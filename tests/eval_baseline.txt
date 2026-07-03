@@ -1,0 +1,36 @@
+Q 1 PASS: TOROK SE Größe 100 maximale Spannkraft radial?... → expected 150, got snippet: Die maximale Spannkraft radial für das Handspannfutter TOROK SE in der Baugröße 100 beträgt exakt **150 kN**.
+Q 2 PASS: TOROK RD Größe 100 Drehzahl n max?... → expected 5000, got snippet: Die maximale Drehzahl (n max.) für das Handspannfutter TOROK RD in der Baugröße 100 beträgt **5000 1/min**.
+Q 3 PASS: MAXXOS T211 Größe B Rundlauf?... → expected 0.01, got snippet: Der Standard-Rundlauf für den Spanndorn MAXXOS T211 Größe B beträgt **≤ 0,010 mm** (10 µm).
+
+Zusatzinformation: Falls für Ihre Fertigung eine noch höhere Präzision erforderlich ist, stehen auf Anfrage
+Q 4 PASS: TOROK 250 maximale Spannkraft?... → refusal check: In den mir vorliegenden Unterlagen ist leider kein Handspannfutter TOROK in der Baugröße 250 aufgeführt. Ich kann Ihnen daher die maximale Spannkraft für diese spezifische Größe nicht nennen.
+
+Als Ref
+Q 5 PASS: Welche maximale Spannkraft hat ein TOROK 100 bei 190 kN Betä... → refusal check: Als HAINBUCH Technical Advisor muss ich Sie darauf hinweisen, dass eine Betätigungskraft von 190 kN für das Handspannfutter TOROK der Baugröße 100 **nicht zulässig** ist und die Spezifikationen deutli
+Q 6 PASS: TOPlus premium Axzug Größe 100 Spannbereich?... → must contain ['15', '100'], got: Guten Tag! Hier spricht Ihr HAINBUCH Technical Advisor.
+
+Der Spannbereich für das Spannfutter **TOPlus premium Axzug Größe 100** beträgt:
+
+*   **15 – 100 mm** (sowohl mit Standard-Spannkopf als auch m
+Q 7 PASS: SPANNTOP nova Modular Größe 125 Drehzahl?... → expected 3200, got snippet: Die maximale Drehzahl (n max.) für das Spannfutter SPANNTOP nova Modular Größe 125 beträgt **3200 1/min**.
+Q 8 PASS: InoFlex VD Handspannfutter Größe 100 Rundlauf?... → refusal check: Das InoFlex VD Handspannfutter ist laut Katalog **nicht in der Baugröße 100 erhältlich**. 
+
+Die verfügbaren Baugrößen für dieses Futter sind **165, 215, 260 und 315**. 
+
+Für alle diese verfügbaren Bau
+Q 9 PASS: MANDO T211 Größe 3 Spannbereich?... → must contain ['50', '80'], got: Der Spannbereich für den MANDO T211 Größe 3 beträgt **50 – 80 mm**.
+Q10 PASS: HYDROK SE Größe 52 Drehzahl?... → expected 1000, got snippet: Die maximale Drehzahl (n max.) für den hydraulischen Spannstock HYDROK SE in der Baugröße 52 beträgt **1000 1/min**.
+Q11 PASS: B-Top3 Backenfutter Größe 250 Rundlauf?... → refusal check: In den vorliegenden Fachbuch-Auszügen sind leider **keine Daten für die Baugröße 250** des Backenfutters B-Top3 enthalten. 
+
+Als Referenz: Für die dokumentierte **Baugröße 215** des B-Top3 Backenfutte
+Q12 FAIL: centroteX quick-change compatible with which Hainbuch produc... → must contain ['TOPlus', 'TOROK', 'SPANNTOP'], got: As the HAINBUCH Technical Advisor, I must honestly inform you that page 372 is not included in the provided technical excerpts. 
+
+However, based on the available documentation from other pages, the ce
+Q13 FAIL: Welche Produkte haben eine Flanschaufnahme Ø 240 H6?... → must contain ['TOROK', 'TOPlus'], got: Als HAINBUCH Technical Advisor muss ich Ihnen leider mitteilen, dass die mir vorliegenden Fachbuch-Auszüge keine Informationen zu unseren HAINBUCH-Produkten oder spezifischen Flanschaufnahmen (wie Ø 2
+Q14 PASS: TOROK CFK SE maximale Betätigungskraft?... → expected 65, got snippet: Die maximale Betätigungskraft (Zug / Druck) für das Handspannfutter TOROK CFK SE ist abhängig von der Baugröße:
+
+* **Baugröße 52:** 40 kN
+* **Baugröße 65:** 45 kN
+Q15 PASS: MAXXOS T211 Größe F Spannbereich?... → must contain ['50', '100'], got: Der Spannbereich für den Spanndorn MAXXOS T211 Größe F beträgt **50 – 100 mm**.
+
+RESULT: 13/15 passed
