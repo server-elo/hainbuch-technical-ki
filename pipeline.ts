@@ -65,7 +65,7 @@ function lastUserImages(messages: any[]): Array<{ type: "image_url"; image_url: 
   for (const msg of [...messages].reverse()) {
     if (msg.role !== "user") continue;
     for (const part of msg.parts || []) {
-      if (part.inlineData && images.length < 3 && !/dxf/i.test(part.inlineData.mimeType || "")) {
+      if (part.inlineData && images.length < 3 && !/dxf|pdf/i.test(part.inlineData.mimeType || "")) {
         images.push({
           type: "image_url",
           image_url: {
@@ -89,10 +89,52 @@ function lastUserDxf(messages: any[]): string | null {
   return null;
 }
 
+function lastUserPdf(messages: any[]): string | null {
+  for (const msg of [...messages].reverse()) {
+    if (msg.role !== "user") continue;
+    for (const part of msg.parts || []) {
+      if (part.inlineData && /pdf/i.test(part.inlineData.mimeType || "")) return part.inlineData.data;
+    }
+  }
+  return null;
+}
+
 export async function runPipeline(messages: any[], emit: EmitFn = () => {}, lastAnalysis: any = null) {
   const conversation = conversationText(messages);
   const images = lastUserImages(messages);
   const sources = new Set<string>();
+
+  // ---- PDF attachment: server-side render pages -> vision images + embedded text ----
+  const pdfB64 = lastUserPdf(messages);
+  let pdfTextBlock = "";
+  if (pdfB64) {
+    emit({ type: "status", stage: "drawing", label: "PDF wird verarbeitet…" });
+    try {
+      const res = await fetch(`${RAG_API_URL}/parse-pdf`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ b64: pdfB64 }),
+        signal: AbortSignal.timeout(30000),
+      });
+      const d: any = await res.json();
+      if (d.ok) {
+        for (const png of (d.pageImagesPng || []).slice(0, 3 - images.length)) {
+          images.push({ type: "image_url", image_url: { url: `data:image/png;base64,${png}` } });
+        }
+        if (d.text) {
+          pdfTextBlock =
+            `\n\nANGEHÄNGTES PDF (eingebetteter Text, ${d.pageCount} Seiten` +
+            (d.pageCount > d.pagesRendered ? `, erste ${d.pagesRendered} verarbeitet` : "") +
+            `):\n${d.text}`;
+        }
+        emit({ type: "info", label: `PDF verarbeitet: ${d.pagesRendered}/${d.pageCount} Seiten` });
+      } else {
+        emit({ type: "info", label: `PDF nicht lesbar (${d.error})` });
+      }
+    } catch (e: any) {
+      console.warn("[PDF]", e.message);
+    }
+  }
 
   // ---- Stage 0: what does the user actually need? ----
   const lastUser = [...messages].reverse().find((m) => m.role === "user");
@@ -103,7 +145,7 @@ export async function runPipeline(messages: any[], emit: EmitFn = () => {}, last
 
   emit({ type: "status", stage: "intent", label: "Anfrage wird eingeordnet…" });
   const dxfB64 = lastUserDxf(messages);
-  const route = await classifyIntent(lastText, images.length > 0 || !!dxfB64, conversation, !!(lastAnalysis?.operations?.length));
+  const route = await classifyIntent(lastText, images.length > 0 || !!dxfB64 || !!pdfB64, conversation, !!(lastAnalysis?.operations?.length));
   const { intent, language, germanQuery } = route;
   const langName = LANGUAGE_NAMES[language];
   const answerLang =
@@ -280,6 +322,7 @@ export async function runPipeline(messages: any[], emit: EmitFn = () => {}, last
       drawingData = res.drawing;
     }
   }
+  if (pdfTextBlock) drawingBlock += pdfTextBlock;
 
   // ---- Stage 1: material selection (grounded in Fachkunde/Tabellenbuch) ----
   console.log("[Pipeline] Stage 1: material selection");

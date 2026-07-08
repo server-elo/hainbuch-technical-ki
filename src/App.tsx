@@ -705,10 +705,11 @@ export default function App() {
   const convertFileToBase64 = (file: File): Promise<{base64: string, mimeType: string}> => {
     return new Promise((resolve, reject) => {
       const reader = new FileReader();
-      // DXF: raw base64, no canvas processing (parsed deterministically server-side)
-      if (/\.dxf$/i.test(file.name)) {
+      // DXF/PDF: raw base64, no canvas processing (parsed server-side)
+      if (/\.(dxf|pdf)$/i.test(file.name)) {
+        const mimeType = /\.pdf$/i.test(file.name) ? 'application/pdf' : 'application/dxf';
         reader.onloadend = () =>
-          resolve({ base64: (reader.result as string).split(',')[1], mimeType: 'application/dxf' });
+          resolve({ base64: (reader.result as string).split(',')[1], mimeType });
         reader.onerror = reject;
         reader.readAsDataURL(file);
         return;
@@ -866,7 +867,9 @@ export default function App() {
         <div className="px-3 sm:px-6 pt-3 sm:pt-4 bg-white border-t border-neutral-200 pb-[max(0.75rem,env(safe-area-inset-bottom))] sm:pb-4">
           {attachedFile && (
             <div className="flex items-center gap-2 mb-2 mx-1 px-3 py-1.5 bg-neutral-50 border border-neutral-200 rounded-lg text-xs text-neutral-600 w-fit max-w-full">
-              <ImageIcon size={13} className="text-red-600 shrink-0" />
+              {/\.pdf$/i.test(attachedFile.name)
+                ? <FileText size={13} className="text-red-600 shrink-0" />
+                : <ImageIcon size={13} className="text-red-600 shrink-0" />}
               <span className="truncate">{attachedFile.name}</span>
               <button
                 type="button"
@@ -882,7 +885,7 @@ export default function App() {
             <input
               ref={fileInputRef}
               type="file"
-              accept="image/*,.dxf"
+              accept="image/*,.dxf,.pdf"
               className="hidden"
               onChange={(e) => {
                 setAttachedFile(e.target.files?.[0] ?? null);
