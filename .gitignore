@@ -9,3 +9,4 @@ coverage/
 .app_key
 .tunnel_url
 .firebase/
+feedback.jsonl

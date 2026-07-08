@@ -16,7 +16,7 @@ function timeMin(op: ManufacturingOperation): number {
 }
 
 /** Horizontal bar chart of machining time per operation. */
-export default function OperationsChart({ operations }: { operations: ManufacturingOperation[] }) {
+export default function OperationsChart({ operations, title = 'Zeitverteilung' }: { operations: ManufacturingOperation[]; title?: string }) {
   const times = operations.map(timeMin);
   const max = Math.max(...times, 0.01);
   const total = times.reduce((a, b) => a + b, 0);
@@ -25,7 +25,7 @@ export default function OperationsChart({ operations }: { operations: Manufactur
     <div className="border border-neutral-200 rounded-lg p-4">
       <div className="flex items-center justify-between mb-3 flex-wrap gap-2">
         <h4 className="text-[11px] text-neutral-400 font-semibold uppercase tracking-wider">
-          Zeitverteilung
+          {title}
         </h4>
         <div className="flex flex-wrap gap-2.5">
           {[...new Set(operations.map((o) => o.operationType))].map((t) => (

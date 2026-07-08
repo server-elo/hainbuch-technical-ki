@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { CheckCircle2, Loader2, Circle } from 'lucide-react';
 import type { PipelineStatus } from '../types';
-import { HAINBUCH_FACTS, HAINBUCH_FACTS_EN } from '../facts';
+import { FACTS_BY_LANG } from '../facts';
 import { T, type UiLang } from '../i18n';
 
 const STAGE_KEYS = ['retrieval-material', 'material', 'retrieval-catalog', 'plan', 'calc'];
@@ -17,9 +17,10 @@ function useElapsed(startedAt: number) {
   return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`;
 }
 
-function FactCarousel({ lang }: { lang: UiLang }) {
-  const FACTS = lang === 'en' ? HAINBUCH_FACTS_EN : HAINBUCH_FACTS;
-  const [idx, setIdx] = useState(() => Math.floor(Math.random() * FACTS.length));
+export function FactCarousel({ lang }: { lang: UiLang }) {
+  const FACTS = FACTS_BY_LANG[lang] || FACTS_BY_LANG.de;
+  // always open with the time-savings teaser, then rotate
+  const [idx, setIdx] = useState(0);
   useEffect(() => {
     const t = setInterval(() => setIdx((i) => (i + 1) % FACTS.length), 8000);
     return () => clearInterval(t);

@@ -7,38 +7,187 @@
 }
 
 /* ============================================
-   FORCE LIGHT MODE - NO DARK MODE ALLOWED
+   HAINBUCH INDUSTRIAL DESIGN SYSTEM
+   Serious, professional, mobile-first
    ============================================ */
 
+:root {
+  --hainbuch-red: #d40511;
+  --neutral-50: #fafafa;
+  --neutral-100: #f5f5f5;
+  --neutral-200: #e5e5e5;
+  --neutral-300: #d4d4d4;
+  --neutral-400: #a3a3a3;
+  --neutral-500: #737373;
+  --neutral-600: #525252;
+  --neutral-700: #404040;
+  --neutral-800: #262626;
+  --neutral-900: #171717;
+}
+
+/* Force light mode only */
 html, body, #root {
   background-color: #ffffff !important;
-  color: #262626;
+  color: var(--neutral-800);
   color-scheme: light !important;
 }
 
-/* Kill any dark mode that Tailwind or system might add */
-html.dark,
-html[class*="dark"],
-body.dark,
-body[class*="dark"],
-#root.dark,
-#root[class*="dark"] {
+html.dark, html[class*="dark"], body.dark, body[class*="dark"], #root.dark {
   background-color: #ffffff !important;
-  color: #262626 !important;
+  color: var(--neutral-800) !important;
 }
 
-/* Mobile-first responsive polish */
-@media (max-width: 768px) {
+/* ============================================
+   ROOT LAYOUT — MOBILE FIRST
+   ============================================ */
+
+#root {
+  min-height: 100dvh;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Desktop layout */
+@media (min-width: 768px) {
+  .app-root {
+    min-height: 100dvh;
+  }
+
+  .chat-column {
+    flex: 1 1 100%;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    height: 100dvh;
+  }
+}
+
+/* Mobile: single column, chat only */
+@media (max-width: 767px) {
+  .app-root {
+    flex-direction: column;
+    min-height: 100dvh;
+  }
+
+  .chat-column {
+    flex: 1 1 auto;
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+    max-height: 100dvh;
+  }
+
   .mobile-chat {
-    height: calc(100dvh - 120px);
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+  }
+
+  /* Prevent iOS zoom on inputs */
+  input[type="text"],
+  textarea {
+    font-size: 16px !important;
   }
   
-  .mobile-input {
-    padding-bottom: env(safe-area-inset-bottom, 8px);
+  .header-compact {
+    padding: 0.75rem 1rem;
   }
   
-  .recommendation-card {
-    padding: 12px;
-    font-size: 13px;
+  .header-compact .subtitle {
+    display: none;
+  }
+  
+}
+
+/* ============================================
+   HEADER
+   ============================================ */
+
+.hainbuch-brand {
+  font-weight: 900;
+  letter-spacing: -0.02em;
+  color: var(--hainbuch-red);
+}
+
+/* ============================================
+   CHAT MESSAGES
+   ============================================ */
+
+.message-bubble {
+  max-width: 85%;
+  padding: 0.875rem 1rem;
+  border-radius: 0.75rem;
+  font-size: 0.9375rem;
+  line-height: 1.5;
+}
+
+.message-bubble.user {
+  background-color: var(--neutral-200);
+  color: var(--neutral-800);
+  margin-left: auto;
+}
+
+.message-bubble.model {
+  background-color: #ffffff;
+  border: 1px solid var(--neutral-200);
+  box-shadow: 0 1px 2px rgb(0 0 0 / 0.04);
+}
+
+/* ============================================
+   COMPOSER (Tailwind flex pill in App.tsx)
+   Legacy absolute positioning removed.
+   ============================================ */
+
+.composer-input {
+  font-size: 0.9375rem;
+}
+
+/* send-btn: only color/hover remain; positioning removed */
+.send-btn {
+  background-color: var(--hainbuch-red);
+  color: white;
+  transition: background-color 0.15s ease;
+}
+.send-btn:hover:not(:disabled) { background-color: #b0040e; }
+.send-btn:disabled { opacity: 0.3; }
+
+/* Safe-area padding moved to the wrapper div in App.tsx */
+.mobile-input {
+  font-size: 16px !important;
+}
+
+
+/* ============================================
+   THINKING / PROGRESS
+   ============================================ */
+
+.thinking-indicator {
+  font-size: 0.6875rem;
+  color: var(--neutral-500);
+}
+
+/* ============================================
+   STATUS & CHIPS
+   ============================================ */
+
+.status-dot {
+  width: 0.5rem;
+  height: 0.5rem;
+  border-radius: 9999px;
+}
+
+.status-dot.online { background-color: #22c55e; }
+.status-dot.limited { background-color: var(--neutral-300); }
+
+/* ============================================
+   MISC
+   ============================================ */
+
+/* Respect reduced motion */
+@media (prefers-reduced-motion: reduce) {
+  * {
+    transition: none !important;
+    animation: none !important;
   }
 }

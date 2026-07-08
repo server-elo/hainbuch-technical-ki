@@ -10,7 +10,8 @@
     "preview": "vite preview",
     "clean": "rm -rf dist server.cjs",
     "lint": "tsc --noEmit",
-    "test": "tsx tests/machining.test.ts"
+    "test": "tsx tests/machining.test.ts && tsx tests/cost.test.ts && tsx tests/clamping.test.ts",
+    "gauntlet": "tsx tests/gauntlet.ts"
   },
   "dependencies": {
     "@google/genai": "^2.4.0",

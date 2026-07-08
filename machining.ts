@@ -18,7 +18,8 @@ export type OperationType =
   | "bohren"
   | "senken"
   | "reiben"
-  | "gewindebohren";
+  | "gewindebohren"
+  | "gewindedrehen";
 
 export interface CuttingRange {
   min: number;
@@ -29,12 +30,16 @@ export interface CuttingRange {
 interface MaterialCuttingData {
   label: string;
   examples: string;
-  /** vc in m/min per operation (carbide for drehen/fräsen, VHM for bohren) */
-  vc: Record<OperationType, CuttingRange>;
+  /** vc in m/min per operation (carbide for drehen/fräsen, VHM for bohren).
+   *  gewindedrehen is not stored: derived from drehen per Fachkunde rule
+   *  (≈ 25 % niedriger, HM nicht unter 40 m/min) — see threadTurningVcRange. */
+  vc: Record<Exclude<OperationType, "gewindedrehen">, CuttingRange>;
   /** feed: f in mm/U (drehen, bohren, senken, reiben) */
-  f: Record<Exclude<OperationType, "fräsen" | "gewindebohren">, CuttingRange>;
+  f: Record<Exclude<OperationType, "fräsen" | "gewindebohren" | "gewindedrehen">, CuttingRange>;
   /** fz in mm/tooth for milling */
   fz: CuttingRange;
+  /** citation per operation type when the range comes from the Fachkunde */
+  sources?: Partial<Record<OperationType | "fz", string>>;
 }
 
 const R = (min: number, max: number, def: number): CuttingRange => ({
@@ -67,45 +72,55 @@ export const MATERIALS: Record<string, MaterialCuttingData> = {
     label: "Baustahl",
     examples: "S235JR, S355J2, E295",
     vc: {
-      drehen: R(150, 280, 200),
-      fräsen: R(100, 200, 150),
+      drehen: R(200, 440, 300),
+      fräsen: R(100, 450, 220),
       bohren: R(50, 110, 80),
       senken: R(25, 55, 40),
       reiben: R(6, 16, 10),
       gewindebohren: R(5, 15, 8),
     },
     f: {
-      drehen: R(0.05, 0.4, 0.25),
+      drehen: R(0.1, 0.8, 0.3),
       bohren: R(0.05, 0.35, 0.2),
       senken: R(0.08, 0.25, 0.15),
       reiben: R(0.2, 0.6, 0.4),
     },
-    fz: R(0.04, 0.16, 0.09),
+    fz: R(0.1, 0.4, 0.15),
+    sources: {
+      drehen: "Fachkunde Tab. 1/2 Drehen (unlegierter Stahl, HM besch.)",
+      fräsen: "Fachkunde Tab. 1 Fräsen (HM, unlegierter Stahl)",
+      fz: "Fachkunde Tab. 1 Fräsen (HM, unlegierter Stahl)",
+    },
   },
   verguetungsstahl: {
     label: "Vergütungsstahl",
     examples: "C45, C60, 42CrMo4",
     vc: {
-      drehen: R(120, 240, 180),
-      fräsen: R(80, 180, 120),
+      drehen: R(115, 380, 240),
+      fräsen: R(100, 350, 180),
       bohren: R(40, 100, 70),
       senken: R(20, 50, 35),
       reiben: R(5, 14, 8),
       gewindebohren: R(4, 12, 7),
     },
     f: {
-      drehen: R(0.05, 0.35, 0.2),
+      drehen: R(0.1, 0.8, 0.25),
       bohren: R(0.05, 0.3, 0.18),
       senken: R(0.08, 0.2, 0.12),
       reiben: R(0.2, 0.5, 0.3),
     },
-    fz: R(0.03, 0.14, 0.08),
+    fz: R(0.1, 0.25, 0.12),
+    sources: {
+      drehen: "Fachkunde Tab. 1/2 Drehen (unleg. C≥0,35 % / niedrigleg.)",
+      fräsen: "Fachkunde Tab. 1 Fräsen (HM, legierter Stahl)",
+      fz: "Fachkunde Tab. 1 Fräsen (HM, legierter Stahl)",
+    },
   },
   edelstahl: {
     label: "Nichtrostender Stahl",
     examples: "X5CrNi18-10 (1.4301), 1.4404",
     vc: {
-      drehen: R(80, 180, 120),
+      drehen: R(95, 240, 160),
       fräsen: R(50, 120, 80),
       bohren: R(25, 60, 40),
       senken: R(12, 30, 20),
@@ -119,13 +134,16 @@ export const MATERIALS: Record<string, MaterialCuttingData> = {
       reiben: R(0.15, 0.4, 0.25),
     },
     fz: R(0.03, 0.12, 0.06),
+    sources: {
+      drehen: "Fachkunde Tab. 1/2 Drehen (hochlegiert, geglüht)",
+    },
   },
   gusseisen: {
     label: "Gusseisen",
     examples: "EN-GJL-250, EN-GJS-400",
     vc: {
       drehen: R(100, 220, 150),
-      fräsen: R(70, 160, 100),
+      fräsen: R(100, 300, 150),
       bohren: R(40, 100, 70),
       senken: R(20, 50, 35),
       reiben: R(6, 15, 10),
@@ -137,7 +155,11 @@ export const MATERIALS: Record<string, MaterialCuttingData> = {
       senken: R(0.1, 0.3, 0.18),
       reiben: R(0.2, 0.6, 0.4),
     },
-    fz: R(0.05, 0.2, 0.12),
+    fz: R(0.1, 0.3, 0.15),
+    sources: {
+      fräsen: "Fachkunde Tab. 1 Fräsen (HM, Gusseisen)",
+      fz: "Fachkunde Tab. 1 Fräsen (HM, Gusseisen)",
+    },
   },
   aluminium: {
     label: "Aluminiumlegierung",
@@ -288,10 +310,52 @@ export interface CalculationResult {
 const MAX_RPM_DEFAULT = 8000;
 const TOOL_CHANGE_MIN = 0.15;
 
+/** Standard metric coarse pitch (DIN 13) by nominal ∅ — models regularly get
+ *  pitches wrong, so this beats whatever the LLM suggested (gewindebohren);
+ *  for gewindedrehen it is only the fallback when no pitch was planned. */
+export const STANDARD_PITCH: Record<number, number> = {
+  3: 0.5, 4: 0.7, 5: 0.8, 6: 1.0, 8: 1.25, 10: 1.5,
+  12: 1.75, 14: 2.0, 16: 2.0, 18: 2.5, 20: 2.5, 22: 2.5,
+  24: 3.0, 27: 3.0, 30: 3.5, 33: 3.5, 36: 4.0, 39: 4.0, 42: 4.5,
+};
+
+/** Fachkunde Tab. 1 „Anzahl der Arbeitsgänge beim Drehen von Außengewinden"
+ *  (Kap. 3.6.5.9 Gewindedrehen): Durchgänge nach Steigung. Oberhalb des
+ *  Tabellenbereichs (P > 1,5) wird mit der mittleren Zustellung der letzten
+ *  Tabellenspalte extrapoliert (Gewindetiefe 0,6134·P / (0,92/6) = 4·P). */
+export function threadTurningPasses(pitchMm: number): number {
+  if (pitchMm <= 0.5) return 4;
+  if (pitchMm <= 0.75) return 4;
+  if (pitchMm <= 1.0) return 5;
+  if (pitchMm <= 1.5) return 6;
+  return Math.ceil(4 * pitchMm - 1e-9);
+}
+
+/** Fachkunde 3.6.5.9: vc beim Gewindedrehen ≈ 25 % niedriger als beim
+ *  Längsdrehen; bei HM-Wendeschneidplatten nicht unter 40 m/min. */
+export function threadTurningVcRange(materialKey: string): CuttingRange {
+  const mat = MATERIALS[materialKey] ?? MATERIALS.baustahl;
+  const derive = (v: number) => Math.max(40, Math.round(v * 0.75));
+  const d = mat.vc.drehen;
+  return { min: derive(d.min), max: derive(d.max), default: derive(d.default) };
+}
+
 function clamp(value: number | undefined, range: CuttingRange): number {
   if (value === undefined || !Number.isFinite(value) || value <= 0)
     return range.default;
   return Math.min(range.max, Math.max(range.min, value));
+}
+
+/** Fachkunde Tab. 2 (Nutenfräsen): fz-Erhöhung bei kleiner Schnitttiefe ae.
+ *  ae = d/3 → Basis; d/6 → +15 %; d/8 → +30 %; d/10 → +45 %; d/20 → +100 %. */
+export function slotFeedFactor(aeMm: number, dMm: number): number {
+  if (aeMm <= 0 || dMm <= 0) return 1;
+  const r = aeMm / dMm;
+  if (r <= 1 / 20) return 2.0;
+  if (r <= 1 / 10) return 1.45;
+  if (r <= 1 / 8) return 1.3;
+  if (r <= 1 / 6) return 1.15;
+  return 1;
 }
 
 function round(n: number, digits = 1): number {
@@ -308,9 +372,12 @@ export function calculateOperation(
   const type = op.operationType;
   const D = Math.max(0.5, op.diameterMm || 10);
   const passes = Math.max(1, Math.round(op.passes || 1));
+  let passesUsed = passes;
   const L = Math.max(0.1, op.cutLengthMm || 1);
 
-  const vc = clamp(op.vcSuggested, mat.vc[type]);
+  const vcRange =
+    type === "gewindedrehen" ? threadTurningVcRange(materialKey) : mat.vc[type];
+  const vc = clamp(op.vcSuggested, vcRange);
   let n = (vc * 1000) / (Math.PI * D);
   const rpmLimited = n > maxRpm;
   n = Math.min(n, maxRpm);
@@ -320,29 +387,29 @@ export function calculateOperation(
   let vf: number;
   let totalPath: number;
   let formula: string;
+  /** effective pitch after DIN-13 correction/fallback (thread ops only) */
+  let effectivePitch: number | undefined;
 
   if (type === "fräsen") {
     const z = Math.max(1, Math.round(op.teeth || 3));
     feedUsed = clamp(op.feedSuggested, mat.fz);
     feedUnit = "mm/Zahn";
-    vf = n * z * feedUsed;
+    const slotF = op.aeMm ? slotFeedFactor(op.aeMm, D) : 1;
+    vf = n * z * feedUsed * slotF;
     // approach/overrun allowance: half tool diameter each side
     totalPath = (L + D) * passes;
     formula =
       `n = (${round(vc)}·1000)/(π·${round(D)}) = ${round(n, 0)} 1/min` +
       (rpmLimited ? ` (auf n_max ${maxRpm} begrenzt)` : "") +
-      `; vf = n·z·fz = ${round(n, 0)}·${z}·${feedUsed} = ${round(vf, 0)} mm/min` +
+      `; vf = n·z·fz${slotF > 1 ? `·${slotF}` : ""} = ${round(vf, 0)} mm/min` +
+      (slotF > 1 ? ` (Nutenfräs-Korrektur +${Math.round((slotF - 1) * 100)} % n. Fachkunde Tab. 2)` : "") +
       `; t = L/vf = (${round(L)}+${round(D)})·${passes}/${round(vf, 0)} = ` +
       `${round(totalPath / vf, 2)} min`;
   } else if (type === "gewindebohren") {
     // Standard metric coarse pitch (DIN 13) by nominal ∅ beats whatever the
     // LLM suggested — models regularly get pitches wrong.
-    const STANDARD_PITCH: Record<number, number> = {
-      3: 0.5, 4: 0.7, 5: 0.8, 6: 1.0, 8: 1.25, 10: 1.5,
-      12: 1.75, 14: 2.0, 16: 2.0, 18: 2.5, 20: 2.5, 22: 2.5,
-      24: 3.0, 27: 3.0, 30: 3.5, 33: 3.5, 36: 4.0, 39: 4.0, 42: 4.5,
-    };
     const P = STANDARD_PITCH[Math.round(D)] ?? Math.max(0.25, op.threadPitchMm || 1.5);
+    effectivePitch = P;
     feedUsed = P;
     feedUnit = "mm/U";
     vf = n * P;
@@ -351,6 +418,30 @@ export function calculateOperation(
       `n = (${round(vc)}·1000)/(π·${round(D)}) = ${round(n, 0)} 1/min` +
       `; vf = n·P = ${round(n, 0)}·${P} = ${round(vf, 0)} mm/min` +
       `; t = 2·l·i/vf = 2·${round(L)}·${passes}/${round(vf, 0)} = ${round(totalPath / vf, 2)} min`;
+  } else if (type === "gewindedrehen") {
+    // Thread turning (lathe). Feed = pitch; pass count from the Fachkunde
+    // table (Kap. 3.6.5.9), NOT from the LLM. Fine pitches (e.g. M24x1,5)
+    // are legitimate on turned parts, so a planned pitch is accepted as-is;
+    // only a missing/implausible pitch falls back to DIN-13 coarse.
+    const planned = op.threadPitchMm;
+    const P =
+      planned && planned >= 0.25 && planned <= 8
+        ? planned
+        : STANDARD_PITCH[Math.round(D)] ?? 1.5;
+    effectivePitch = P;
+    passesUsed = threadTurningPasses(P);
+    feedUsed = P;
+    feedUnit = "mm/U";
+    vf = n * P;
+    totalPath = L * passesUsed;
+    formula =
+      `n = (${round(vc)}·1000)/(π·${round(D)}) = ${round(n, 0)} 1/min` +
+      (rpmLimited ? ` (auf n_max ${maxRpm} begrenzt)` : "") +
+      `; vf = n·P = ${round(n, 0)}·${P} = ${round(vf, 0)} mm/min` +
+      `; t = i·L/(n·P) = ${passesUsed}·${round(L)}/${round(vf, 0)} = ${round(totalPath / vf, 2)} min` +
+      ` — ${passesUsed} Durchgänge n. Fachkunde Tab. 1 (Gewindedrehen)` +
+      (P > 1.5 ? " (oberhalb Tabellenbereich: mittlere Zustellung wie P 1,5 extrapoliert)" : "") +
+      `; vc 25 % unter Längsdrehen n. Fachkunde`;
   } else {
     // drehen, bohren, senken, reiben — feed per revolution
     feedUsed = clamp(op.feedSuggested, mat.f[type]);
@@ -390,10 +481,15 @@ export function calculateOperation(
     }
   }
 
+  const srcKey = type === "fräsen" ? "fräsen" : type;
+  const src = mat.sources?.[srcKey as OperationType] ?? (type === "fräsen" ? mat.sources?.fz : undefined);
+  if (src) formula += ` — Richtwerte: ${src}`;
+
   return {
     ...op,
     diameterMm: D,
-    passes,
+    passes: passesUsed,
+    threadPitchMm: effectivePitch ?? op.threadPitchMm,
     cutLengthMm: L,
     vcUsed: round(vc),
     feedUsed: round(feedUsed, 3),
@@ -430,7 +526,7 @@ export function calculatePlan(
  *  start from realistic values (they get clamped anyway). */
 export function cuttingDataPromptTable(materialKey: string): string {
   const mat = MATERIALS[materialKey] ?? MATERIALS.baustahl;
-  const rows = (Object.keys(mat.vc) as OperationType[]).map((t) => {
+  const rows = (Object.keys(mat.vc) as Array<Exclude<OperationType, "gewindedrehen">>).map((t) => {
     const vc = mat.vc[t];
     const feed =
       t === "fräsen"
@@ -440,5 +536,9 @@ export function cuttingDataPromptTable(materialKey: string): string {
           : `f ${mat.f[t].min}–${mat.f[t].max} mm/U`;
     return `- ${t}: vc ${vc.min}–${vc.max} m/min (Richtwert ${vc.default}), ${feed}`;
   });
+  const tt = threadTurningVcRange(materialKey);
+  rows.push(
+    `- gewindedrehen: vc ${tt.min}–${tt.max} m/min (Richtwert ${tt.default}, 25 % unter Längsdrehen n. Fachkunde), f = Steigung P, Schnittaufteilung n. Fachkunde Tab. 1`
+  );
   return `Richtwerte für ${mat.label} (${mat.examples}):\n${rows.join("\n")}`;
 }

@@ -1,7 +1,7 @@
 /** Unit tests for the deterministic machining calculator.
  *  Run: npm test  (plain tsx + assert — no framework needed) */
 import assert from "node:assert/strict";
-import { calculateOperation, calculatePlan, MATERIALS } from "../machining";
+import { calculateOperation, calculatePlan, MATERIALS, slotFeedFactor } from "../machining";
 
 let passed = 0;
 function test(name: string, fn: () => void) {
@@ -105,6 +105,69 @@ test("volume guard: no effect when path time already realistic", () => {
     "aluminium", 8000
   );
   assert.ok(!op.calculation.includes("maßgebend"));
+});
+
+
+test("Fachkunde Tab. 2: Nutenfräs-Korrektur (fz 0,25 bei ae=d/6 → wirksam ~0,29)", () => {
+  near(slotFeedFactor(10, 60), 1.15); // ae = d/6 → +15 %
+  near(slotFeedFactor(5, 60), 1.45);  // ae = d/12 (Band ≤ d/10) → +45 %
+  near(slotFeedFactor(3, 60), 2.0);   // ae = d/20 → +100 %
+  near(slotFeedFactor(20, 60), 1);    // ae = d/3 → Basis
+  near(0.25 * slotFeedFactor(10, 60), 0.2875);
+});
+
+test("Buch-Kalibrierung: Baustahl-Fräsbereiche = Fachkunde-HM-Tabelle", () => {
+  const m = MATERIALS.baustahl;
+  near(m.vc["fräsen"].min, 100);
+  near(m.vc["fräsen"].max, 450);
+  near(m.fz.min, 0.1);
+  near(m.fz.max, 0.4);
+});
+
+test("Arbeitsplan zitiert die Fachkunde-Quelle", () => {
+  const op = calculateOperation(
+    { stepName: "Planfräsen", operationType: "fräsen", tool: "D50", diameterMm: 50, cutLengthMm: 100, teeth: 5, vcSuggested: 200, feedSuggested: 0.15 },
+    "baustahl"
+  );
+  assert.match(op.calculation, /Fachkunde Tab\. 1 Fräsen/);
+});
+
+test("gewindedrehen: f = P, Durchgänge aus Fachkunde Tab. 1, t = i·L/(n·P)", () => {
+  const op = calculateOperation(
+    { stepName: "Gewinde M24x1,5", operationType: "gewindedrehen", tool: "Gewindedrehmeißel 60°", diameterMm: 24, cutLengthMm: 13, passes: 1 /* LLM-Wert wird überstimmt */, threadPitchMm: 1.5 },
+    "verguetungsstahl"
+  );
+  assert.equal(op.passes, 6); // Fachkunde Tab. 1: P 1,5 → 6 Durchgänge
+  near(op.feedUsed, 1.5, 0.001);
+  assert.equal(op.feedUnit, "mm/U");
+  near(op.timeMin, (6 * 13) / op.feedRateMmPerMin, 0.02);
+  assert.match(op.calculation, /Fachkunde Tab\. 1 \(Gewindedrehen\)/);
+});
+
+test("gewindedrehen: vc 25 % unter Längsdrehen, HM-Untergrenze 40 m/min", () => {
+  // Vergütungsstahl: drehen-Richtwert 240 → 180 m/min
+  const steel = calculateOperation(
+    { stepName: "M24x1,5", operationType: "gewindedrehen", tool: "GD", diameterMm: 24, cutLengthMm: 13, threadPitchMm: 1.5 },
+    "verguetungsstahl"
+  );
+  assert.equal(steel.vcUsed, Math.round(MATERIALS.verguetungsstahl.vc.drehen.default * 0.75));
+  // Titan: 0,75·50 = 37,5 → auf 40 m/min angehoben (Fachkunde: HM nicht unter 40)
+  const ti = calculateOperation(
+    { stepName: "M24x1,5", operationType: "gewindedrehen", tool: "GD", diameterMm: 24, cutLengthMm: 13, threadPitchMm: 1.5 },
+    "titan"
+  );
+  assert.equal(ti.vcUsed, 40);
+});
+
+test("gewindedrehen: fehlende Steigung → DIN-13-Regelgewinde, Durchgänge extrapoliert", () => {
+  const op = calculateOperation(
+    { stepName: "Gewinde M24", operationType: "gewindedrehen", tool: "GD", diameterMm: 24, cutLengthMm: 20 },
+    "baustahl"
+  );
+  near(op.threadPitchMm!, 3.0, 0.001); // M24 Regelgewinde P = 3 (DIN 13)
+  near(op.feedUsed, 3.0, 0.001);
+  assert.equal(op.passes, 12); // > Tabellenbereich: 4·P (gleiche mittlere Zustellung wie P 1,5)
+  assert.match(op.calculation, /extrapoliert/);
 });
 
 console.log(`\n${passed} tests passed${process.exitCode ? " (with failures)" : ""}`);
