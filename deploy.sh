@@ -36,7 +36,9 @@ fi
 if [ -z "$TUNNEL" ]; then
   echo "… Tunnel wird gestartet"
   pkill -f "cloudflared tunnel" 2>/dev/null; sleep 1
-  nohup cloudflared tunnel --url http://localhost:3000 > /tmp/cloudflared.log 2>&1 &
+  # http2 statt QUIC: deutlich stabiler (QUIC-Tunnel brachen nach Stunden mit
+  # "failed to dial to edge" ab → network error auf der Website)
+  nohup cloudflared tunnel --url http://localhost:3000 --protocol http2 > /tmp/cloudflared.log 2>&1 &
   until grep -qo "https://[a-z0-9-]*\.trycloudflare\.com" /tmp/cloudflared.log 2>/dev/null; do sleep 2; done
   TUNNEL=$(grep -o "https://[a-z0-9-]*\.trycloudflare\.com" /tmp/cloudflared.log | head -1)
   echo "$TUNNEL" > .tunnel_url
