@@ -4,6 +4,8 @@ import "dotenv/config";
 export const PORT = Number(process.env.PORT || 3000);
 export const LMSTUDIO_URL = process.env.LMSTUDIO_URL || "http://localhost:1234/v1";
 export const MODEL_ID = process.env.MODEL_ID || "agents-a1-mlx-oq8";
+// Fast model for trivial calls (intent classification, translations).
+export const FAST_MODEL_ID = process.env.FAST_MODEL_ID || MODEL_ID;
 export const RAG_API_URL = process.env.RAG_API_URL || "http://127.0.0.1:7777";
 export const MAX_RPM = Number(process.env.MAX_RPM || 8000);
 export const LLM_TIMEOUT_MS = Number(process.env.LLM_TIMEOUT_MS || 900000);

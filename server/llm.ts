@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-import { LMSTUDIO_URL, MODEL_ID, LLM_TIMEOUT_MS, USE_JSON_OBJECT } from "./config";
+import { LMSTUDIO_URL, MODEL_ID, FAST_MODEL_ID, LLM_TIMEOUT_MS, USE_JSON_OBJECT } from "./config";
 
 export type ChatContent =
   | string
@@ -50,8 +50,10 @@ async function fetchWithRetry(url: string, init: RequestInit): Promise<Response>
 export async function llmJson<T>(
   messages: OpenAiMessage[],
   schema: z.ZodType<T>,
-  schemaName: string
+  schemaName: string,
+  opts: { fast?: boolean } = {}
 ): Promise<T> {
+  const model = opts.fast ? FAST_MODEL_ID : MODEL_ID;
   const jsonSchema = z.toJSONSchema(schema);
   const requestMessages: OpenAiMessage[] = USE_JSON_OBJECT
     ? [
@@ -69,7 +71,7 @@ export async function llmJson<T>(
     headers: { "Content-Type": "application/json" },
     signal: AbortSignal.timeout(LLM_TIMEOUT_MS),
     body: JSON.stringify({
-      model: MODEL_ID,
+      model,
       messages: requestMessages,
       temperature: 0.3,
       response_format: USE_JSON_OBJECT
@@ -97,7 +99,7 @@ export async function llmJson<T>(
       headers: { "Content-Type": "application/json" },
       signal: AbortSignal.timeout(LLM_TIMEOUT_MS),
       body: JSON.stringify({
-        model: MODEL_ID,
+        model,
         messages: [
           ...requestMessages,
           {

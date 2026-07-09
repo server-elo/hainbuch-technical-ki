@@ -145,6 +145,16 @@ export async function runPipeline(messages: any[], emit: EmitFn = () => {}, last
 
   emit({ type: "status", stage: "intent", label: "Anfrage wird eingeordnet…" });
   const dxfB64 = lastUserDxf(messages);
+  // Vision drawing analysis is the slowest stage (~30 s) and independent of
+  // intent — start it now, in parallel with classification.
+  let drawingPromise: ReturnType<typeof analyzeDrawing> | null = null;
+  if (images.length > 0 && !dxfB64) {
+    emit({ type: "status", stage: "drawing", label: "Zeichnung wird vermessen (Ausschnitte + Maßketten-Prüfung)…" });
+    drawingPromise = analyzeDrawing(images, emit).catch((e) => {
+      console.warn("[Drawing]", e.message);
+      return null;
+    });
+  }
   // The classifier must see the PDF's embedded text: material/dimensions in
   // the PDF must not trigger redundant clarifying questions.
   const intentText = pdfTextBlock ? `${lastText}${pdfTextBlock.slice(0, 1500)}` : lastText;
@@ -317,9 +327,8 @@ export async function runPipeline(messages: any[], emit: EmitFn = () => {}, last
       console.warn("[DXF]", e.message);
     }
   }
-  if (!drawingBlock && images.length > 0) {
-    emit({ type: "status", stage: "drawing", label: "Zeichnung wird vermessen (Ausschnitte + Maßketten-Prüfung)…" });
-    const res = await analyzeDrawing(images, emit);
+  if (!drawingBlock && drawingPromise) {
+    const res = await drawingPromise;
     if (res) {
       drawingBlock = `\n\n${res.block}`;
       drawingData = res.drawing;

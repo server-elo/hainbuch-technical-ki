@@ -121,7 +121,8 @@ export async function classifyIntent(
         },
       ],
       IntentSchema,
-      "route"
+      "route",
+      { fast: true }
     ) as { intent: Intent; language: string; germanQuery: string; missingInfo?: string[]; machine?: string | null; affectsPlan?: boolean };
     const language = (LANGUAGES as readonly string[]).includes(r.language)
       ? (r.language as Language)
