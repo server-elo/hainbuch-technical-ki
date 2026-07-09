@@ -1,7 +1,7 @@
 /** Unit tests for the clamping-force check (kc from Fachkunde Tabelle 1).
  *  Run: npm test */
 import assert from "node:assert/strict";
-import { checkClamping, cuttingForceN, kcFor, powerLimitFactor } from "../clamping_check";
+import { checkClamping, cuttingForceN, kcFor, powerLimitFactor } from "../server/clamping_check";
 
 let passed = 0;
 function test(name: string, fn: () => void) {

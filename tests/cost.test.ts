@@ -1,7 +1,7 @@
 /** Unit tests for the deterministic cost comparison.
  *  Run: npm test */
 import assert from "node:assert/strict";
-import { compareCosts, actuationOf } from "../cost_compare";
+import { compareCosts, actuationOf } from "../server/cost_compare";
 
 let passed = 0;
 function test(name: string, fn: () => void) {

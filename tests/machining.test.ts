@@ -1,7 +1,7 @@
 /** Unit tests for the deterministic machining calculator.
  *  Run: npm test  (plain tsx + assert — no framework needed) */
 import assert from "node:assert/strict";
-import { calculateOperation, calculatePlan, MATERIALS, slotFeedFactor } from "../machining";
+import { calculateOperation, calculatePlan, MATERIALS, slotFeedFactor } from "../server/machining";
 
 let passed = 0;
 function test(name: string, fn: () => void) {

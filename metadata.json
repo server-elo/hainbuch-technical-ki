@@ -1,5 +1,0 @@
-{
-  "name": "HAINBUCH Technical Advisor",
-  "description": "AI-Fertigungsberater: Werkstoffwahl, Arbeitsplan mit ISO-berechneten Zeiten, Passungsanalyse nach ISO 286 und Spannmittel-Empfehlungen aus dem HAINBUCH-Katalog. Läuft mit lokalem LLM (LM Studio) oder API-Endpunkt.",
-  "version": "1.0.0"
-}

@@ -18,7 +18,7 @@ APP_KEY=$(cat .app_key)
 # 2) Backend läuft?
 if ! curl -s -o /dev/null --max-time 3 http://localhost:3000/; then
   echo "… Backend wird gestartet"
-  pkill -f "tsx server.ts" 2>/dev/null; sleep 2
+  pkill -f "tsx server/server.ts" 2>/dev/null; sleep 2
   APP_KEY="$APP_KEY" nohup npm run dev > /tmp/hainbuch-advisor.log 2>&1 &
   until curl -s -o /dev/null --max-time 2 http://localhost:3000/; do sleep 2; done
 fi
