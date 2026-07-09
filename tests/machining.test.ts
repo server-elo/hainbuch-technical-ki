@@ -170,4 +170,28 @@ test("gewindedrehen: fehlende Steigung → DIN-13-Regelgewinde, Durchgänge extr
   assert.match(op.calculation, /extrapoliert/);
 });
 
+test("Fachkunde-Rechenbeispiel Bohren 34Cr4: vc 20, f 0,12 → n = 637/min", () => {
+  // Fachkunde: 34Cr4, HSS-Spiralbohrer d=10 → vc = 20 m/min, f = 0,12 mm
+  // n = vc/(d·π) = 20/(0,01·π) = 637/min
+  const op = calculateOperation(
+    { stepName: "Bohren D10", operationType: "bohren", tool: "HSS D10", diameterMm: 10, cutLengthMm: 30, passes: 1, vcSuggested: 20, feedSuggested: 0.12 },
+    "verguetungsstahl"
+  );
+  assert.equal(op.vcUsed, 20); // im Tabellenbereich — darf nicht geklemmt werden
+  near(op.spindleSpeedRpm, 637, 0.005);
+  near(op.feedUsed, 0.12, 0.001);
+});
+
+test("Bohren vc-Bereiche entsprechen Fachkunde Tab. 1 (HSS-Spiralbohrer)", () => {
+  // Stahl Rm ≤ 800 (Baustahl): HSS besch. vc 40 als Default
+  assert.equal(MATERIALS.baustahl.vc.bohren.default, 40);
+  assert.equal(MATERIALS.baustahl.vc.gewindebohren.default, 16); // Tab. 2: unleg. ≤ 700
+  // Stähle 700–1000 N/mm²: vc 20–25 → Default 25... nein: Beispiel nutzt 20–25-Band
+  assert.ok(MATERIALS.verguetungsstahl.vc.bohren.min <= 20 && 25 <= MATERIALS.verguetungsstahl.vc.bohren.max);
+  assert.equal(MATERIALS.verguetungsstahl.vc.gewindebohren.default, 10); // Tab. 2: leg. ≤ 1000
+  assert.equal(MATERIALS.edelstahl.vc.bohren.default, 12); // nichtrostend: vc 12
+  assert.equal(MATERIALS.gusseisen.vc.bohren.default, 20); // ≤ 250 HB: vc 20
+  assert.equal(MATERIALS.aluminium.vc.bohren.default, 45); // Rm ≤ 350: vc 45
+});
+
 console.log(`\n${passed} tests passed${process.exitCode ? " (with failures)" : ""}`);

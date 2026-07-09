@@ -74,14 +74,14 @@ export const MATERIALS: Record<string, MaterialCuttingData> = {
     vc: {
       drehen: R(200, 440, 300),
       fräsen: R(100, 450, 220),
-      bohren: R(50, 110, 80),
+      bohren: R(30, 40, 40), // HSS blank 30–35, HSS beschichtet 40 (Stahl Rm ≤ 800)
       senken: R(25, 55, 40),
       reiben: R(6, 16, 10),
-      gewindebohren: R(5, 15, 8),
+      gewindebohren: R(10, 16, 16), // unlegiert Rm ≤ 700: vc 16
     },
     f: {
       drehen: R(0.1, 0.8, 0.3),
-      bohren: R(0.05, 0.35, 0.2),
+      bohren: R(0.08, 0.32, 0.18), // f nach Bohrer-Ø (4–25 mm): 0,08–0,32
       senken: R(0.08, 0.25, 0.15),
       reiben: R(0.2, 0.6, 0.4),
     },
@@ -90,6 +90,8 @@ export const MATERIALS: Record<string, MaterialCuttingData> = {
       drehen: "Fachkunde Tab. 1/2 Drehen (unlegierter Stahl, HM besch.)",
       fräsen: "Fachkunde Tab. 1 Fräsen (HM, unlegierter Stahl)",
       fz: "Fachkunde Tab. 1 Fräsen (HM, unlegierter Stahl)",
+      bohren: "Fachkunde Tab. 1 Spiralbohrer (HSS besch., Stahl Rm ≤ 800: vc 40; HSS blank 30–35)",
+      gewindebohren: "Fachkunde Tab. 2 HSS-Gewindebohrer (unleg. Stahl ≤ 700 N/mm²: vc 16)",
     },
   },
   verguetungsstahl: {
@@ -98,14 +100,14 @@ export const MATERIALS: Record<string, MaterialCuttingData> = {
     vc: {
       drehen: R(115, 380, 240),
       fräsen: R(100, 350, 180),
-      bohren: R(40, 100, 70),
+      bohren: R(20, 40, 25), // HSS: Rm ≤ 800: 40 (besch.) / 20–25 (blank >700); Rm > 800: 20
       senken: R(20, 50, 35),
       reiben: R(5, 14, 8),
-      gewindebohren: R(4, 12, 7),
+      gewindebohren: R(8, 12, 10), // unleg. > 700 bzw. legiert ≤ 1000: vc 10
     },
     f: {
       drehen: R(0.1, 0.8, 0.25),
-      bohren: R(0.05, 0.3, 0.18),
+      bohren: R(0.08, 0.28, 0.12), // f nach Bohrer-Ø: >800 N/mm² 0,08–0,15; ≤800 bis 0,28
       senken: R(0.08, 0.2, 0.12),
       reiben: R(0.2, 0.5, 0.3),
     },
@@ -114,6 +116,8 @@ export const MATERIALS: Record<string, MaterialCuttingData> = {
       drehen: "Fachkunde Tab. 1/2 Drehen (unleg. C≥0,35 % / niedrigleg.)",
       fräsen: "Fachkunde Tab. 1 Fräsen (HM, legierter Stahl)",
       fz: "Fachkunde Tab. 1 Fräsen (HM, legierter Stahl)",
+      bohren: "Fachkunde Tab. 1 Spiralbohrer (HSS, Stähle 700–1000 N/mm²: vc 20–25; Beispiel 34Cr4: vc 20, f 0,12)",
+      gewindebohren: "Fachkunde Tab. 2 HSS-Gewindebohrer (leg. Stahl ≤ 1000 N/mm²: vc 10)",
     },
   },
   edelstahl: {
@@ -122,20 +126,21 @@ export const MATERIALS: Record<string, MaterialCuttingData> = {
     vc: {
       drehen: R(95, 240, 160),
       fräsen: R(50, 120, 80),
-      bohren: R(25, 60, 40),
+      bohren: R(10, 15, 12), // nichtrostend: vc 12 (HSS besch.)
       senken: R(12, 30, 20),
       reiben: R(4, 10, 6),
       gewindebohren: R(3, 10, 5),
     },
     f: {
       drehen: R(0.05, 0.3, 0.18),
-      bohren: R(0.04, 0.25, 0.12),
+      bohren: R(0.06, 0.12, 0.08), // f nach Bohrer-Ø: 0,06–0,12
       senken: R(0.06, 0.18, 0.1),
       reiben: R(0.15, 0.4, 0.25),
     },
     fz: R(0.03, 0.12, 0.06),
     sources: {
       drehen: "Fachkunde Tab. 1/2 Drehen (hochlegiert, geglüht)",
+      bohren: "Fachkunde Tab. 1 Spiralbohrer (HSS besch., nichtrostende Stähle: vc 12)",
     },
   },
   gusseisen: {
@@ -144,14 +149,14 @@ export const MATERIALS: Record<string, MaterialCuttingData> = {
     vc: {
       drehen: R(100, 220, 150),
       fräsen: R(100, 300, 150),
-      bohren: R(40, 100, 70),
+      bohren: R(15, 25, 20), // Gusseisen ≤ 250 HB: vc 20 (HSS besch.)
       senken: R(20, 50, 35),
       reiben: R(6, 15, 10),
       gewindebohren: R(5, 15, 8),
     },
     f: {
       drehen: R(0.1, 0.5, 0.3),
-      bohren: R(0.08, 0.4, 0.25),
+      bohren: R(0.2, 0.4, 0.3), // f nach Bohrer-Ø: 0,20–0,40
       senken: R(0.1, 0.3, 0.18),
       reiben: R(0.2, 0.6, 0.4),
     },
@@ -159,6 +164,7 @@ export const MATERIALS: Record<string, MaterialCuttingData> = {
     sources: {
       fräsen: "Fachkunde Tab. 1 Fräsen (HM, Gusseisen)",
       fz: "Fachkunde Tab. 1 Fräsen (HM, Gusseisen)",
+      bohren: "Fachkunde Tab. 1 Spiralbohrer (HSS besch., Gusseisen ≤ 250 HB: vc 20)",
     },
   },
   aluminium: {
@@ -167,18 +173,21 @@ export const MATERIALS: Record<string, MaterialCuttingData> = {
     vc: {
       drehen: R(250, 800, 400),
       fräsen: R(200, 600, 300),
-      bohren: R(80, 250, 150),
+      bohren: R(35, 55, 45), // Al-Legierung Rm ≤ 350: vc 45 (HSS besch.)
       senken: R(40, 120, 75),
       reiben: R(10, 30, 20),
       gewindebohren: R(10, 30, 20),
     },
     f: {
       drehen: R(0.05, 0.5, 0.25),
-      bohren: R(0.08, 0.4, 0.25),
+      bohren: R(0.2, 0.4, 0.3), // f nach Bohrer-Ø: 0,20–0,40
       senken: R(0.1, 0.3, 0.2),
       reiben: R(0.2, 0.8, 0.5),
     },
     fz: R(0.05, 0.25, 0.12),
+    sources: {
+      bohren: "Fachkunde Tab. 1 Spiralbohrer (HSS besch., Al-Legierung Rm ≤ 350: vc 45)",
+    },
   },
   messing: {
     label: "Messing",
