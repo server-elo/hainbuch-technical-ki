@@ -334,9 +334,18 @@ export async function runPipeline(messages: any[], emit: EmitFn = () => {}, last
     stage: "retrieval-material",
     label: "Fachkunde & Tabellenbuch werden durchsucht…",
   });
+  // Tolerance designations from the drawing (22h6, 40H7 …) must reach the
+  // RAG API so its deterministic ISO 286 solver produces the exact limits.
+  const tolMentions = [
+    ...new Set(
+      `${lastText} ${drawingBlock}`.match(/\d{1,3}\s*[A-Za-z]{1,2}\d{1,2}(?:\s*\/\s*[A-Za-z]{1,2}\d{1,2})?/g) || []
+    ),
+  ]
+    .slice(0, 6)
+    .join(" ");
   const materialRag = await ragRetrieve(
     // German query — the knowledge base is German; germanQuery is the translated core request.
-    `Werkstoffauswahl Eigenschaften Zerspanbarkeit: ${germanQuery || lastText} ${conversation.slice(-1200)}`,
+    `Werkstoffauswahl Eigenschaften Zerspanbarkeit: ${germanQuery || lastText} ${tolMentions} ${conversation.slice(-1200)}`,
     ["fachkunde_metall", "fachkunde_lift", "tabellenbuch_metall"],
     4
   );
