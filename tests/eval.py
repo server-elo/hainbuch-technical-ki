@@ -77,7 +77,7 @@ def check_numeric(text: str, expected: float | int, tolerance: float = 0.0) -> b
 def check_refusal(text: str) -> bool:
     t = text.lower()
     # Robust negation detection for German refusals
-    has_negation = bool(re.search(r"\b(nicht|kein\w*|keine)\b", t))
+    has_negation = bool(re.search(r"\b(nicht|nichts|kein\w*|keine)\b", t))
     refusal_cues = [
         "enthalten", "vorliegen", "vorhanden", "angegeben", "bekannt",
         "verfügbar", "aufgeführt", "zulässig", "möglich", "baugröße",
@@ -172,17 +172,21 @@ QUESTIONS = [
     },
     {
         "id": 12,
-        "q": "centroteX quick-change compatible with which Hainbuch products on page 372?",
+        "q": "centroteX quick-change compatible with which Hainbuch products?",
         "type": "text",
-        "contains": ["TOPlus", "TOROK", "SPANNTOP"],
-        "source": "Vision catalogue TOC + centroteX section",
+        # Catalogue p.374 'Passend für': TOPlus mini/premium, SPANNTOP mini/nova,
+        # B-Top, InoFlex VT-S, MANDO T211/T212/T812, MAXXOS T211. TOROK is NOT listed.
+        "contains": ["TOPlus", "SPANNTOP", "MANDO"],
+        "source": "Katalog S.374 Passend-für-Liste (centroteX S / M / mandoteX)",
     },
     {
         "id": 13,
         "q": "Welche Produkte haben eine Flanschaufnahme Ø 240 H6?",
         "type": "text",
-        "contains": ["TOROK", "TOPlus"],
-        "source": "multiple entries in products_de.json",
+        # Only TOROK SE and TOROK RD (Größe 100) have BD = Ø 240 H6
+        # (Katalog S.130/132 Technische Daten). No TOPlus has a 240 H6 flange.
+        "contains": ["TOROK"],
+        "source": "Katalog S.130/132: TOROK SE/RD Flanschaufnahme BD",
     },
     {
         "id": 14,
