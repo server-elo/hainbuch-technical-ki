@@ -145,7 +145,10 @@ export async function runPipeline(messages: any[], emit: EmitFn = () => {}, last
 
   emit({ type: "status", stage: "intent", label: "Anfrage wird eingeordnet…" });
   const dxfB64 = lastUserDxf(messages);
-  const route = await classifyIntent(lastText, images.length > 0 || !!dxfB64 || !!pdfB64, conversation, !!(lastAnalysis?.operations?.length));
+  // The classifier must see the PDF's embedded text: material/dimensions in
+  // the PDF must not trigger redundant clarifying questions.
+  const intentText = pdfTextBlock ? `${lastText}${pdfTextBlock.slice(0, 1500)}` : lastText;
+  const route = await classifyIntent(intentText, images.length > 0 || !!dxfB64 || !!pdfB64, conversation, !!(lastAnalysis?.operations?.length));
   const { intent, language, germanQuery } = route;
   const langName = LANGUAGE_NAMES[language];
   const answerLang =
