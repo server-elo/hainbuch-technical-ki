@@ -3,7 +3,7 @@
 # Checks/starts the Cloudflare tunnel, builds the frontend against the
 # current tunnel URL + app key, deploys to https://hainbuchki.web.app
 set -u
-APP_DIR="/Users/lorenc/Desktop/hainbuch-technical-advisor"
+APP_DIR="/Users/lorenc/projects/hainbuch-technical-advisor"
 cd "$APP_DIR"
 
 echo "── Deploy: HAINBUCH Technical Advisor ─────────────────"

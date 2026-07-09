@@ -4,7 +4,7 @@
 # and redeploys the frontend when the tunnel URL changes.
 set -u
 
-APP_DIR="/Users/lorenc/Desktop/hainbuch-technical-advisor"
+APP_DIR="/Users/lorenc/projects/hainbuch-technical-advisor"
 RAG_DIR="/Users/lorenc/Desktop/Engineering-RAG"
 PY="/Users/lorenc/mlx-env/bin/python"
 LOG="/tmp/hainbuch-supervisor.log"
@@ -29,17 +29,36 @@ fi
 
 # ── 3) Cloudflare tunnel (http2) ─────────────────────────────────────
 TUNNEL=$(cat "$APP_DIR/.tunnel_url" 2>/dev/null || true)
+FAIL_MARK="/tmp/hainbuch-tunnel-failing-since"
 tunnel_ok=false
 if pgrep -f "cloudflared tunnel" > /dev/null && [ -n "$TUNNEL" ]; then
-  # verify end-to-end through the public URL (advisor must be up first)
   if curl -s --max-time 12 "$TUNNEL/api/status" 2>/dev/null | grep -q '"model"'; then
     tunnel_ok=true
+    rm -f "$FAIL_MARK"
+  else
+    # process alive but URL failing — fresh quick-tunnel DNS takes minutes.
+    # Only restart after 6 minutes of continuous failure.
+    now=$(date +%s)
+    if [ ! -f "$FAIL_MARK" ]; then
+      echo "$now" > "$FAIL_MARK"
+      tunnel_ok=true  # grace period
+      log "tunnel URL not resolving yet — grace period started"
+    else
+      since=$(cat "$FAIL_MARK")
+      if [ $((now - since)) -lt 360 ]; then
+        tunnel_ok=true  # still within grace
+      else
+        log "tunnel failing for $((now - since))s — will restart"
+      fi
+    fi
   fi
 fi
 if [ "$tunnel_ok" = false ]; then
   log "tunnel down — restarting"
   pkill -f "cloudflared tunnel" 2>/dev/null; sleep 2
-  nohup cloudflared tunnel --url http://localhost:3000 --protocol http2 > /tmp/cloudflared.log 2>&1 &
+  rm -f "$FAIL_MARK"
+  # detach fully: survive this script's launchd session teardown
+  (nohup cloudflared tunnel --url http://localhost:3000 --protocol http2 > /tmp/cloudflared.log 2>&1 &) </dev/null
   for i in $(seq 1 15); do
     NEW=$(grep -o "https://[a-z0-9-]*\.trycloudflare\.com" /tmp/cloudflared.log 2>/dev/null | head -1)
     [ -n "$NEW" ] && break

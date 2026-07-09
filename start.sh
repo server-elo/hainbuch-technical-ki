@@ -4,7 +4,7 @@
 set -u
 
 RAG_DIR="/Users/lorenc/Desktop/Engineering-RAG"
-APP_DIR="/Users/lorenc/Desktop/hainbuch-technical-advisor"
+APP_DIR="/Users/lorenc/projects/hainbuch-technical-advisor"
 PY="/Users/lorenc/mlx-env/bin/python"
 
 echo "── HAINBUCH Technical Advisor ──────────────────────────"
