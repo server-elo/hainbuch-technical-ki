@@ -126,10 +126,7 @@ export const PlanStageSchema = z.object({
         description: z.string().describe("Warum dieses Spannmittel; nenne Baugröße und Spannbereich aus dem Katalog"),
         pros: z
           .array(z.string())
-          .describe("2-3 konkrete Vorteile DIESER Lösung für DIESES Werkstück (kurz, je max. 12 Wörter)"),
-        cons: z
-          .array(z.string())
-          .describe("1-2 ehrliche Nachteile/Grenzen gegenüber den Alternativen (z. B. Preis, Rüstaufwand, manuell statt automatisiert)"),
+          .describe("2-4 konkrete Vorteile DIESER Lösung für DIESES Werkstück (kurz, je max. 12 Wörter)"),
         technicalData: z
           .string()
           .describe("Relevante Katalogdaten: Spannbereich, Rundlauf, max. Drehzahl, Mat.-Nr. falls im Auszug"),
@@ -137,6 +134,6 @@ export const PlanStageSchema = z.object({
     )
     .max(3)
     .describe(
-      "IMMER 2 bis 3 ALTERNATIVE Spannmittel-Empfehlungen, sortiert nach Eignung — fast immer gibt es eine automatisierbare/kraftbetätigte Option (z. B. SPANNTOP, TOPlus, HYDROK) UND eine manuelle/wirtschaftliche Option (z. B. MANOK, TOROK) für dieselbe Aufgabe. Die Vor-/Nachteile müssen den Vergleich zwischen den Alternativen zeigen. Nur wenn wirklich nur EIN Produkt technisch passt, gib eines an. KEINE Preise, KEINE Werkzeuge."
+      "IMMER 2 bis 3 ALTERNATIVE Spannmittel-Empfehlungen, sortiert nach Eignung — fast immer gibt es eine automatisierbare/kraftbetätigte Option (z. B. SPANNTOP, TOPlus, HYDROK) UND eine manuelle/wirtschaftliche Option (z. B. MANOK, TOROK) für dieselbe Aufgabe. Die Vorteile zeigen, wofür jede Alternative am besten geeignet ist (z. B. ‚ideal für Automatisierung‘ vs. ‚wirtschaftlich bei kleinen Serien‘). Nur wenn wirklich nur EIN Produkt technisch passt, gib eines an. KEINE Preise, KEINE Werkzeuge."
     ),
 });

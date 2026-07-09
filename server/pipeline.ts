@@ -664,7 +664,6 @@ ABSOLUTE REGEL — UNVERHANDLICH (wird streng geprüft):
         product,
         description: stripPageRefs(r.description),
         pros: (r.pros ?? []).map(stripPageRefs),
-        cons: (r.cons ?? []).map(stripPageRefs),
         technicalData: r.technicalData ? stripPageRefs(r.technicalData) : r.technicalData,
         imageUrl: productImageUrl(product),
       };
