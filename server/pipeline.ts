@@ -265,6 +265,19 @@ export async function runPipeline(messages: any[], emit: EmitFn = () => {}, last
       (m.parts || []).some((p: any) => (p.text || "").includes(ASK_MARKER))
   );
   if (route.missingInfo.length > 0 && !alreadyAsked) {
+    // The drawing often answers "missing" info (material in the title block,
+    // dimensions) — await the parallel vision analysis before asking.
+    let missing = route.missingInfo;
+    if (drawingPromise) {
+      const res = await drawingPromise;
+      if (res) {
+        if (res.drawing.material) missing = missing.filter((m) => m !== "werkstoff");
+        if (res.drawing.overallDimensionsMm.length) missing = missing.filter((m) => m !== "abmessungen");
+      }
+    }
+    route.missingInfo = missing;
+  }
+  if (route.missingInfo.length > 0 && !alreadyAsked) {
     emit({ type: "status", stage: "chat", label: "Rückfragen werden formuliert…" });
     const ORDER = ["werkstoff", "stueckzahl", "abmessungen", "maschine"];
     const items = ORDER.filter((m) => route.missingInfo.includes(m));

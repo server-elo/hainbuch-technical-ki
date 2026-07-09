@@ -31,6 +31,9 @@ const DrawingSchema = z.object({
     )
     .describe("ALLE lesbaren Maße der Zeichnung"),
   tolerances: z.array(z.string()).describe("Alle Toleranz-/Passungsangaben, z.B. '22H7'"),
+  material: z
+    .string()
+    .describe("Werkstoff aus dem Schriftfeld (Werkst./MATERIAL), z.B. '1.0038/S235JR' oder 'C45' — leer lassen wenn nicht angegeben"),
 });
 export type DrawingData = z.infer<typeof DrawingSchema>;
 
@@ -160,6 +163,7 @@ export async function analyzeDrawing(
     const block =
       `ZEICHNUNGSDATEN (extrahiert, Maßketten rechnerisch geprüft):\n` +
       `Teiletyp: ${drawing.partType}; Hauptmaße: ${drawing.overallDimensionsMm.join(" x ")} mm\n` +
+      (drawing.material ? `Werkstoff laut Schriftfeld: ${drawing.material}\n` : "") +
       `Toleranzen: ${drawing.tolerances.join(", ") || "keine"}\n` +
       dimLines.join("\n") +
       (report.length ? `\nMaßketten-Prüfung: ${report.join("; ")}` : "") +
