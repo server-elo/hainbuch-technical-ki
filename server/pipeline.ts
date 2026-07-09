@@ -15,7 +15,7 @@ import { ragRetrieve, parseFitSolutions } from "./rag";
 import { MaterialStageSchema, PlanStageSchema } from "./schemas";
 import { analyzeDrawing, type DrawingData, type EmitFn } from "./drawing";
 import { classifyIntent, LANGUAGE_NAMES } from "./intent";
-import { HAINBUCH_RE, productForceKn, productImageUrl, stripPageRefs } from "./products";
+import { HAINBUCH_RE, canonicalProductName, productForceKn, productImageUrl, stripPageRefs } from "./products";
 
 // ---------------------------------------------------------------------------
 // Raw-stock guard: the LLM proposes, the code decides. Raw material must
@@ -642,14 +642,20 @@ ABSOLUTE REGEL — UNVERHANDLICH (wird streng geprüft):
   const recommendations = plan.recommendations
     .filter((r) => HAINBUCH_RE.test(r.product))
     .slice(0, 3)
-    .map((r) => ({
-      ...r,
-      description: stripPageRefs(r.description),
-      pros: (r.pros ?? []).map(stripPageRefs),
-      cons: (r.cons ?? []).map(stripPageRefs),
-      technicalData: r.technicalData ? stripPageRefs(r.technicalData) : r.technicalData,
-      imageUrl: productImageUrl(r.product),
-    }));
+    .map((r) => {
+      // Pin loose LLM wording to the exact catalogue product name so photos,
+      // kN lookups and the customer-visible name always agree.
+      const product = canonicalProductName(r.product);
+      return {
+        ...r,
+        product,
+        description: stripPageRefs(r.description),
+        pros: (r.pros ?? []).map(stripPageRefs),
+        cons: (r.cons ?? []).map(stripPageRefs),
+        technicalData: r.technicalData ? stripPageRefs(r.technicalData) : r.technicalData,
+        imageUrl: productImageUrl(product),
+      };
+    });
 
   // Spindle limit: state what the calculation used — customer value,
   // researched machine spec, or assumption. Show only if new to the conversation.

@@ -42,6 +42,40 @@ const PRODUCT_RECORDS: ProductRecord[] = (() => {
   return [];
 })();
 
+/** Pin a free-form LLM product name to the exact catalogue product name.
+ *  Guards against loose wordings like „InoFlex-Schraubstock“ that would
+ *  otherwise mis-map photos and confuse customers. Returns the input when
+ *  no confident catalogue match exists. */
+export function canonicalProductName(productName: string): string {
+  const family = (s: string) => s.match(FAMILY_RE)?.[0].toLowerCase().replace("-", "");
+  const norm = (s: string) =>
+    s.toLowerCase().replace(/[^a-z0-9äöüß]+/g, " ").trim().split(/\s+/).filter(Boolean);
+  const fam = family(productName);
+  if (!fam) return productName;
+  const q = norm(productName);
+  const qSet = new Set(q);
+  const qSizes = q.filter((w) => /^\d{1,3}$/.test(w));
+  let best: { score: number; name: string } | null = null;
+  // exact token or prefix match ≥ 4 chars (zentrisch ↔ Zentrischspanner)
+  const tokMatch = (t: string) =>
+    qSet.has(t) ||
+    (t.length >= 4 && q.some((w) => w.length >= 4 && (w.startsWith(t) || t.startsWith(w))));
+  for (const p of PRODUCT_RECORDS) {
+    if (family(p.name) !== fam) continue;
+    const tokens = norm(p.name);
+    // score: catalogue-name tokens found in the query (family, series, SE/RD, size)
+    let score = tokens.filter(tokMatch).length;
+    // exact size named by the LLM strongly pins the record
+    if (qSizes.length && tokens.some((t) => qSizes.includes(t))) score += 2;
+    // prefer shorter (more generic) names on ties — avoids accessory records
+    if (!best || score > best.score || (score === best.score && p.name.length < best.name.length)) {
+      best = { score, name: p.name };
+    }
+  }
+  // require at least family + one more matching token to overrule the LLM
+  return best && best.score >= 2 ? best.name : productName;
+}
+
 /** Catalogue radial holding force in kN for a recommended product name.
  *  Conservative: among equally good matches, the WEAKEST size wins. */
 export function productForceKn(productName: string): number | null {
