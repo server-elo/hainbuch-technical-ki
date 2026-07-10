@@ -8,7 +8,7 @@ export const T = {
     online: 'Online',
     limited: 'Eingeschränkt',
     welcome:
-      'Willkommen beim HAINBUCH Technical Advisor.\n\nBeschreiben Sie Ihre Anwendung — Werkstück, Maße, Passungen, Stückzahl.\n\nSie erhalten Werkstoffempfehlung, Arbeitsplan mit Bearbeitungszeiten, Passungsanalyse nach ISO 286 und die passenden Spannmittel.',
+      'Willkommen beim HAINBUCH Technical Advisor. Ich helfe bei allem rund um Zerspanung und Spanntechnik:\n\n📐 Zeichnung fotografieren oder als PDF/DXF anhängen → kompletter Arbeitsplan mit Spannmittel-Empfehlung\n🔧 Fertigungsfragen — Passungen (ISO 286), Schnittdaten, Toleranzen, Werkstoffe\n📦 Produktfragen — Spannbereiche, Drehzahlen, Baugrößen aus dem Katalog\n🛠️ Praxisprobleme — Rattern, Rundlauf, Spannkraft, Prozessauslegung\n🎓 Auch für Einsteiger — fragen Sie einfach, ich erkläre gern\n\nWomit kann ich helfen?',
     inputPlaceholder: 'Werkstück beschreiben — z.B. Flansch aus C45, Ø80, Bohrung 22H7, 200 Stück',
     heroTitle1: 'Ihre Fertigungsanalyse.',
     heroTitle2: 'Fundiert und präzise.',
