@@ -19,27 +19,24 @@ const PRODUCT_IMAGES: ProductImage[] = (() => {
 })();
 
 export const FAMILY_RE =
-  /toplus|spanntop|mando|maxxos|torok|manok|hydrok|b-?top|b-?tex|inozet|inoflex|centrotex|centrex|testit|monteq|vario|backenmodul|magnetmodul|stirnmitnehmer|morsekegel|spannkopf|spanndorn/i;
+  /toplus|spanntop|mandotex\|mando|maxxos|torok|manok|hydrok|b-?top|b-?tex|inozet|inoflex|centrotex|centrex|testit|monteq|vario|backenmodul|magnetmodul|stirnmitnehmer|morsekegel|spannkopf|spanndorn/i;
 
 // Recommendations are workholding only — allowlist of families that exist in
 // the 2026 catalogue. CAPTEX/KIPPTOP removed (not in this catalogue);
 // centroteX/TESTIT/CENTREX added.
 export const HAINBUCH_RE =
-  /toplus|spanntop|mando|maxxos|torok|manok|hydrok|b-top|b-?tex|inozet|inoflex|centrotex|centrex|testit|vario|backenmodul|magnetmodul|stirnmitnehmer|morsekegel|spannkopf|spanndorn|monteq/i;
+  /toplus|spanntop|mandotex\|mando|maxxos|torok|manok|hydrok|b-top|b-?tex|inozet|inoflex|centrotex|centrex|testit|vario|backenmodul|magnetmodul|stirnmitnehmer|morsekegel|spannkopf|spanndorn|monteq/i;
 
 // Full product records (incl. catalogue holding force) for the clamping check.
 type ProductRecord = { name: string; fields?: Record<string, string> };
 const PRODUCT_RECORDS: ProductRecord[] = (() => {
-  for (const p of [
-    "/Users/lorenc/Desktop/Engineering-RAG/data/processed/hainbuch/products_de.json",
-    path.join(process.cwd(), "assets/products/products_de.json"),
-  ]) {
-    try {
-      return JSON.parse(fs.readFileSync(p, "utf8"));
-    } catch { /* try next */ }
+  const local = path.join(process.cwd(), "assets/products/products_de.json");
+  try {
+    return JSON.parse(fs.readFileSync(local, "utf8"));
+  } catch {
+    console.warn("[Products] assets/products/products_de.json missing — no clamping check");
+    return [];
   }
-  console.warn("[Products] products_de.json missing — no clamping check");
-  return [];
 })();
 
 /** Pin a free-form LLM product name to the exact catalogue product name.

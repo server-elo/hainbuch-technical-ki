@@ -45,6 +45,7 @@ export const H_GRID = [0.1, 0.16, 0.3, 0.5, 0.8];
 /** kc rows straight from Fachkunde Metall, Tabelle 1 „Richtwerte für die
  *  spez. Schnittkraft kc beim Drehen“ (N/mm² at h = 0,1 / 0,16 / 0,3 / 0,5 / 0,8). */
 export const KC_TABLE: Record<string, { row: number[]; source: string }> = {
+  werkzeugstahl: { row: [3200, 2800, 2300, 1950, 1650], source: "Fachkunde Tab. 1, legierter Stahl (1.2842 approx)" },
   baustahl: { row: [2995, 2600, 2130, 1845, 1605], source: "Fachkunde Tab. 1, E295" },
   verguetungsstahl: { row: [2700, 2380, 1990, 1750, 1540], source: "Fachkunde Tab. 1, C35E" },
   automatenstahl: { row: [1985, 1820, 1615, 1485, 1365], source: "Fachkunde Tab. 1, 9SMn28" },

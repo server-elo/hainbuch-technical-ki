@@ -19,7 +19,14 @@ export type OperationType =
   | "senken"
   | "reiben"
   | "gewindebohren"
-  | "gewindedrehen";
+  | "gewindedrehen"
+  // Nicht-zerspanende Schritte — erscheinen im Arbeitsplan, aber nicht in
+  // der Maschinenzeit (härten meist Fremdvergabe, schleifen andere Maschine):
+  | "härten"
+  | "schleifen";
+
+/** Operation types that are not cut on the primary machine. */
+export const NON_CUTTING: ReadonlySet<string> = new Set(["härten", "schleifen"]);
 
 export interface CuttingRange {
   min: number;
@@ -33,9 +40,9 @@ interface MaterialCuttingData {
   /** vc in m/min per operation (carbide for drehen/fräsen, VHM for bohren).
    *  gewindedrehen is not stored: derived from drehen per Fachkunde rule
    *  (≈ 25 % niedriger, HM nicht unter 40 m/min) — see threadTurningVcRange. */
-  vc: Record<Exclude<OperationType, "gewindedrehen">, CuttingRange>;
+  vc: Record<Exclude<OperationType, "gewindedrehen" | "härten" | "schleifen">, CuttingRange>;
   /** feed: f in mm/U (drehen, bohren, senken, reiben) */
-  f: Record<Exclude<OperationType, "fräsen" | "gewindebohren" | "gewindedrehen">, CuttingRange>;
+  f: Record<Exclude<OperationType, "fräsen" | "gewindebohren" | "gewindedrehen" | "härten" | "schleifen">, CuttingRange>;
   /** fz in mm/tooth for milling */
   fz: CuttingRange;
   /** citation per operation type when the range comes from the Fachkunde */
@@ -49,6 +56,33 @@ const R = (min: number, max: number, def: number): CuttingRange => ({
 });
 
 export const MATERIALS: Record<string, MaterialCuttingData> = {
+  werkzeugstahl: {
+    label: "Werkzeugstahl / Kaltarbeitsstahl",
+    examples: "1.2842, 90MnCrV8, 1.2080, 1.2379",
+    vc: {
+      drehen: R(80, 160, 120),
+      fräsen: R(60, 140, 100),
+      bohren: R(15, 30, 22),
+      senken: R(12, 25, 18),
+      reiben: R(4, 10, 7),
+      gewindebohren: R(5, 12, 8),
+    },
+    f: {
+      drehen: R(0.08, 0.25, 0.15),
+      bohren: R(0.06, 0.18, 0.10),
+      senken: R(0.08, 0.20, 0.12),
+      reiben: R(0.15, 0.40, 0.25),
+    },
+    fz: R(0.06, 0.18, 0.10),
+    sources: {
+      drehen: "Fachkunde Tab. 1/2 Drehen (legierter Stahl, HM)",
+      fräsen: "Fachkunde Tab. 1 Fräsen (HM, legierter Stahl)",
+      fz: "Fachkunde Tab. 1 Fräsen (HM, legierter Stahl)",
+      bohren: "Fachkunde Tab. 1 Spiralbohrer (HSS besch., leg. Stahl)",
+      gewindebohren: "Fachkunde Tab. 2 HSS-Gewindebohrer (leg. Stahl)",
+    },
+  },
+
   automatenstahl: {
     label: "Automatenstahl",
     examples: "11SMn30, 9SMn28",
@@ -379,6 +413,26 @@ export function calculateOperation(
 ): CalculatedOperation {
   const mat = MATERIALS[materialKey] ?? MATERIALS.baustahl;
   const type = op.operationType;
+
+  // Non-cutting steps: listed in the plan for completeness, no ISO formula.
+  // Härten = external/oven (lead time, not machine time); Schleifen = other
+  // machine, rough per-part guide value so the plan is honest about it.
+  if (type === "härten" || type === "schleifen") {
+    const guideMin = type === "schleifen" ? 1.5 : 0;
+    return {
+      ...op,
+      vcUsed: 0,
+      feedUsed: 0,
+      feedUnit: "mm/U",
+      spindleSpeedRpm: 0,
+      feedRateMmPerMin: 0,
+      timeMin: guideMin,
+      calculation:
+        type === "härten"
+          ? "Fremdvergabe/Wärmebehandlung — Durchlaufzeit (Tage), nicht Maschinenzeit"
+          : "Flachschleifen auf separater Maschine — Richtwert ~1,5 min/Teil (nicht ISO-berechnet)",
+    };
+  }
   const D = Math.max(0.5, op.diameterMm || 10);
   const passes = Math.max(1, Math.round(op.passes || 1));
   let passesUsed = passes;
@@ -519,8 +573,11 @@ export function calculatePlan(
   const calculated = operations.map((op) =>
     calculateOperation(op, materialKey, maxRpm)
   );
-  const cutting = calculated.reduce((s, op) => s + op.timeMin, 0);
-  const toolChanges = Math.max(0, calculated.length - 1) * TOOL_CHANGE_MIN;
+  // totals cover only CUTTING ops on the primary machine — härten/schleifen
+  // must never inflate or hide inside "Maschinenzeit"
+  const cuttingOps = calculated.filter((o) => !NON_CUTTING.has(o.operationType));
+  const cutting = cuttingOps.reduce((s, op) => s + op.timeMin, 0);
+  const toolChanges = Math.max(0, cuttingOps.length - 1) * TOOL_CHANGE_MIN;
   return {
     operations: calculated,
     totalCuttingTimeMin: round(cutting, 2),

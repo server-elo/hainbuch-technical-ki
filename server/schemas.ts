@@ -55,6 +55,8 @@ export const OperationSchema = z.object({
     "reiben",
     "gewindebohren",
     "gewindedrehen",
+    "härten",
+    "schleifen",
   ]),
   tool: z
     .string()

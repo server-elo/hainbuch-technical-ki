@@ -376,7 +376,7 @@ export async function runPipeline(messages: any[], emit: EmitFn = () => {}, last
   const materialSystem = `Du bist ein erfahrener Fertigungsingenieur. Wähle den passenden Werkstoff und das Norm-Rohmaterial für das beschriebene Bauteil.
 ${answerLang} (Gilt für alle Textfelder: geometryAssessment, reasoning.)
 Wähle materialKey NUR aus: ${MATERIAL_KEYS.join(", ")}.
-Falls der Kunde einen Werkstoff nennt, ordne ihn der passenden Gruppe zu.
+Falls der Kunde einen Werkstoff nennt, ordne ihn der passenden Gruppe zu. Eindeutige Zuordnungen: 1.2842/90MnCrV8/1.2080/1.2379/1.2510 → werkzeugstahl (NICHT verguetungsstahl); 16MnCr5/20MnCr5 → einsatzstahl; C45/C60/42CrMo4 → verguetungsstahl; 1.4301/1.4404/1.4571 → edelstahl.
 VORRANG-REGEL: Die NEUESTE Angabe des KUNDEN gewinnt IMMER — auch gegen frühere Annahmen oder Rohmaße aus dem bisherigen Gesprächsverlauf. Liefert der Kunde ein fehlendes Maß nach (z. B. auf Rückfrage „Dicke?" antwortet er „10"), dann ist die Dicke exakt 10 mm und das Rohmaß wird daraus NEU berechnet — alte Assistenten-Werte verwerfen.
 ROHMATERIAL-REGEL: prismatische Teile (ebene Flächen, Konsolen, Gehäuse) → Block/Platte; Rotationsteile (Welle, Flansch, Buchse) → Rundstange/Rohr. Rohmaß = Fertigmaß + Aufmaß (wird vom System geprüft).${
     materialRag.context
@@ -468,11 +468,24 @@ Wenn ja → gib NUR diese Nachricht zurück und plane NICHTS:
 Nur wenn die Dicke vorhanden ist, darfst du mit dem Arbeitsplan fortfahren.
 ${
     prismatic
-      ? "WICHTIG — TEILEFORM: Das Rohmaterial ist ein BLOCK → prismatisches FRÄSTEIL auf Fräsmaschine/BAZ. Es gibt KEIN Drehen in diesem Arbeitsplan. Spannmittel: stationär (MANOK, TOROK, Spannstock), NICHT TOPlus/SPANNTOP-Futter."
+      ? "WICHTIG — TEILEFORM: Das Rohmaterial ist ein BLOCK → prismatisches FRÄSTEIL auf Fräsmaschine/BAZ. Es gibt KEIN Drehen in diesem Arbeitsplan. Spannmittel: Zentrischspanner / Maschinenschraubstock (z.B. InoFlex). Verwende für Flachmaterial KEINE Spannköpfe wie MANOK, TOROK oder HYDROK."
       : "TEILEFORM: Rotationsteil (Rundmaterial) → Drehen zuerst; Spannmittel: Futter/Spannzange (TOPlus, SPANNTOP) für Außenspannung, Spanndorn (MANDO) für Innenspannung."
   }
 
+
+=== FERTIGUNGSSTRATEGIE & TOLERANZEN (PROFI) ===
+1. ZIELMAßE: Bei asymmetrischen Toleranzen (z.B. +0,40/+0,25) MUSS das Zielmaß zwingend in der Mitte des Toleranzfeldes berechnet werden (z.B. 4,92 mm). Fräse niemals auf das Nennmaß.
+2. HÄRTEN & HARTBEARBEITUNG: Bei Werkzeugstahl ≥ 45 HRC und Form-/Lagetoleranzen ≤ 0,01 mm auf Bezugsflächen gibt es zwei gleichwertige Profi-Pfade:
+   - Pfad A (Standard, prozesssicher): Weichfräsen mit 0,3–0,5 mm Aufmaß → Härten → Flachschleifen auf Toleranzmitte (intern oder extern).
+   - Pfad B (Ein-Maschinen-Profi): Weichfräsen mit Aufmaß → Härten → Hart-Planfräsen / CBN-Schlichten (ap ≤ 0,05–0,1 mm, CBN-Werkzeug) auf Toleranzmitte. Nur auf thermisch stabiler HSC/5-Achs-Maschine mit Magnetspannplatte oder vakuumgestützter Aufnahme. Messprotokoll für Ebenheit/Parallelität zwingend.
+3. AUFSPANNUNGEN: Seitliche Features (z.B. horizontales M3-Abziehgewinde) erfordern zwingend eine separate Aufspannung (hochkant) VOR dem Härten.
+
 Erstelle den Arbeitsplan (Reihenfolge nach Analyse: Fräsen/Drehen/Bohren/Senken/Reiben/Gewindebohren).
+WICHTIG — VOLLSTÄNDIGE PROZESSKETTE: Fordert die Zeichnung eine HÄRTE (HRC-Angabe, Einsatzhärten, vergütet) oder enge Form-/Lagetoleranzen (< 0,02 mm), dann plane die komplette Kette als eigene Arbeitsgänge:
+- operationType "härten" NACH der Weichbearbeitung (stepName z. B. "Härten auf 50+4 HRC (Fremdvergabe)"; diameterMm/cutLengthMm/passes = 1, vcSuggested/feedSuggested = 1 als Platzhalter)
+- operationType "schleifen" für die Endbearbeitung toleranzkritischer Flächen nach dem Härten (stepName mit Zielmaß, z. B. "Flachschleifen auf 4,925 ±0,075")
+- Gewinde und alle Bohrungen IMMER vor dem Härten.
+Diese Schritte erscheinen im Plan, zählen aber nicht zur Maschinenzeit (der Server kennzeichnet sie).
 WICHTIG — HARTE REGEL: Bevor du mit dem Arbeitsplan beginnst, prüfe ob alle kritischen Maße vorhanden sind. Bei prismatischen Teilen ist die DICKe / Materialstärke zwingend erforderlich. Fehlt sie in der Zeichnung → du MUSST SOFORT den User fragen und darfst KEINEN Plan erstellen.
 
 Du gibst NUR die Planungsdaten an (Werkzeug, Durchmesser, Zähnezahl, Schnittweg, Anzahl Schnitte, vc, f/fz aus den Richtwerten). Drehzahl, Vorschubgeschwindigkeit und Zeiten werden NICHT von dir berechnet — das macht der Server deterministisch nach ISO-Formeln.
@@ -747,7 +760,9 @@ ABSOLUTE REGEL — UNVERHANDLICH (wird streng geprüft):
         passes: op.passes,
         threadPitchMm: op.threadPitchMm,
       })),
-      totalEstimatedMachiningTime: `${calc.totalTimeMin.toFixed(2)} min (Schnittzeit ${calc.totalCuttingTimeMin.toFixed(2)} min + Werkzeugwechsel ${calc.toolChangeAllowanceMin.toFixed(2)} min)`,
+      totalEstimatedMachiningTime: `${calc.totalTimeMin.toFixed(2)} min Maschinenzeit (Schnittzeit ${calc.totalCuttingTimeMin.toFixed(2)} min + Werkzeugwechsel ${calc.toolChangeAllowanceMin.toFixed(2)} min)` +
+        (calc.operations.some((o: any) => o.operationType === "härten" || o.operationType === "schleifen")
+          ? " — zzgl. Wärmebehandlung/Schleifen (separate Durchlaufzeit)" : ""),
       ragSources: [...sources],
     },
     recommendations,
