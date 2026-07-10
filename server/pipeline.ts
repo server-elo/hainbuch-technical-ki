@@ -16,6 +16,7 @@ import { MaterialStageSchema, PlanStageSchema } from "./schemas";
 import { analyzeDrawing, type DrawingData, type EmitFn } from "./drawing";
 import { classifyIntent, LANGUAGE_NAMES } from "./intent";
 import { HAINBUCH_RE, canonicalProductName, productForceKn, productImageUrl, stripPageRefs } from "./products";
+import { ecosystemFor, automationNudge } from "./sales";
 
 // ---------------------------------------------------------------------------
 // Raw-stock guard: the LLM proposes, the code decides. Raw material must
@@ -665,8 +666,15 @@ ABSOLUTE REGEL — UNVERHANDLICH (wird streng geprüft):
 
   // Recommendations are workholding only — drop anything that isn't a
   // HAINBUCH product family, cap at 3.
+  const seenProducts = new Set<string>();
   const recommendations = plan.recommendations
     .filter((r) => HAINBUCH_RE.test(r.product))
+    .filter((r) => {
+      const key = canonicalProductName(r.product);
+      if (seenProducts.has(key)) return false;
+      seenProducts.add(key);
+      return true;
+    })
     .slice(0, 3)
     .map((r) => {
       // Pin loose LLM wording to the exact catalogue product name so photos,
@@ -720,6 +728,19 @@ ABSOLUTE REGEL — UNVERHANDLICH (wird streng geprüft):
         )
       : null;
 
+  // Sales layer: complete the package — ecosystem accessories per product
+  // family + an honest automation nudge when the batch size justifies it.
+  // merge ecosystem across ALL recommended families (dedup by category),
+  // so e.g. a stationary vise's Mehrfachspannplatten appear even when the
+  // hand chuck is listed first
+  const ecoSeen = new Set<string>();
+  const ecosystem = recommendations
+    .flatMap((r) => ecosystemFor(r.product, batchSize))
+    .filter((e) => (ecoSeen.has(e.category) ? false : (ecoSeen.add(e.category), true)))
+    .slice(0, 4);
+  const hasManual = recommendations.some((r) => /manok|torok|manuell|inoflex vd/i.test(r.product));
+  const salesNudge = automationNudge(batchSize, hasManual);
+
   // Clamping-force traffic light: estimated cutting force vs. catalogue
   // holding force of each recommended product (labeled guide values).
   const clampingCheck = checkClamping(
@@ -766,5 +787,7 @@ ABSOLUTE REGEL — UNVERHANDLICH (wird streng geprüft):
       ragSources: [...sources],
     },
     recommendations,
+    ecosystem,
+    salesNudge,
   };
 }

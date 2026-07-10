@@ -542,6 +542,28 @@ function AnalysisBlock({ analysis, t }: { analysis: NonNullable<ChatMessage['ana
           </div>
         </div>
       ))}
+
+      {analysis.ecosystem && analysis.ecosystem.length > 0 && (
+        <div className="border border-neutral-200 rounded-lg p-4 bg-white">
+          <h4 className="text-[11px] text-red-600 font-semibold uppercase tracking-wider mb-2">
+            Das passende Komplettpaket
+          </h4>
+          <div className="space-y-2">
+            {analysis.ecosystem.map((e, i) => (
+              <div key={i} className="text-[12px]">
+                <span className="font-semibold text-neutral-800">{e.category}: </span>
+                <span className="text-neutral-700">{e.suggestion}</span>
+                <p className="text-[11px] text-neutral-400 leading-relaxed">{e.reason}</p>
+              </div>
+            ))}
+          </div>
+          {analysis.salesNudge && (
+            <p className="text-[11px] text-neutral-600 mt-3 pt-2 border-t border-neutral-100 leading-relaxed">
+              💡 {analysis.salesNudge}
+            </p>
+          )}
+        </div>
+      )}
     </div>
   );
 }
@@ -682,6 +704,8 @@ export default function App() {
             fitSolutions: Array.isArray(result.fitSolutions) ? result.fitSolutions : null,
             costComparison: result.costComparison ?? null,
             clampingCheck: result.clampingCheck ?? null,
+            ecosystem: Array.isArray(result.ecosystem) ? result.ecosystem : null,
+            salesNudge: result.salesNudge ?? null,
           },
         } : {}),
       }]);

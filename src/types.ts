@@ -28,6 +28,10 @@ export interface ChatMessage {
     costComparison?: CostComparison | null;
     /** deterministic clamping-force traffic light */
     clampingCheck?: ClampingCheck | null;
+    /** ecosystem accessories for the recommended family (sales layer) */
+    ecosystem?: { category: string; suggestion: string; reason: string }[] | null;
+    /** honest automation nudge for the batch size */
+    salesNudge?: string | null;
   };
 }
 
