@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;900&family=JetBrains+Mono:wght@400;500&display=swap');
 @import "tailwindcss";
 
 @theme {
@@ -13,6 +13,9 @@
 
 :root {
   --hainbuch-red: #d40511;
+  --hainbuch-red-dark: #b0040e;
+  --hainbuch-red-tint: #fef2f2;
+
   --neutral-50: #fafafa;
   --neutral-100: #f5f5f5;
   --neutral-200: #e5e5e5;
@@ -23,6 +26,15 @@
   --neutral-700: #404040;
   --neutral-800: #262626;
   --neutral-900: #171717;
+
+  /* Elevation — tight, industrial, never fluffy */
+  --shadow-sm: 0 1px 2px rgb(23 23 23 / 0.05);
+  --shadow-md: 0 2px 8px -2px rgb(23 23 23 / 0.08), 0 1px 3px rgb(23 23 23 / 0.04);
+  --shadow-lg: 0 12px 32px -8px rgb(23 23 23 / 0.14), 0 2px 8px rgb(23 23 23 / 0.06);
+
+  --radius-card: 0.625rem;
+
+  --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
 }
 
 /* Force light mode only */
@@ -36,6 +48,46 @@ html.dark, html[class*="dark"], body.dark, body[class*="dark"], #root.dark {
   background-color: #ffffff !important;
   color: var(--neutral-800) !important;
 }
+
+body {
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+}
+
+/* Tabular figures everywhere numbers matter */
+.font-mono, table, .tnum {
+  font-variant-numeric: tabular-nums;
+}
+
+/* ============================================
+   FOCUS — visible for keyboards, quiet for mice
+   ============================================ */
+
+:focus-visible {
+  outline: 2px solid var(--hainbuch-red);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+:focus:not(:focus-visible) { outline: none; }
+
+/* ============================================
+   SCROLLBARS — thin, unobtrusive
+   ============================================ */
+
+.scroll-thin {
+  scrollbar-width: thin;
+  scrollbar-color: var(--neutral-300) transparent;
+}
+.scroll-thin::-webkit-scrollbar { width: 8px; height: 8px; }
+.scroll-thin::-webkit-scrollbar-track { background: transparent; }
+.scroll-thin::-webkit-scrollbar-thumb {
+  background-color: var(--neutral-300);
+  border-radius: 9999px;
+  border: 2px solid transparent;
+  background-clip: content-box;
+}
+.scroll-thin::-webkit-scrollbar-thumb:hover { background-color: var(--neutral-400); }
 
 /* ============================================
    ROOT LAYOUT — MOBILE FIRST
@@ -89,15 +141,55 @@ html.dark, html[class*="dark"], body.dark, body[class*="dark"], #root.dark {
   textarea {
     font-size: 16px !important;
   }
-  
+
   .header-compact {
     padding: 0.75rem 1rem;
   }
-  
+
   .header-compact .subtitle {
     display: none;
   }
-  
+}
+
+/* Centered reading column — chat stays legible on wide monitors */
+.measure {
+  width: 100%;
+  max-width: 56rem;
+  margin-inline: auto;
+}
+
+/* Very wide monitors: let the analysis breathe a bit more */
+@media (min-width: 1600px) {
+  .measure { max-width: 64rem; }
+}
+
+/* Short/landscape phones: reclaim vertical space */
+@media (max-height: 560px) and (orientation: landscape) {
+  .header-compact { padding-block: 0.375rem; }
+  .composer-wrap { padding-top: 0.5rem; }
+  .composer-input { max-height: 5rem; }
+}
+
+/* Any table inside an answer scrolls horizontally instead of
+   squeezing columns into unreadable stacks on narrow phones. */
+.table-scroll {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: thin;
+}
+.table-scroll > table {
+  min-width: 22rem;
+}
+
+/* Touch devices need real 44px targets — desktop keeps the compact icons */
+@media (pointer: coarse) {
+  .tap {
+    min-width: 2.75rem;
+    min-height: 2.75rem;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+  }
 }
 
 /* ============================================
@@ -110,6 +202,31 @@ html.dark, html[class*="dark"], body.dark, body[class*="dark"], #root.dark {
   color: var(--hainbuch-red);
 }
 
+.app-header {
+  background: rgba(255, 255, 255, 0.85);
+  backdrop-filter: saturate(180%) blur(12px);
+  -webkit-backdrop-filter: saturate(180%) blur(12px);
+  border-bottom: 1px solid var(--neutral-200);
+}
+
+/* ============================================
+   CARDS
+   ============================================ */
+
+.card {
+  background: #fff;
+  border: 1px solid var(--neutral-200);
+  border-radius: var(--radius-card);
+  box-shadow: var(--shadow-sm);
+}
+
+.card-label {
+  font-size: 0.6875rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
 /* ============================================
    CHAT MESSAGES
    ============================================ */
@@ -119,44 +236,90 @@ html.dark, html[class*="dark"], body.dark, body[class*="dark"], #root.dark {
   padding: 0.875rem 1rem;
   border-radius: 0.75rem;
   font-size: 0.9375rem;
-  line-height: 1.5;
+  line-height: 1.6;
 }
 
 .message-bubble.user {
-  background-color: var(--neutral-200);
-  color: var(--neutral-800);
+  background-color: var(--neutral-800);
+  color: #fff;
   margin-left: auto;
+  border-bottom-right-radius: 0.25rem;
 }
 
 .message-bubble.model {
   background-color: #ffffff;
   border: 1px solid var(--neutral-200);
-  box-shadow: 0 1px 2px rgb(0 0 0 / 0.04);
+  box-shadow: var(--shadow-sm);
+  border-bottom-left-radius: 0.25rem;
+}
+
+/* Action row reveals on hover (desktop) but stays put on touch */
+.msg-actions { opacity: 1; transition: opacity 0.15s ease; }
+@media (hover: hover) and (min-width: 768px) {
+  .msg-actions { opacity: 0; }
+  .msg-group:hover .msg-actions,
+  .msg-group:focus-within .msg-actions { opacity: 1; }
 }
 
 /* ============================================
-   COMPOSER (Tailwind flex pill in App.tsx)
-   Legacy absolute positioning removed.
+   COMPOSER
    ============================================ */
+
+.composer {
+  border: 1px solid var(--neutral-300);
+  border-radius: 1.5rem;
+  background: #fff;
+  box-shadow: var(--shadow-sm);
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+.composer:focus-within {
+  border-color: var(--hainbuch-red);
+  box-shadow: 0 0 0 3px rgb(212 5 17 / 0.1);
+}
+.composer.dragging {
+  border-color: var(--hainbuch-red);
+  border-style: dashed;
+  background: var(--hainbuch-red-tint);
+}
 
 .composer-input {
   font-size: 0.9375rem;
+  line-height: 1.5;
+  resize: none;
+  max-height: 9rem;
 }
 
 /* send-btn: only color/hover remain; positioning removed */
 .send-btn {
   background-color: var(--hainbuch-red);
   color: white;
-  transition: background-color 0.15s ease;
+  transition: background-color 0.15s ease, transform 0.1s ease;
 }
-.send-btn:hover:not(:disabled) { background-color: #b0040e; }
+.send-btn:hover:not(:disabled) { background-color: var(--hainbuch-red-dark); }
+.send-btn:active:not(:disabled) { transform: scale(0.94); }
 .send-btn:disabled { opacity: 0.3; }
 
-/* Safe-area padding moved to the wrapper div in App.tsx */
 .mobile-input {
   font-size: 16px !important;
 }
 
+/* ============================================
+   SUGGESTION CHIPS (empty state)
+   ============================================ */
+
+.chip {
+  border: 1px solid var(--neutral-200);
+  background: #fff;
+  border-radius: 0.5rem;
+  box-shadow: var(--shadow-sm);
+  transition: border-color 0.15s ease, box-shadow 0.15s ease, transform 0.15s var(--ease-out);
+  text-align: left;
+}
+.chip:hover {
+  border-color: var(--hainbuch-red);
+  box-shadow: var(--shadow-md);
+  transform: translateY(-1px);
+}
 
 /* ============================================
    THINKING / PROGRESS
@@ -165,6 +328,20 @@ html.dark, html[class*="dark"], body.dark, body[class*="dark"], #root.dark {
 .thinking-indicator {
   font-size: 0.6875rem;
   color: var(--neutral-500);
+}
+
+/* Indeterminate shimmer for the top progress bar */
+@keyframes progress-sheen {
+  from { transform: translateX(-100%); }
+  to   { transform: translateX(300%); }
+}
+.progress-sheen::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  width: 33%;
+  background: linear-gradient(90deg, transparent, rgb(255 255 255 / 0.55), transparent);
+  animation: progress-sheen 1.6s ease-in-out infinite;
 }
 
 /* ============================================
@@ -179,6 +356,23 @@ html.dark, html[class*="dark"], body.dark, body[class*="dark"], #root.dark {
 
 .status-dot.online { background-color: #22c55e; }
 .status-dot.limited { background-color: var(--neutral-300); }
+
+/* Soft pulse halo on the live status dot */
+@keyframes status-pulse {
+  0%   { box-shadow: 0 0 0 0 rgb(34 197 94 / 0.5); }
+  70%  { box-shadow: 0 0 0 5px rgb(34 197 94 / 0); }
+  100% { box-shadow: 0 0 0 0 rgb(34 197 94 / 0); }
+}
+.status-dot.online { animation: status-pulse 2.4s ease-out infinite; }
+
+/* ============================================
+   PRINT — hide chrome, keep the analysis
+   ============================================ */
+
+@media print {
+  .app-header, .composer, .no-print { display: none !important; }
+  .message-bubble { border: none !important; box-shadow: none !important; max-width: 100% !important; }
+}
 
 /* ============================================
    MISC

@@ -1,6 +1,7 @@
 import { motion } from 'motion/react';
 import type { ManufacturingOperation } from '../types';
 
+/** One colour per operationType in server/schemas.ts. */
 const TYPE_COLORS: Record<string, string> = {
   drehen: '#dc2626',
   fräsen: '#0284c7',
@@ -8,7 +9,13 @@ const TYPE_COLORS: Record<string, string> = {
   senken: '#ea580c',
   reiben: '#059669',
   gewindebohren: '#db2777',
+  gewindedrehen: '#be185d',
+  härten: '#b45309',
+  schleifen: '#0d9488',
 };
+
+const FALLBACK = '#d40511';
+const colorFor = (t: string) => TYPE_COLORS[t] || FALLBACK;
 
 function timeMin(op: ManufacturingOperation): number {
   const m = /([\d.,]+)/.exec(op.time);
@@ -30,7 +37,7 @@ export default function OperationsChart({ operations, title = 'Zeitverteilung' }
         <div className="flex flex-wrap gap-2.5">
           {[...new Set(operations.map((o) => o.operationType))].map((t) => (
             <span key={t} className="flex items-center gap-1 text-[10px] text-neutral-500 capitalize">
-              <span className="w-2 h-2 rounded-sm" style={{ background: TYPE_COLORS[t] || '#999' }} />
+              <span className="w-2 h-2 rounded-sm" style={{ background: colorFor(t) }} />
               {t}
             </span>
           ))}
@@ -42,20 +49,20 @@ export default function OperationsChart({ operations, title = 'Zeitverteilung' }
           const pct = (t / max) * 100;
           const share = total > 0 ? (t / total) * 100 : 0;
           return (
-            <div key={i} className="grid grid-cols-[minmax(90px,1.2fr)_3fr_auto] items-center gap-2">
+            <div key={i} className="grid grid-cols-[minmax(72px,1fr)_2fr_auto] sm:grid-cols-[minmax(90px,1.2fr)_3fr_auto] items-center gap-1.5 sm:gap-2">
               <span className="text-[11px] text-neutral-600 truncate" title={op.stepName}>
                 {op.stepName}
               </span>
-              <div className="h-4 bg-neutral-100 rounded overflow-hidden">
+              <div className="h-3.5 sm:h-4 bg-neutral-100 rounded overflow-hidden">
                 <motion.div
                   initial={{ width: 0 }}
                   animate={{ width: `${pct}%` }}
                   transition={{ duration: 0.6, delay: i * 0.08 }}
                   className="h-full rounded"
-                  style={{ background: TYPE_COLORS[op.operationType] || '#999' }}
+                  style={{ background: colorFor(op.operationType) }}
                 />
               </div>
-              <span className="text-[11px] font-mono text-neutral-500 w-24 text-right">
+              <span className="text-[10px] sm:text-[11px] font-mono text-neutral-500 w-[4.5rem] sm:w-24 text-right">
                 {op.time} · {share.toFixed(0)}%
               </span>
             </div>

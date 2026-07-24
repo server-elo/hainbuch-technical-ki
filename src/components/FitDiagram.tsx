@@ -98,7 +98,7 @@ export default function FitDiagram({ fit }: { fit: FitSolution }) {
             {shaftBot >= 0 ? '+' : ''}{shaftBot} µm
           </text>
         </svg>
-        <div className="flex flex-col justify-center gap-2.5 text-xs min-w-[130px]">
+        <div className="grid grid-cols-2 sm:flex sm:flex-col justify-center gap-2.5 text-xs w-full sm:w-auto sm:min-w-[130px]">
           <div>
             <p className="text-neutral-400 text-[10px] uppercase tracking-wide font-semibold">Höchstspiel</p>
             <p className="font-mono text-neutral-900">{fit.psh.toFixed(3).replace('.', ',')} mm</p>
@@ -109,7 +109,7 @@ export default function FitDiagram({ fit }: { fit: FitSolution }) {
             </p>
             <p className="font-mono text-neutral-900">{fit.puh.toFixed(3).replace('.', ',')} mm</p>
           </div>
-          <div>
+          <div className="col-span-2">
             <p className="text-neutral-400 text-[10px] uppercase tracking-wide font-semibold">Grenzmaße</p>
             <p className="font-mono text-[10px] text-sky-700">
               Bohrung {fit.holeGo.toFixed(3).replace('.', ',')} / {fit.holeGu.toFixed(3).replace('.', ',')}

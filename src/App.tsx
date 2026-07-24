@@ -1,16 +1,37 @@
 import React, { useState, useRef, useEffect } from 'react';
 import {
-  Send, Bot, User, ChevronRight, ChevronDown, Loader2, FileText,
+  Send, User, ChevronRight, ChevronDown, Loader2, FileText,
   Image as ImageIcon, Paperclip, X, Clock, TrendingDown, Copy, Check,
-  ThumbsUp, ThumbsDown, FileDown
+  ThumbsUp, ThumbsDown, FileDown, ArrowDown, PenLine
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import type { ChatMessage, PipelineStatus } from './types';
 import WaitingPanel, { FactCarousel } from './components/WaitingPanel';
 import { T, type UiLang } from './i18n';
 import { API_BASE, apiHeaders } from './config';
+import { num, eur } from './format';
 import OperationsChart from './components/OperationsChart';
 import FitDiagram from './components/FitDiagram';
+
+/** HAINBUCH collet mark — three jaws around a bore. Same geometry as the app icon. */
+function ColletMark({ size = 16, className = '' }: { size?: number; className?: string }) {
+  return (
+    <svg viewBox="0 0 64 64" width={size} height={size} className={className} aria-hidden="true">
+      <defs>
+        <clipPath id="cm-slots">
+          <path
+            d="M0 0h64v64H0z M32 32 L36.4 -17.8 L27.6 -17.8 Z M32 32 L-13.3 53.1 L-9.0 60.7 Z M32 32 L73.0 60.7 L77.3 53.1 Z"
+            clipRule="evenodd"
+          />
+        </clipPath>
+      </defs>
+      <g clipPath="url(#cm-slots)">
+        <circle cx="32" cy="32" r="19" fill="none" stroke="currentColor" strokeWidth="7" />
+      </g>
+      <circle cx="32" cy="32" r="7.5" fill="currentColor" />
+    </svg>
+  );
+}
 
 /** Pipeline stages the i18n stage list covers (same order as t.stages). */
 const STAGE_INDEX: Record<string, number> = {
@@ -141,7 +162,7 @@ function messageToText(msg: ChatMessage, t: (typeof T)[keyof typeof T]): string 
       ma.operations.forEach((op, i) => {
         let line = `${String((i + 1) * 10).padStart(3, '0')}  ${op.stepName} — ${op.tool} — ${op.time}`;
         if (op.spindleSpeedRpm !== undefined) {
-          line += `\n     n = ${op.spindleSpeedRpm} 1/min, vc = ${op.vc} m/min, f = ${op.feed} ${op.feedUnit}, vf = ${op.feedRateMmPerMin} mm/min`;
+          line += `\n     n = ${num(op.spindleSpeedRpm, 'de', 0)} 1/min, vc = ${num(op.vc, 'de')} m/min, f = ${num(op.feed, 'de', 3)} ${op.feedUnit}, vf = ${num(op.feedRateMmPerMin, 'de', 0)} mm/min`;
         }
         out.push(line);
       });
@@ -150,17 +171,17 @@ function messageToText(msg: ChatMessage, t: (typeof T)[keyof typeof T]): string 
   }
   if (a?.clampingCheck) {
     const ck = a.clampingCheck;
-    out.push(`\n${t.clampCheck} (erforderlich ≈ ${ck.requiredClampForceKn} kN):`);
+    out.push(`\n${t.clampCheck} (erforderlich ≈ ${num(ck.requiredClampForceKn, 'de', 1)} kN):`);
     ck.products.forEach(p =>
-      out.push(`- ${p.product}: ${p.catalogForceKn !== null ? `${p.catalogForceKn} kN → ${p.verdict}` : 'keine Katalog-Spannkraft'}`)
+      out.push(`- ${p.product}: ${p.catalogForceKn !== null ? `${num(p.catalogForceKn, 'de', 1)} kN → ${p.verdict}` : 'keine Katalog-Spannkraft'}`)
     );
     out.push(ck.note);
   }
   if (a?.costComparison) {
     const cc = a.costComparison;
-    out.push(`\n${t.costCompare} (${cc.batchSize} Stk, ${cc.hourlyRateEur} €/h):`);
+    out.push(`\n${t.costCompare} (${num(cc.batchSize, 'de', 0)} Stk, ${num(cc.hourlyRateEur, 'de', 0)} €/h):`);
     cc.alternatives.forEach(alt =>
-      out.push(`- ${alt.product} (${alt.actuation}): ${alt.clampMinPerPart} min/Teil, ${alt.handlingMinSeries} min Serie, ${alt.handlingCostSeriesEur} €${alt.extraVsBestEur > 0 ? ` (+${alt.extraVsBestEur} €)` : ''}`)
+      out.push(`- ${alt.product} (${alt.actuation}): ${num(alt.clampMinPerPart, 'de')} min/Teil, ${num(alt.handlingMinSeries, 'de')} min Serie, ${eur(alt.handlingCostSeriesEur, 'de')}${alt.extraVsBestEur > 0 ? ` (+${eur(alt.extraVsBestEur, 'de')})` : ''}`)
     );
     out.push(cc.note);
   }
@@ -198,7 +219,7 @@ function buildPrintHtml(msg: ChatMessage, t: (typeof T)[keyof typeof T]): string
       const rows = ma.operations.map((op, i) =>
         `<tr><td>${String((i + 1) * 10).padStart(3, '0')}</td><td>${esc(op.stepName)}<br><span class="dim">${esc(op.tool)}</span>` +
         (op.spindleSpeedRpm !== undefined
-          ? `<br><span class="dim">n = ${op.spindleSpeedRpm} 1/min · vc = ${op.vc} m/min · f = ${op.feed} ${esc(op.feedUnit || '')} · vf = ${op.feedRateMmPerMin} mm/min</span>`
+          ? `<br><span class="dim">n = ${num(op.spindleSpeedRpm, 'de', 0)} 1/min · vc = ${num(op.vc, 'de')} m/min · f = ${num(op.feed, 'de', 3)} ${esc(op.feedUnit || '')} · vf = ${num(op.feedRateMmPerMin, 'de', 0)} mm/min</span>`
           : '') +
         `</td><td class="right">${esc(op.time)}</td></tr>`).join('');
       body += card(t.plan,
@@ -223,18 +244,18 @@ function buildPrintHtml(msg: ChatMessage, t: (typeof T)[keyof typeof T]): string
     const ck = a.clampingCheck;
     const rows = ck.products.map(p => {
       const sym = p.verdict === 'passt' ? '🟢' : p.verdict === 'knapp' ? '🟡' : p.verdict === 'zu klein' ? '🔴' : '⚪';
-      return `<tr><td>${sym} ${esc(p.product)}</td><td class="right">${p.catalogForceKn !== null ? p.catalogForceKn + ' kN' : '—'}</td><td class="right"><b>${esc(p.verdict)}</b></td></tr>`;
+      return `<tr><td>${sym} ${esc(p.product)}</td><td class="right">${p.catalogForceKn !== null ? num(p.catalogForceKn, 'de', 1) + ' kN' : '—'}</td><td class="right"><b>${esc(p.verdict)}</b></td></tr>`;
     }).join('');
-    body += card(`${t.clampCheck} · erforderlich ≈ ${ck.requiredClampForceKn} kN`,
+    body += card(`${t.clampCheck} · erforderlich ≈ ${num(ck.requiredClampForceKn, 'de', 1)} kN`,
       `<table><tbody>${rows}</tbody></table><p class="dim">${esc(ck.note)}</p>`);
   }
   if (a?.costComparison) {
     const cc = a.costComparison;
     const rows = cc.alternatives.map(alt =>
       `<tr><td>${esc(alt.product)} <span class="dim">· ${esc(alt.actuation)}</span></td>` +
-      `<td class="right">${alt.clampMinPerPart} min</td><td class="right">${alt.handlingMinSeries} min</td>` +
-      `<td class="right"><b>${alt.handlingCostSeriesEur} €${alt.extraVsBestEur > 0 ? ` (+${alt.extraVsBestEur})` : ''}</b></td></tr>`).join('');
-    body += card(`${t.costCompare} · ${cc.batchSize} Stk · ${cc.hourlyRateEur} €/h`,
+      `<td class="right">${num(alt.clampMinPerPart, 'de')} min</td><td class="right">${num(alt.handlingMinSeries, 'de')} min</td>` +
+      `<td class="right"><b>${eur(alt.handlingCostSeriesEur, 'de')}${alt.extraVsBestEur > 0 ? ` (+${num(alt.extraVsBestEur, 'de')})` : ''}</b></td></tr>`).join('');
+    body += card(`${t.costCompare} · ${num(cc.batchSize, 'de', 0)} Stk · ${num(cc.hourlyRateEur, 'de', 0)} €/h`,
       `<table><thead><tr><th></th><th class="right">${esc(t.perPart)}</th><th class="right">${esc(t.perSeries)}</th><th class="right">€</th></tr></thead><tbody>${rows}</tbody></table>` +
       `<p class="dim">${esc(cc.note)}</p>`);
   }
@@ -281,7 +302,7 @@ function PdfButton({ msg, t }: { msg: ChatMessage; t: (typeof T)[keyof typeof T]
     <button
       onClick={openPrint}
       title="PDF"
-      className="flex items-center gap-1 text-[11px] text-neutral-400 hover:text-red-600 transition-colors"
+      className="tap flex items-center gap-1 text-[11px] text-neutral-400 hover:text-red-600 transition-colors"
     >
       <FileDown size={12} />
       PDF
@@ -305,14 +326,14 @@ function FeedbackButtons({ getText }: { getText: () => string }) {
       <button
         onClick={() => send('up')}
         aria-label="+1"
-        className={`transition-colors ${sent === 'up' ? 'text-green-600' : sent ? 'text-neutral-200' : 'text-neutral-400 hover:text-green-600'}`}
+        className={`tap transition-colors ${sent === 'up' ? 'text-green-600' : sent ? 'text-neutral-200' : 'text-neutral-400 hover:text-green-600'}`}
       >
         <ThumbsUp size={12} />
       </button>
       <button
         onClick={() => send('down')}
         aria-label="-1"
-        className={`transition-colors ${sent === 'down' ? 'text-red-600' : sent ? 'text-neutral-200' : 'text-neutral-400 hover:text-red-600'}`}
+        className={`tap transition-colors ${sent === 'down' ? 'text-red-600' : sent ? 'text-neutral-200' : 'text-neutral-400 hover:text-red-600'}`}
       >
         <ThumbsDown size={12} />
       </button>
@@ -342,7 +363,7 @@ function CopyButton({ getText, labels }: { getText: () => string; labels: { copy
   return (
     <button
       onClick={copy}
-      className="flex items-center gap-1 text-[11px] text-neutral-400 hover:text-red-600 transition-colors"
+      className="tap flex items-center gap-1 text-[11px] text-neutral-400 hover:text-red-600 transition-colors"
       title={labels.copy}
     >
       {copied ? <Check size={12} className="text-green-600" /> : <Copy size={12} />}
@@ -352,7 +373,7 @@ function CopyButton({ getText, labels }: { getText: () => string; labels: { copy
 }
 
 /** Structured pipeline result (fits, plan, cutting data, products) shown under the message. */
-function AnalysisBlock({ analysis, t }: { analysis: NonNullable<ChatMessage['analysis']>; t: (typeof T)[keyof typeof T] }) {
+function AnalysisBlock({ analysis, t, lang }: { analysis: NonNullable<ChatMessage['analysis']>; t: (typeof T)[keyof typeof T]; lang: UiLang }) {
   const ma = analysis.manufacturingAnalysis;
   const recs = analysis.recommendations;
   const fits = analysis.fitSolutions;
@@ -412,8 +433,8 @@ function AnalysisBlock({ analysis, t }: { analysis: NonNullable<ChatMessage['ana
                   </div>
                   <span className="text-[11px] text-neutral-500">{op.tool}</span>
                   {op.spindleSpeedRpm !== undefined && (
-                    <span className="text-[11px] text-neutral-400">
-                      n = {op.spindleSpeedRpm} 1/min · vc = {op.vc} m/min · f = {op.feed} {op.feedUnit} · vf = {op.feedRateMmPerMin} mm/min
+                    <span className="text-[11px] text-neutral-400 font-mono break-words">
+                      n = {num(op.spindleSpeedRpm, lang, 0)} 1/min · vc = {num(op.vc, lang)} m/min · f = {num(op.feed, lang, 3)} {op.feedUnit} · vf = {num(op.feedRateMmPerMin, lang, 0)} mm/min
                     </span>
                   )}
                 </div>
@@ -431,7 +452,7 @@ function AnalysisBlock({ analysis, t }: { analysis: NonNullable<ChatMessage['ana
       {analysis.clampingCheck && (
         <div className="border border-neutral-200 rounded-lg p-4 bg-white">
           <h4 className="text-[11px] text-red-600 font-semibold uppercase tracking-wider mb-2">
-            {t.clampCheck} · erforderlich ≈ {analysis.clampingCheck.requiredClampForceKn} kN
+            {t.clampCheck} · erforderlich ≈ {num(analysis.clampingCheck.requiredClampForceKn, lang, 1)} kN
           </h4>
           <div className="space-y-1.5">
             {analysis.clampingCheck.products.map((p, i) => {
@@ -446,7 +467,7 @@ function AnalysisBlock({ analysis, t }: { analysis: NonNullable<ChatMessage['ana
                     <span className="truncate font-medium text-neutral-800">{p.product}</span>
                   </span>
                   <span className="font-mono text-neutral-500 shrink-0">
-                    {p.catalogForceKn !== null ? `${p.catalogForceKn} kN · ${Math.round((p.ratio ?? 0) * 100)} %` : '—'}
+                    {p.catalogForceKn !== null ? `${num(p.catalogForceKn, lang, 1)} kN · ${Math.round((p.ratio ?? 0) * 100)} %` : '—'}
                     <span className={`ml-2 font-sans font-semibold ${
                       p.verdict === 'passt' ? 'text-green-700' : p.verdict === 'knapp' ? 'text-yellow-600' : p.verdict === 'zu klein' ? 'text-red-600' : 'text-neutral-400'
                     }`}>{p.verdict}</span>
@@ -462,8 +483,9 @@ function AnalysisBlock({ analysis, t }: { analysis: NonNullable<ChatMessage['ana
       {analysis.costComparison && (
         <div className="border border-neutral-200 rounded-lg p-4 bg-white">
           <h4 className="text-[11px] text-red-600 font-semibold uppercase tracking-wider mb-2">
-            {t.costCompare} · {analysis.costComparison.batchSize} Stk · {analysis.costComparison.hourlyRateEur} €/h
+            {t.costCompare} · {num(analysis.costComparison.batchSize, lang, 0)} Stk · {num(analysis.costComparison.hourlyRateEur, lang, 0)} €/h
           </h4>
+          <div className="table-scroll -mx-1 px-1">
           <table className="w-full text-[11px] text-neutral-600">
             <thead>
               <tr className="text-neutral-400">
@@ -480,15 +502,16 @@ function AnalysisBlock({ analysis, t }: { analysis: NonNullable<ChatMessage['ana
                     {a.product}
                     <span className="text-neutral-400 font-normal"> · {a.actuation}</span>
                   </td>
-                  <td className="py-1.5 text-right font-mono">{a.clampMinPerPart} min</td>
-                  <td className="py-1.5 text-right font-mono">{a.handlingMinSeries} min</td>
+                  <td className="py-1.5 text-right font-mono">{num(a.clampMinPerPart, lang)} min</td>
+                  <td className="py-1.5 text-right font-mono">{num(a.handlingMinSeries, lang)} min</td>
                   <td className={`py-1.5 text-right font-mono ${a.extraVsBestEur === 0 ? 'text-green-700 font-semibold' : 'text-red-600'}`}>
-                    {a.handlingCostSeriesEur} €{a.extraVsBestEur > 0 ? ` (+${a.extraVsBestEur})` : ''}
+                    {eur(a.handlingCostSeriesEur, lang)}{a.extraVsBestEur > 0 ? ` (+${num(a.extraVsBestEur, lang)})` : ''}
                   </td>
                 </tr>
               ))}
             </tbody>
           </table>
+          </div>
           <p className="text-[10px] text-neutral-400 mt-2 leading-relaxed">{analysis.costComparison.note}</p>
         </div>
       )}
@@ -500,7 +523,7 @@ function AnalysisBlock({ analysis, t }: { analysis: NonNullable<ChatMessage['ana
               src={`${API_BASE}${rec.imageUrl}`}
               alt={rec.product}
               loading="lazy"
-              className="w-full h-48 sm:h-64 object-contain bg-white border-b border-neutral-100"
+              className="w-full h-40 sm:h-56 lg:h-64 object-contain bg-white border-b border-neutral-100"
               onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
             />
           )}
@@ -630,10 +653,33 @@ export default function App() {
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLTextAreaElement>(null);
+  const [atBottom, setAtBottom] = useState(true);
+  const [dragging, setDragging] = useState(false);
 
   useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [messages, isLoading]);
+    if (atBottom) messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [messages, isLoading, atBottom]);
+
+  // Track whether the user has scrolled away from the latest message.
+  useEffect(() => {
+    const el = scrollRef.current;
+    if (!el) return;
+    const onScroll = () => {
+      setAtBottom(el.scrollHeight - el.scrollTop - el.clientHeight < 80);
+    };
+    el.addEventListener('scroll', onScroll, { passive: true });
+    return () => el.removeEventListener('scroll', onScroll);
+  }, []);
+
+  // Auto-grow the composer up to the CSS max-height.
+  useEffect(() => {
+    const el = inputRef.current;
+    if (!el) return;
+    el.style.height = 'auto';
+    el.style.height = `${el.scrollHeight}px`;
+  }, [inputValue]);
 
   // Consume the NDJSON pipeline stream: status events update the waiting
   // panel; the final "result" line carries the full analysis.
@@ -794,19 +840,46 @@ export default function App() {
     await submitText(inputValue);
   };
 
+  const resetChat = () => {
+    if (isLoading) return;
+    setMessages([{ role: 'model', parts: [{ text: '' }] }]);
+    setInputValue('');
+    setAttachedFile(null);
+  };
+
+  const acceptDrop = (f: File | undefined) => {
+    if (f && /\.(dxf|pdf)$/i.test(f.name) || f?.type.startsWith('image/')) setAttachedFile(f!);
+  };
+
+  // Empty state = only the synthetic welcome message is present.
+  const isEmpty = messages.length === 1;
+
   return (
     <div className="app-root h-[100dvh] bg-white text-neutral-800 flex flex-col overflow-hidden font-sans">
 
       {/* ── Chat column ─────────────────────────────────────────────── */}
       <div className="chat-column w-full flex flex-col flex-1 min-h-0 mobile-chat">
-        <header className="header-compact px-6 py-4 border-b border-neutral-200 bg-white flex items-center justify-between z-10">
-          <div className="flex items-center gap-3">
-            <span className="hainbuch-brand text-xl font-black tracking-tight text-red-600">HAINBUCH</span>
-            <span className="h-5 w-px bg-neutral-200" />
-            <span className="subtitle text-sm text-neutral-500">{t.subtitle}</span>
+        <header className="app-header header-compact px-4 sm:px-6 py-3 sm:py-4 flex items-center justify-between z-10 shrink-0 sticky top-0">
+          <div className="flex items-center gap-2.5 min-w-0">
+            <ColletMark size={22} className="text-red-600 shrink-0" />
+            <span className="hainbuch-brand text-lg sm:text-xl font-black tracking-tight text-red-600">HAINBUCH</span>
+            <span className="h-5 w-px bg-neutral-200 shrink-0" />
+            <span className="subtitle text-sm text-neutral-500 truncate">{t.subtitle}</span>
           </div>
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-2 sm:gap-4 shrink-0">
             <StatusDot onlineLabel={t.online} limitedLabel={t.limited} />
+            {!isEmpty && (
+              <button
+                onClick={resetChat}
+                disabled={isLoading}
+                title={t.newChat}
+                aria-label={t.newChat}
+                className="flex items-center gap-1.5 text-xs text-neutral-500 hover:text-red-600 disabled:opacity-30 transition-colors rounded-md px-2 py-1 hover:bg-neutral-100"
+              >
+                <PenLine size={14} />
+                <span className="hidden sm:inline">{t.newChat}</span>
+              </button>
+            )}
           </div>
         </header>
 
@@ -818,7 +891,7 @@ export default function App() {
             >
               <div className="h-0.5 bg-neutral-100 overflow-hidden">
                 <div
-                  className="h-full bg-red-600 transition-all duration-700"
+                  className="h-full bg-red-600 transition-all duration-700 relative overflow-hidden progress-sheen"
                   style={{ width: `${{ intent: 5, drawing: 12, chat: 55, 'retrieval-material': 22, material: 40, 'retrieval-catalog': 58, plan: 78, calc: 93 }[pipeline.stage] ?? 10}%` }}
                 />
               </div>
@@ -836,20 +909,21 @@ export default function App() {
             )}
           </div>
         )}
-        <div className="flex-1 overflow-y-auto px-3 sm:px-6 py-4 sm:py-6 space-y-5 bg-neutral-50" style={{minHeight:0}}>
+        <div ref={scrollRef} className="scroll-thin flex-1 overflow-y-auto px-3 sm:px-6 py-4 sm:py-6 bg-neutral-50" style={{minHeight:0}}>
+          <div className="measure space-y-5">
           {messages.map((msg, index) => (
             <motion.div
               initial={{ opacity: 0, y: 8 }}
               animate={{ opacity: 1, y: 0 }}
               key={index}
-              className={`flex gap-3 ${msg.role === 'user' ? 'flex-row-reverse' : ''}`}
+              className={`msg-group flex gap-3 ${msg.role === 'user' ? 'flex-row-reverse' : ''}`}
             >
-              <div className={`w-8 h-8 rounded-full flex items-center justify-center shrink-0 ${
+              <div className={`hidden sm:flex w-8 h-8 rounded-full items-center justify-center shrink-0 ${
                 msg.role === 'user' ? 'bg-neutral-200 text-neutral-600' : 'bg-red-600 text-white'
               }`}>
-                {msg.role === 'user' ? <User size={15} /> : <Bot size={15} />}
+                {msg.role === 'user' ? <User size={15} /> : <ColletMark size={17} />}
               </div>
-              <div className={`message-bubble ${msg.role === 'user' ? 'user' : 'model'} ${msg.analysis ? 'max-w-[92%] sm:max-w-[85%] flex-1' : 'max-w-[85%] sm:max-w-[75%]'} rounded-xl px-4 py-3`}>
+              <div className={`message-bubble ${msg.role === 'user' ? 'user' : 'model'} ${msg.analysis ? 'max-w-full sm:max-w-[85%] flex-1' : 'max-w-[88%] sm:max-w-[75%]'} rounded-xl px-3.5 sm:px-4 py-3`}>
                 {msg.parts.map((part, pIdx) => (
                   <div key={pIdx}>
                     {(index === 0 && msg.role === 'model' ? true : !!part.text) && (
@@ -863,9 +937,9 @@ export default function App() {
                     )}
                   </div>
                 ))}
-                {msg.analysis && <AnalysisBlock analysis={msg.analysis} t={t} />}
+                {msg.analysis && <AnalysisBlock analysis={msg.analysis} t={t} lang={uiLang} />}
                 {msg.role === 'model' && index > 0 && (
-                  <div className="mt-2 flex justify-end items-center gap-3">
+                  <div className="msg-actions no-print mt-2 flex justify-end items-center gap-3">
                     <FeedbackButtons getText={() => messageToText(msg, t)} />
                     {msg.analysis && <PdfButton msg={msg} t={t} />}
                     <CopyButton getText={() => messageToText(msg, t)} labels={{ copy: t.copy, copied: t.copied }} />
@@ -874,10 +948,34 @@ export default function App() {
               </div>
             </motion.div>
           ))}
+          {isEmpty && !isLoading && (
+            <motion.div
+              initial={{ opacity: 0, y: 8 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.15 }}
+              className="pl-0 sm:pl-11 pr-0 sm:pr-2"
+            >
+              <p className="text-[11px] font-semibold uppercase tracking-widest text-neutral-400 mb-2">
+                {t.examplesLabel}
+              </p>
+              <div className="grid gap-2 sm:grid-cols-2 max-w-3xl">
+                {t.examples.map((ex, i) => (
+                  <button
+                    key={i}
+                    onClick={() => submitText(ex)}
+                    className="chip group px-3 py-2.5 text-[12px] text-neutral-600 leading-relaxed flex items-start gap-2"
+                  >
+                    <ChevronRight size={13} className="mt-0.5 shrink-0 text-neutral-300 group-hover:text-red-600 transition-colors" />
+                    <span>{ex}</span>
+                  </button>
+                ))}
+              </div>
+            </motion.div>
+          )}
           {isLoading && pipeline && (
             <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="flex gap-3">
-              <div className="w-8 h-8 rounded-full bg-red-600 flex items-center justify-center shrink-0 text-white">
-                <Bot size={15} />
+              <div className="hidden sm:flex w-8 h-8 rounded-full bg-red-600 items-center justify-center shrink-0 text-white">
+                <ColletMark size={17} />
               </div>
               <div className="pt-2 flex-1 min-w-0 max-w-md space-y-3">
                 <ThinkingIndicator pipeline={pipeline} fallback={t.waitTitle} />
@@ -886,11 +984,26 @@ export default function App() {
             </motion.div>
           )}
           <div ref={messagesEndRef} />
+          </div>
         </div>
 
-        <div className="px-3 sm:px-6 pt-3 sm:pt-4 bg-white border-t border-neutral-200 pb-[max(0.75rem,env(safe-area-inset-bottom))] sm:pb-4">
+        <div className="composer-wrap relative px-3 sm:px-6 pt-3 sm:pt-4 bg-white border-t border-neutral-200 pb-[max(0.75rem,env(safe-area-inset-bottom))] sm:pb-4">
+          <AnimatePresence>
+            {!atBottom && (
+              <motion.button
+                initial={{ opacity: 0, y: 6 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: 6 }}
+                onClick={() => messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })}
+                className="no-print absolute -top-11 left-1/2 -translate-x-1/2 w-9 h-9 rounded-full bg-white border border-neutral-200 shadow-md flex items-center justify-center text-neutral-500 hover:text-red-600 hover:border-red-300 transition-colors"
+                aria-label="↓"
+              >
+                <ArrowDown size={16} />
+              </motion.button>
+            )}
+          </AnimatePresence>
           {attachedFile && (
-            <div className="flex items-center gap-2 mb-2 mx-1 px-3 py-1.5 bg-neutral-50 border border-neutral-200 rounded-lg text-xs text-neutral-600 w-fit max-w-full">
+            <div className="measure mb-2 flex"><div className="flex items-center gap-2 px-3 py-1.5 bg-neutral-50 border border-neutral-200 rounded-lg text-xs text-neutral-600 w-fit max-w-full">
               {/\.pdf$/i.test(attachedFile.name)
                 ? <FileText size={13} className="text-red-600 shrink-0" />
                 : <ImageIcon size={13} className="text-red-600 shrink-0" />}
@@ -903,9 +1016,19 @@ export default function App() {
               >
                 <X size={13} />
               </button>
-            </div>
+            </div></div>
           )}
-          <form onSubmit={handleSubmit} className="relative flex items-center gap-1 bg-white border border-neutral-300 rounded-full px-2 py-2 focus-within:border-red-600 focus-within:ring-1 focus-within:ring-red-600/30 transition-all">
+          <form
+            onSubmit={handleSubmit}
+            onDragOver={(e) => { e.preventDefault(); setDragging(true); }}
+            onDragLeave={() => setDragging(false)}
+            onDrop={(e) => {
+              e.preventDefault();
+              setDragging(false);
+              acceptDrop(e.dataTransfer.files?.[0]);
+            }}
+            className={`composer measure no-print relative flex items-end gap-1 px-2 py-1.5 ${dragging ? 'dragging' : ''}`}
+          >
             <input
               ref={fileInputRef}
               type="file"
@@ -921,26 +1044,34 @@ export default function App() {
               onClick={() => fileInputRef.current?.click()}
               disabled={isLoading}
               title={t.drawingAttached}
-              className={`flex items-center justify-center w-9 h-9 rounded-full transition-colors shrink-0 disabled:opacity-30 ${
+              className={`flex items-center justify-center w-9 h-9 rounded-full transition-colors shrink-0 disabled:opacity-30 mb-0.5 ${
                 attachedFile ? 'text-red-600 bg-red-50' : 'text-neutral-400 hover:text-red-600 hover:bg-neutral-100'
               }`}
             >
               <Paperclip size={16} />
             </button>
-            <input
-              type="text"
+            <textarea
+              ref={inputRef}
+              rows={1}
               value={inputValue}
               onChange={(e) => setInputValue(e.target.value)}
-              placeholder={t.inputPlaceholder}
-              className="composer-input flex-1 bg-transparent text-sm placeholder:text-neutral-400 focus:outline-none px-2 mobile-input"
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' && !e.shiftKey) {
+                  e.preventDefault();
+                  void submitText(inputValue);
+                }
+              }}
+              placeholder={dragging ? t.dropHint : t.inputPlaceholder}
+              className="composer-input flex-1 bg-transparent text-sm placeholder:text-neutral-400 focus:outline-none px-2 py-2 mobile-input overflow-y-auto scroll-thin"
               disabled={isLoading}
             />
             <button
               type="submit"
               disabled={isLoading || (!inputValue.trim() && !attachedFile)}
-              className="send-btn flex items-center justify-center w-9 h-9 rounded-full bg-red-600 text-white hover:bg-red-700 disabled:opacity-30 transition-colors shrink-0"
+              aria-label="Senden"
+              className="send-btn flex items-center justify-center w-9 h-9 rounded-full bg-red-600 text-white hover:bg-red-700 disabled:opacity-30 transition-colors shrink-0 mb-0.5"
             >
-              <Send size={16} className="ml-0.5" />
+              {isLoading ? <Loader2 size={16} className="animate-spin" /> : <Send size={16} className="ml-0.5" />}
             </button>
           </form>
         </div>

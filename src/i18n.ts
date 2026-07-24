@@ -64,6 +64,8 @@ export const T = {
     copy: 'Kopieren',
     copied: 'Kopiert',
     remove: 'Entfernen',
+    newChat: 'Neuer Chat',
+    dropHint: 'Zeichnung hier ablegen',
   },
   en: {
     subtitle: 'Technical Advisor',
@@ -126,6 +128,8 @@ export const T = {
     copy: 'Copy',
     copied: 'Copied',
     remove: 'Remove',
+    newChat: 'New chat',
+    dropHint: 'Drop drawing here',
   },
   zh: {
     subtitle: '技术顾问',
@@ -181,6 +185,8 @@ export const T = {
     copy: '复制',
     copied: '已复制',
     remove: '移除',
+    newChat: '新对话',
+    dropHint: '将图纸拖放到此处',
   },
   es: {
     subtitle: 'Asesor Técnico',
@@ -236,6 +242,8 @@ export const T = {
     copy: 'Copiar',
     copied: 'Copiado',
     remove: 'Quitar',
+    newChat: 'Nuevo chat',
+    dropHint: 'Suelte el plano aquí',
   },
   fr: {
     subtitle: 'Conseiller Technique',
@@ -291,6 +299,8 @@ export const T = {
     copy: 'Copier',
     copied: 'Copié',
     remove: 'Retirer',
+    newChat: 'Nouveau chat',
+    dropHint: 'Déposez le plan ici',
   },
   it: {
     subtitle: 'Consulente Tecnico',
@@ -346,6 +356,8 @@ export const T = {
     copy: 'Copia',
     copied: 'Copiato',
     remove: 'Rimuovi',
+    newChat: 'Nuova chat',
+    dropHint: 'Trascina qui il disegno',
   },
   tr: {
     subtitle: 'Teknik Danışman',
@@ -401,6 +413,8 @@ export const T = {
     copy: 'Kopyala',
     copied: 'Kopyalandı',
     remove: 'Kaldır',
+    newChat: 'Yeni sohbet',
+    dropHint: 'Teknik resmi buraya bırakın',
   },
 } as const;
 
