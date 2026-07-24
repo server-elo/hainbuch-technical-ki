@@ -737,9 +737,15 @@ ABSOLUTE REGEL — UNVERHANDLICH (wird streng geprüft):
   // merge ecosystem across ALL recommended families (dedup by category),
   // so e.g. a stationary vise's Mehrfachspannplatten appear even when the
   // hand chuck is listed first
+  // The raw-stock Ø is what the customer actually clamps — it pins the
+  // suggested Spannköpfe/Segmentspannbüchsen to real, orderable sizes.
+  const clampDiaMm = (() => {
+    const m = /Ø\s*(\d+(?:[.,]\d+)?)/.exec(material.rawStock.dimensions);
+    return m ? parseFloat(m[1].replace(",", ".")) : null;
+  })();
   const ecoSeen = new Set<string>();
   const ecosystem = recommendations
-    .flatMap((r) => ecosystemFor(r.product, batchSize))
+    .flatMap((r) => ecosystemFor(r.product, { batchSize, clampDiaMm }))
     .filter((e) => (ecoSeen.has(e.category) ? false : (ecoSeen.add(e.category), true)))
     .slice(0, 4);
   const hasManual = recommendations.some((r) => /manok|torok|manuell|inoflex vd/i.test(r.product));

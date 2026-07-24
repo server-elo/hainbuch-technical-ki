@@ -185,6 +185,14 @@ function messageToText(msg: ChatMessage, t: (typeof T)[keyof typeof T]): string 
     );
     out.push(cc.note);
   }
+  if (a?.ecosystem?.length) {
+    out.push('\nDas passende Komplettpaket:');
+    a.ecosystem.forEach(e => {
+      out.push(`- ${e.category}: ${e.suggestion} (${e.reason})`);
+      e.products?.forEach(p => out.push(`    ${p.name} · Mat.-Nr. ${p.materialNo}`));
+    });
+    if (a.salesNudge) out.push(a.salesNudge);
+  }
   if (a?.recommendations) {
     a.recommendations.forEach((rec, i) => {
       out.push(`\n${t.recommendation} ${i + 1}: ${rec.product}\n${rec.description}`);
@@ -258,6 +266,18 @@ function buildPrintHtml(msg: ChatMessage, t: (typeof T)[keyof typeof T]): string
     body += card(`${t.costCompare} · ${num(cc.batchSize, 'de', 0)} Stk · ${num(cc.hourlyRateEur, 'de', 0)} €/h`,
       `<table><thead><tr><th></th><th class="right">${esc(t.perPart)}</th><th class="right">${esc(t.perSeries)}</th><th class="right">€</th></tr></thead><tbody>${rows}</tbody></table>` +
       `<p class="dim">${esc(cc.note)}</p>`);
+  }
+  if (a?.ecosystem?.length) {
+    const rows = a.ecosystem.map(e =>
+      `<tr><td><b>${esc(e.category)}</b><br><span class="dim">${esc(e.reason)}</span></td>` +
+      `<td>${esc(e.suggestion)}` +
+      (e.products?.length
+        ? `<br>${e.products.map(p => `<span class="dim">${esc(p.name)} · Mat.-Nr. ${esc(p.materialNo)}</span>`).join('<br>')}`
+        : '') +
+      `</td></tr>`).join('');
+    body += card('Das passende Komplettpaket',
+      `<table><tbody>${rows}</tbody></table>` +
+      (a.salesNudge ? `<p class="dim">${esc(a.salesNudge)}</p>` : ''));
   }
   for (const [i, rec] of (a?.recommendations || []).entries()) {
     body += card(`${t.recommendation} ${i + 1}`,
@@ -577,6 +597,16 @@ function AnalysisBlock({ analysis, t, lang }: { analysis: NonNullable<ChatMessag
                 <span className="font-semibold text-neutral-800">{e.category}: </span>
                 <span className="text-neutral-700">{e.suggestion}</span>
                 <p className="text-[11px] text-neutral-400 leading-relaxed">{e.reason}</p>
+                {e.products && e.products.length > 0 && (
+                  <ul className="mt-1 space-y-0.5">
+                    {e.products.map((p, j) => (
+                      <li key={j} className="text-[11px] text-neutral-600 flex flex-wrap gap-x-2">
+                        <span>{p.name}</span>
+                        <span className="font-mono text-neutral-400">Mat.-Nr. {p.materialNo}</span>
+                      </li>
+                    ))}
+                  </ul>
+                )}
               </div>
             ))}
           </div>

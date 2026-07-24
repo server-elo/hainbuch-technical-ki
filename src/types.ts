@@ -29,7 +29,12 @@ export interface ChatMessage {
     /** deterministic clamping-force traffic light */
     clampingCheck?: ClampingCheck | null;
     /** ecosystem accessories for the recommended family (sales layer) */
-    ecosystem?: { category: string; suggestion: string; reason: string }[] | null;
+    ecosystem?: {
+      category: string;
+      suggestion: string;
+      reason: string;
+      products?: { name: string; materialNo: string }[];
+    }[] | null;
     /** honest automation nudge for the batch size */
     salesNudge?: string | null;
   };
