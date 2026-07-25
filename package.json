@@ -10,7 +10,7 @@
     "preview": "vite preview",
     "clean": "rm -rf dist server.cjs",
     "lint": "tsc --noEmit",
-    "test": "tsx tests/machining.test.ts && tsx tests/cost.test.ts && tsx tests/clamping.test.ts",
+    "test": "tsx tests/machining.test.ts && tsx tests/cost.test.ts && tsx tests/clamping.test.ts && tsx tests/notices.test.ts && tsx tests/abort.test.ts && tsx tests/rag-fit.test.ts",
     "gauntlet": "tsx tests/gauntlet.ts"
   },
   "dependencies": {

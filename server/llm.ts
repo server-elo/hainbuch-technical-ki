@@ -1,6 +1,7 @@
 import { z } from "zod";
 
 import { LMSTUDIO_URL, MODEL_ID, FAST_MODEL_ID, LLM_TIMEOUT_MS, USE_JSON_OBJECT } from "./config";
+import { clientAborted, requestSignal } from "./abort";
 
 export type ChatContent =
   | string
@@ -30,14 +31,14 @@ async function fetchWithRetry(url: string, init: RequestInit): Promise<Response>
   for (let attempt = 0; ; attempt++) {
     try {
       const res = await fetch(url, init);
-      if ((res.status >= 500 || res.status === 429) && attempt === 0) {
+      if ((res.status >= 500 || res.status === 429) && attempt === 0 && !clientAborted()) {
         console.warn(`[LLM] ${res.status} — retrying in 3s`);
         await new Promise((r) => setTimeout(r, 3000));
         continue;
       }
       return res;
     } catch (e) {
-      if (attempt === 0) {
+      if (attempt === 0 && !clientAborted()) {
         console.warn(`[LLM] network error — retrying in 3s`);
         await new Promise((r) => setTimeout(r, 3000));
         continue;
@@ -69,7 +70,7 @@ export async function llmJson<T>(
   const res = await fetchWithRetry(`${LMSTUDIO_URL}/chat/completions`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    signal: AbortSignal.timeout(LLM_TIMEOUT_MS),
+    signal: requestSignal(LLM_TIMEOUT_MS),
     body: JSON.stringify({
       model,
       messages: requestMessages,
@@ -97,7 +98,7 @@ export async function llmJson<T>(
     const retryRes = await fetchWithRetry(`${LMSTUDIO_URL}/chat/completions`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      signal: AbortSignal.timeout(LLM_TIMEOUT_MS),
+      signal: requestSignal(LLM_TIMEOUT_MS),
       body: JSON.stringify({
         model,
         messages: [
@@ -126,7 +127,7 @@ export async function llmText(messages: OpenAiMessage[]): Promise<string> {
   const res = await fetchWithRetry(`${LMSTUDIO_URL}/chat/completions`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    signal: AbortSignal.timeout(LLM_TIMEOUT_MS),
+    signal: requestSignal(LLM_TIMEOUT_MS),
     body: JSON.stringify({ model: MODEL_ID, messages, temperature: 0.5 }),
   });
   if (!res.ok) throw new Error(`LM Studio error (${res.status})`);
