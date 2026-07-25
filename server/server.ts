@@ -45,7 +45,8 @@ function clientIp(req: express.Request): string {
 // Server
 // ---------------------------------------------------------------------------
 
-async function startServer() {
+/** All API middleware and routes — no Vite, no listen (used by tests too). */
+export function createApiApp() {
   const app = express();
 
   // Stable request id for logs / client correlation.
@@ -320,6 +321,13 @@ async function startServer() {
     res.end();
   });
 
+  return app;
+}
+
+async function startServer() {
+  const app = createApiApp();
+  const APP_KEY = process.env.APP_KEY || "";
+
   if (process.env.NODE_ENV !== "production") {
     // Dev frontend must send the same key the backend checks — Vite only
     // exposes VITE_-prefixed vars to the client.
@@ -345,4 +353,5 @@ async function startServer() {
   server.setTimeout(LLM_TIMEOUT_MS * 2);
 }
 
-startServer();
+// Skip auto-start when imported (tests use createApiApp directly).
+if (process.env.NODE_ENV !== "test") startServer();
