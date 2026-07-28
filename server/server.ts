@@ -296,8 +296,11 @@ export function createApiApp() {
     const heartbeat = setInterval(() => emit({ type: "ping" }), 15000);
     // Client gone (tab closed, tunnel dropped) -> abort every in-flight LLM
     // and RAG call instead of finishing an answer nobody receives.
+    // IMPORTANT: use res 'close', not req 'close'. On Node 20+/25 the request
+    // stream closes as soon as the POST body is fully read, which would abort
+    // the pipeline mid-LLM even while the response socket is still open.
     const aborter = new AbortController();
-    req.on("close", () => {
+    res.on("close", () => {
       if (!res.writableEnded) aborter.abort();
     });
     try {

@@ -77,12 +77,18 @@ const SMALLTALK_RE =
 
 // Pure knowledge questions: "Was ist…", "Unterschied zwischen…" etc.
 const QUESTION_RE =
-  /^(was|wie|warum|wieso|weshalb|welche[rs]?|wann|wo|erkl[äa]r|unterschied|definier|bedeut|gibt es|kann man|ist ein)/i;
+  /^(was|wie|warum|wieso|weshalb|welche[rs]?|wann|wo|bei welcher|mit welchem|erkl[äa]r|unterschied|definier|bedeut|gibt es|kann man|ist ein)/i;
 // Anything that smells like a job/recommendation request (incl. machine
 // brands and common typos of "empfehlen") must go through the LLM classifier,
 // not the knowledge-question shortcut.
+// Note: do NOT match bare "fertig" — that hits "Fertigschleifen" (a Fachkunde topic).
 const JOB_RE =
-  /st(ü|ue)ck|losgr(ö|oe)(ß|ss)e|fertig|arbeitsplan|zeichnung|planen|bearbeiten|herstellen|empf(e|ie)hl|emp(f|h)el|recommend|maschine|spannstock|f(ü|u)r m(ein|y|i)|dmg|mori|mazak|hermle|chiron|okuma|haas|doosan|grob|index|emco/i;
+  /st(ü|ue)ck|losgr(ö|oe)(ß|ss)e|fertig(?:en|ung|teil)|arbeitsplan|zeichnung|planen|bearbeiten|herstellen|empf(e|ie)hl|emp(f|h)el|recommend|maschine|spannstock|f(ü|u)r m(ein|y|i)|dmg|mori|mazak|hermle|chiron|okuma|haas|doosan|grob|index|emco/i;
+
+/** Deterministic table / product Qs — force fachfrage even if the LLM would
+ *  mis-route "M12 anziehen" or "Härtetemperatur" as a manufacturing job. */
+const FACH_TABLE_RE =
+  /anziehdrehmoment|anzugsmoment|\bdrehmoment\b.*\bm\s*\d|\bm\s*\d{1,2}\b.*(?:schraube|10\.9|8\.8|12\.9)|h[äa]rtetemperatur|h[äa]rte ich|austenitis|verg[üu]ten|rauheit|fertigschleif|feinschleif|\btestit\b|spannkraftmess|passung\b|\b\d+\s*h\d+\s*\/\s*[a-z]\d+|kernloch|it-?grad|grundtoleranz/i;
 
 export async function classifyIntent(
   lastText: string,
@@ -93,6 +99,10 @@ export async function classifyIntent(
   const t = lastText.trim();
   if (t.length < 30 && SMALLTALK_RE.test(t)) {
     return { intent: "smalltalk", language: "de", germanQuery: "", missingInfo: [], machine: null, affectsPlan: false };
+  }
+  // Deterministic Fachkunde / catalogue lookups: never send through fertigung.
+  if (!hasImage && FACH_TABLE_RE.test(t) && !JOB_RE.test(t)) {
+    return { intent: "fachfrage", language: "de", germanQuery: t, missingInfo: [], machine: null, affectsPlan: false };
   }
   // German pure knowledge questions skip the LLM entirely.
   if (!hasImage && QUESTION_RE.test(t) && !JOB_RE.test(t)) {

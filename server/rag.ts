@@ -31,7 +31,8 @@ export async function ragRetrieve(
     const res = await fetch(`${RAG_API_URL}/retrieve`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      signal: requestSignal(60000),
+      // Keep short: when RAG is down we must fail fast (gauntlet + UX).
+      signal: requestSignal(4000),
       body: JSON.stringify({ query, collections, limit }),
     });
     if (!res.ok) throw new Error(`RAG API ${res.status}`);

@@ -3,6 +3,8 @@ import { llmText } from "../llm";
 import { ragRetrieve, parseFitSolutions } from "../rag";
 import { stripPageRefs } from "../products";
 import { fitHeader } from "../notices";
+import { fachkundeContextBlock, solveFachkunde } from "../fachkunde_solvers";
+import { localProductContext } from "../local_catalog";
 import type { EmitFn } from "../drawing";
 import type { Language } from "../intent";
 
@@ -74,30 +76,74 @@ export async function answerFachfrage(
   emit: EmitFn
 ) {
   emit({ type: "status", stage: "chat", label: "Fachwissen wird nachgeschlagen…" });
+  // Local deterministic tables + catalogue first — must not wait on RAG :7777.
+  const qBlob = `${query}\n${conversation.slice(-800)}`;
+  const localFach = fachkundeContextBlock(qBlob);
+  const localCat = localProductContext(qBlob);
+  const localHits = solveFachkunde(qBlob);
+  if (localHits.length) {
+    console.log("[Fachfrage] local solvers:", localHits.map((h) => h.id).join(", "));
+  }
+  if (localCat) console.log("[Fachfrage] local catalogue context injected");
+
+  // High-confidence local table hit: answer immediately (no RAG, no LLM).
+  if (localHits.length === 1 && localHits[0].direct && !localCat) {
+    const d = localHits[0].direct!;
+    return {
+      message: stripPageRefs(appendFitBlock(d, localFach, language)),
+      mode: "chat" as const,
+      fitSolutions: parseFitSolutions(localFach),
+    };
+  }
+  // TESTit / local catalogue product Q when we already have grounded copy.
+  if (localCat && /testit/i.test(query)) {
+    const direct =
+      "**TESTit** ist das HAINBUCH-**Spannkraftmessgerät** / Messsystem für Spannkraft und Einzugskraft " +
+      "(Außen- und Innenspannung, Hohlschaftkegel). System aus IT-Modul und passenden TEST-Modulen; " +
+      "auch unter Drehzahl einsetzbar; TESTit-App zur Visualisierung und Archivierung.";
+    return {
+      message: stripPageRefs(appendFitBlock(direct, localCat, language)),
+      mode: "chat" as const,
+      fitSolutions: [],
+    };
+  }
+
   // Retrieval always in German — that is the language of the knowledge base.
   const rag = await ragRetrieve(query, null, 6);
-  const fitSolutions = parseFitSolutions(rag.context);
+  const mergedContext = [localFach, localCat, rag.context].filter(Boolean).join("\n\n");
+  const fitSolutions = parseFitSolutions(mergedContext);
+
   let message = await llmText([
     {
       role: "system",
       content:
         `Du bist der HAINBUCH Technical Advisor. Beantworte die Fachfrage präzise. ${answerLang} ` +
-        "ABSOLUTE REGEL: Die Antwort darf NUR aus den mitgelieferten RAG-AUSZÜGEN (HAINBUCH-Katalog + Fachkunde + Technisches Zeichnen) kommen. " +
-        "1. Wenn die Information in den Auszügen steht → antworte exakt daraus. Nenne dabei KEINE Seitenzahlen, Kapitelnummern oder Quellenverweise.\n" +
+        "ABSOLUTE REGEL: Die Antwort darf NUR aus den mitgelieferten AUSZÜGEN (HAINBUCH-Katalog + Fachkunde + Technisches Zeichnen + ## FACHKUNDE LÖSUNG / lokaler Katalog) kommen. " +
+        "1. Wenn die Information in den Auszügen steht → antworte exakt daraus (Zahlen aus ## FACHKUNDE LÖSUNG und ## LOKALER KATALOG-KONTEXT wörtlich übernehmen). Nenne dabei KEINE Seitenzahlen, Kapitelnummern oder Quellenverweise.\n" +
         "2. Wenn die Information NICHT in den Auszügen steht → sage ehrlich, dass die Unterlagen dazu nichts Konkretes enthalten, und stelle SOFORT eine hilfreiche Rückfrage zur Anwendung (Werkstück, Maße, Werkstoff, Stückzahl), damit du eine passende Empfehlung erarbeiten kannst. NIEMALS nur den Satz 'nicht enthalten' als komplette Antwort.\n" +
-        "3. Keine Ergänzungen aus dem allgemeinen Modellwissen erlaubt.\n" +
+        "3. Keine Ergänzungen aus dem allgemeinen Modellwissen erlaubt, solange ## FACHKUNDE LÖSUNG oder Katalog-Kontext vorliegt.\n" +
         "4. Passungswerte: nur aus ## FERTIGE LÖSUNG exakt übernehmen." +
-        (rag.context ? `\n\nFACHBUCH-AUSZÜGE:\n${rag.context.slice(0, 10000)}` : ""),
+        (mergedContext ? `\n\nFACHBUCH-AUSZÜGE:\n${mergedContext.slice(0, 12000)}` : ""),
     },
     { role: "user", content: conversation.slice(-3000) },
   ]);
-  // Documents empty on this topic → fall back to the LLM's general
-  // knowledge, clearly marked as researched (not from HAINBUCH documents).
-  // Fire only when the answer OPENS with the not-found statement — a long
-  // grounded answer that mentions a side gap later must never be replaced.
+
+  // If model still hedged but we have local solvers/catalog, force grounded text.
   const notFound =
-    /nicht enthalten|keine (konkreten |näheren )?(Angaben|Informationen|Daten)|liegen mir (dazu )?nicht vor/i;
-  if (notFound.test(message.trim().slice(0, 250))) {
+    /nicht enthalten|keine (konkreten |näheren )?(Angaben|Informationen|Daten)|liegen mir (dazu )?nicht vor|nicht aus den HAINBUCH/i;
+  if (notFound.test(message.trim().slice(0, 280)) && (localHits.length || localCat)) {
+    console.log("[Fachfrage] model hedged despite local context — using local blocks");
+    const pieces: string[] = [];
+    if (localHits.length) pieces.push(...localHits.map((h) => h.direct || h.block));
+    if (localCat) {
+      // Compact TESTit / product summary without dumping full tables
+      const first = localCat.split("\n").filter((l) => l && !l.startsWith("#")).slice(0, 12).join(" ");
+      pieces.push(first.slice(0, 900));
+    }
+    message = pieces.join("\n\n");
+  } else if (notFound.test(message.trim().slice(0, 250)) && !localFach && !localCat) {
+    // Documents empty on this topic → fall back to the LLM's general
+    // knowledge, clearly marked as researched (not from HAINBUCH documents).
     console.log("[Fachfrage] docs empty — general-knowledge fallback");
     emit({ type: "status", stage: "chat", label: "Unterlagen decken die Frage nicht ab — allgemeine Recherche…" });
     message = await llmText([
@@ -113,7 +159,7 @@ export async function answerFachfrage(
     ]);
   }
   return {
-    message: stripPageRefs(appendFitBlock(message, rag.context, language)),
+    message: stripPageRefs(appendFitBlock(message, mergedContext, language)),
     mode: "chat" as const,
     fitSolutions,
   };
