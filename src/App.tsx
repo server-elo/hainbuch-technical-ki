@@ -2,7 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import {
   Send, User, ChevronRight, ChevronDown, Loader2, FileText,
   Image as ImageIcon, Paperclip, X, Clock, TrendingDown, Copy, Check,
-  ThumbsUp, ThumbsDown, FileDown, ArrowDown, PenLine, Square, ListPlus
+  ThumbsUp, ThumbsDown, FileDown, ArrowDown, PenLine, Square, ListPlus, Sparkles
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import type { ChatMessage, PipelineStatus } from './types';
