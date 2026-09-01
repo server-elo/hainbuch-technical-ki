@@ -2,7 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import {
   Send, User, ChevronRight, ChevronDown, Loader2, FileText,
   Image as ImageIcon, Paperclip, X, Clock, TrendingDown, Copy, Check,
-  ThumbsUp, ThumbsDown, FileDown, ArrowDown, PenLine
+  ThumbsUp, ThumbsDown, FileDown, ArrowDown, PenLine, Square, ListPlus
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import type { ChatMessage, PipelineStatus } from './types';
@@ -106,41 +106,121 @@ function ThinkingIndicator({ pipeline, fallback }: { pipeline: PipelineStatus; f
   );
 }
 
+function resolveImgUrl(url: string): string {
+  if (!url) return url;
+  if (url.startsWith('http://localhost') || url.startsWith('http://127.0.0.1')) {
+    const p = url.replace(/^https?:\/\/[^/]+/, '');
+    return API_BASE ? `${API_BASE}${p}` : p;
+  }
+  if (url.startsWith('/hero-img') || url.startsWith('/shop-img')) {
+    return API_BASE ? `${API_BASE}${url}` : url;
+  }
+  return url;
+}
+
 /** Minimal markdown renderer for assistant messages (###, **bold**, bullets). */
 function MessageText({ text }: { text: string }) {
-  const renderInline = (s: string) =>
-    s.split(/(\*\*[^*]+\*\*)/g).map((part, i) =>
-      part.startsWith('**') && part.endsWith('**') ? (
-        <strong key={i} className="font-semibold text-neutral-900">{part.slice(2, -2)}</strong>
-      ) : (
-        part
-      )
-    );
+  const renderInline = (s: string): React.ReactNode[] => {
+    const imgParts = s.split(/(!\[[^\]]*\]\([^)]+\))/g);
+    const out: React.ReactNode[] = [];
+    imgParts.forEach((chunk, ci) => {
+      const img = chunk.match(/^!\[([^\]]*)\]\(([^)]+)\)$/);
+      if (img) {
+        const src = resolveImgUrl(img[2]);
+        out.push(
+          <img
+            key={`i${ci}`}
+            src={src}
+            alt={img[1]}
+            loading="lazy"
+            className="block max-h-56 w-auto rounded-lg border border-neutral-200 bg-white my-1.5 shadow-sm"
+          />
+        );
+        return;
+      }
+      chunk.split(/(\[[^\]]+\]\([^)]+\))/g).forEach((part, i) => {
+        const link = part.match(/^\[([^\]]+)\]\(([^)]+)\)$/);
+        if (link) {
+          out.push(
+            <a key={`a${ci}-${i}`} href={link[2]} target="_blank" rel="noreferrer"
+               className="text-red-600 underline underline-offset-2 hover:text-red-700">
+              {link[1]}
+            </a>
+          );
+        } else {
+          part.split(/(\*\*[^*]+\*\*)/g).forEach((b, bi) =>
+            out.push(
+              b.startsWith('**') && b.endsWith('**') ? (
+                <strong key={`b${ci}-${i}-${bi}`} className="font-semibold text-neutral-900">{b.slice(2, -2)}</strong>
+              ) : (
+                b
+              )
+            )
+          );
+        }
+      });
+    });
+    return out;
+  };
 
-  return (
-    <div className="text-sm leading-relaxed space-y-1.5">
-      {text.split('\n').map((line, i) => {
-        const t = line.trim();
-        if (!t) return <div key={i} className="h-1" />;
-        if (t.startsWith('###')) {
-          return (
-            <p key={i} className="font-semibold text-neutral-900 mt-2">
-              {t.replace(/^#+\s*/, '')}
-            </p>
-          );
-        }
-        if (/^[-•]\s/.test(t)) {
-          return (
-            <p key={i} className="pl-4 relative">
-              <span className="absolute left-1 text-red-600">•</span>
-              {renderInline(t.replace(/^[-•]\s/, ''))}
-            </p>
-          );
-        }
-        return <p key={i}>{renderInline(line)}</p>;
-      })}
-    </div>
-  );
+  const lines = text.split('\n');
+  const blocks: React.ReactNode[] = [];
+  let i = 0;
+  while (i < lines.length) {
+    const t = lines[i].trim();
+    if (!t) { blocks.push(<div key={`s${i}`} className="h-1" />); i++; continue; }
+    if (t.startsWith('|') && i + 1 < lines.length && /^\|[\s:|-]+\|?$/.test(lines[i + 1].trim())) {
+      const rows: string[][] = [];
+      const head = t.split('|').slice(1, -1).map(c => c.trim());
+      i += 2;
+      while (i < lines.length && lines[i].trim().startsWith('|')) {
+        rows.push(lines[i].trim().split('|').slice(1, -1).map(c => c.trim()));
+        i++;
+      }
+      blocks.push(
+        <div key={`t${i}`} className="overflow-x-auto my-2">
+          <table className="text-xs border-collapse w-full">
+            <thead>
+              <tr>{head.map((c, ci) => <th key={ci} className="border border-neutral-300 bg-neutral-100 px-2 py-1.5 text-left font-semibold">{renderInline(c)}</th>)}</tr>
+            </thead>
+            <tbody>
+              {rows.map((r, ri) => (
+                <tr key={ri}>{r.map((c, ci) => <td key={ci} className="border border-neutral-300 px-2 py-1.5 align-top">{renderInline(c)}</td>)}</tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      );
+      continue;
+    }
+    if (t.startsWith('###') || t.startsWith('##')) {
+      blocks.push(
+        <p key={`h${i}`} className="font-semibold text-neutral-900 mt-2.5 text-sm">
+          {t.replace(/^#+\s*/, '')}
+        </p>
+      );
+      i++;
+      continue;
+    }
+    if (/^[-•]\s/.test(t)) {
+      blocks.push(
+        <p key={`l${i}`} className="pl-4 relative">
+          <span className="absolute left-1 text-red-600">•</span>
+          {renderInline(t.replace(/^[-•]\s/, ''))}
+        </p>
+      );
+      i++;
+      continue;
+    }
+    blocks.push(<p key={`p${i}`}>{renderInline(line0(lines[i]))}</p>);
+    i++;
+  }
+
+  return <div className="text-sm leading-relaxed space-y-1.5">{blocks}</div>;
+}
+
+function line0(l: string): string {
+  return l;
 }
 
 /** Flatten a model message (text + structured analysis) to plain text for the clipboard. */
@@ -680,6 +760,34 @@ export default function App() {
   const [pipeline, setPipeline] = useState<PipelineStatus | null>(null);
   const [showProgress, setShowProgress] = useState(false);
   const [attachedFile, setAttachedFile] = useState<File | null>(null);
+  const [queuedMessages, setQueuedMessages] = useState<{ text: string; file: File | null }[]>([]);
+  const abortControllerRef = useRef<AbortController | null>(null);
+
+  const stopGeneration = () => {
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+      abortControllerRef.current = null;
+    }
+    setIsLoading(false);
+    setPipeline(null);
+    setShowProgress(false);
+  };
+
+  // Stop generation or cancel attachment when Escape is pressed
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        if (isLoading) {
+          e.preventDefault();
+          stopGeneration();
+        } else if (attachedFile) {
+          setAttachedFile(null);
+        }
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isLoading, attachedFile]);
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -715,6 +823,8 @@ export default function App() {
   // panel; the final "result" line carries the full analysis.
   const sendChat = async (newMessages: ChatMessage[]) => {
     setIsLoading(true);
+    const controller = new AbortController();
+    abortControllerRef.current = controller;
     setPipeline({ stage: 'intent', label: '', infos: [], log: [], startedAt: Date.now() });
     try {
       const apiMessages = newMessages
@@ -728,7 +838,8 @@ export default function App() {
       const response = await fetch(`${API_BASE}/api/chat`, {
         method: 'POST',
         headers: apiHeaders(),
-        body: JSON.stringify({ messages: apiMessages, lastAnalysis })
+        body: JSON.stringify({ messages: apiMessages, lastAnalysis }),
+        signal: controller.signal,
       });
       if (!response.ok || !response.body) {
         throw new Error(`Server error (${response.status})`);
@@ -786,6 +897,10 @@ export default function App() {
         } : {}),
       }]);
     } catch (error: any) {
+      if (error?.name === 'AbortError' || controller.signal.aborted) {
+        console.log('Chat generation cancelled by user.');
+        return;
+      }
       console.error('Chat API Error:', error);
       setMessages(prev => [...prev, {
         role: 'model',
@@ -799,6 +914,7 @@ export default function App() {
       setIsLoading(false);
       setPipeline(null);
       setShowProgress(false);
+      abortControllerRef.current = null;
     }
   };
 
@@ -836,7 +952,10 @@ export default function App() {
           const dataUrl = canvas.toDataURL('image/jpeg', 0.85);
           resolve({ base64: dataUrl.split(',')[1], mimeType: 'image/jpeg' });
         };
-        img.onerror = reject;
+        img.onerror = () => {
+          // Browser kann das Format nicht dekodieren (HEIC/AVIF …) → Rohdaten senden
+          resolve({ base64: (reader.result as string).split(',')[1], mimeType: file.type || 'image/png' });
+        };
         img.src = reader.result as string;
       };
       reader.onerror = reject;
@@ -844,13 +963,13 @@ export default function App() {
     });
   };
 
-  const submitText = async (text: string) => {
-    if ((!text.trim() && !attachedFile) || isLoading) return;
+  const executeSubmit = async (text: string, file: File | null) => {
+    if (!text.trim() && !file) return;
     const parts: ChatMessage['parts'] = [];
     if (text.trim()) parts.push({ text });
-    if (attachedFile) {
+    if (file) {
       try {
-        const { base64, mimeType } = await convertFileToBase64(attachedFile);
+        const { base64, mimeType } = await convertFileToBase64(file);
         parts.push({ inlineData: { data: base64, mimeType } });
         if (!text.trim()) parts.push({ text: `[${t.drawingAttached}]` });
       } catch (err) {
@@ -858,27 +977,61 @@ export default function App() {
       }
     }
     if (parts.length === 0) return;
-    const newMessages = [...messages, { role: 'user' as const, parts }];
-    setMessages(newMessages);
-    setInputValue('');
-    setAttachedFile(null);
-    await sendChat(newMessages);
+    setMessages(prev => {
+      const nextMsgs = [...prev, { role: 'user' as const, parts }];
+      void sendChat(nextMsgs);
+      return nextMsgs;
+    });
+  };
+
+  // Automatically process queued messages when loading finishes
+  useEffect(() => {
+    if (!isLoading && queuedMessages.length > 0) {
+      const nextItem = queuedMessages[0];
+      setQueuedMessages(prev => prev.slice(1));
+      void executeSubmit(nextItem.text, nextItem.file);
+    }
+  }, [isLoading, queuedMessages]);
+
+  const submitText = async (text: string) => {
+    if (isLoading) {
+      setQueuedMessages(prev => [...prev, { text, file: null }]);
+      return;
+    }
+    await executeSubmit(text, null);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    await submitText(inputValue);
+    if (!inputValue.trim() && !attachedFile) return;
+    if (isLoading) {
+      setQueuedMessages(prev => [...prev, { text: inputValue, file: attachedFile }]);
+      setInputValue('');
+      setAttachedFile(null);
+      return;
+    }
+    const text = inputValue;
+    const file = attachedFile;
+    setInputValue('');
+    setAttachedFile(null);
+    await executeSubmit(text, file);
   };
 
   const resetChat = () => {
-    if (isLoading) return;
+    if (isLoading) stopGeneration();
+    setQueuedMessages([]);
     setMessages([{ role: 'model', parts: [{ text: '' }] }]);
     setInputValue('');
     setAttachedFile(null);
   };
 
   const acceptDrop = (f: File | undefined) => {
-    if (f && /\.(dxf|pdf)$/i.test(f.name) || f?.type.startsWith('image/')) setAttachedFile(f!);
+    if (!f) return;
+    const ext = '.' + (f.name.split('.').pop() || '').toLowerCase();
+    if (f.type.startsWith('image/') || ['image/*'].includes(f.type) ||
+        ['.png','.jpg','.jpeg','.webp','.gif','.bmp','.avif','.heic','.heif','.jfif','.svg','.dxf','.pdf'].includes(ext)) {
+      setAttachedFile(f);
+    }
   };
 
   // Empty state = only the synthetic welcome message is present.
@@ -888,7 +1041,23 @@ export default function App() {
     <div className="app-root h-[100dvh] bg-white text-neutral-800 flex flex-col overflow-hidden font-sans">
 
       {/* ── Chat column ─────────────────────────────────────────────── */}
-      <div className="chat-column w-full flex flex-col flex-1 min-h-0 mobile-chat">
+      <div
+        className="chat-column w-full flex flex-col flex-1 min-h-0 mobile-chat relative"
+        onDragOver={(e) => { e.preventDefault(); if (!dragging) setDragging(true); }}
+        onDragLeave={(e) => { if (e.currentTarget === e.target) setDragging(false); }}
+        onDrop={(e) => {
+          e.preventDefault();
+          setDragging(false);
+          acceptDrop(e.dataTransfer.files?.[0]);
+        }}
+      >
+        {dragging && (
+          <div className="absolute inset-0 z-50 no-print flex items-center justify-center bg-red-600/10 backdrop-blur-[2px] border-4 border-dashed border-red-600 rounded-lg m-2 pointer-events-none">
+            <div className="bg-white rounded-xl px-5 py-3 shadow-lg font-semibold text-red-600 text-sm">
+              Bild / Zeichnung hier ablegen
+            </div>
+          </div>
+        )}
         <header className="app-header header-compact px-4 sm:px-6 py-3 sm:py-4 flex items-center justify-between z-10 shrink-0 sticky top-0">
           <div className="flex items-center gap-2.5 min-w-0">
             <ColletMark size={22} className="text-red-600 shrink-0" />
@@ -1032,6 +1201,26 @@ export default function App() {
               </motion.button>
             )}
           </AnimatePresence>
+          {queuedMessages.length > 0 && (
+            <div className="measure mb-2 flex flex-col gap-1">
+              {queuedMessages.map((qm, idx) => (
+                <div key={idx} className="flex items-center justify-between px-3 py-1.5 bg-neutral-100 border border-neutral-200 rounded-lg text-xs text-neutral-600 shadow-sm">
+                  <div className="flex items-center gap-2 truncate">
+                    <span className="font-semibold text-red-600 shrink-0">#{idx + 1} In Warteschlange:</span>
+                    <span className="truncate text-neutral-800">{qm.text || qm.file?.name || 'Zeichnung'}</span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setQueuedMessages(prev => prev.filter((_, i) => i !== idx))}
+                    className="text-neutral-400 hover:text-red-600 transition-colors ml-2 shrink-0 p-0.5 rounded"
+                    title={t.remove}
+                  >
+                    <X size={13} />
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
           {attachedFile && (
             <div className="measure mb-2 flex"><div className="flex items-center gap-2 px-3 py-1.5 bg-neutral-50 border border-neutral-200 rounded-lg text-xs text-neutral-600 w-fit max-w-full">
               {/\.pdf$/i.test(attachedFile.name)
@@ -1072,9 +1261,8 @@ export default function App() {
             <button
               type="button"
               onClick={() => fileInputRef.current?.click()}
-              disabled={isLoading}
               title={t.drawingAttached}
-              className={`flex items-center justify-center w-9 h-9 rounded-full transition-colors shrink-0 disabled:opacity-30 mb-0.5 ${
+              className={`flex items-center justify-center w-9 h-9 rounded-full transition-colors shrink-0 mb-0.5 ${
                 attachedFile ? 'text-red-600 bg-red-50' : 'text-neutral-400 hover:text-red-600 hover:bg-neutral-100'
               }`}
             >
@@ -1088,20 +1276,37 @@ export default function App() {
               onKeyDown={(e) => {
                 if (e.key === 'Enter' && !e.shiftKey) {
                   e.preventDefault();
-                  void submitText(inputValue);
+                  void handleSubmit(e);
                 }
               }}
-              placeholder={dragging ? t.dropHint : t.inputPlaceholder}
+              placeholder={
+                dragging
+                  ? t.dropHint
+                  : isLoading
+                    ? 'Nachricht eingeben (wird in die Warteschlange gestellt)...'
+                    : t.inputPlaceholder
+              }
               className="composer-input flex-1 bg-transparent text-sm placeholder:text-neutral-400 focus:outline-none px-2 py-2 mobile-input overflow-y-auto scroll-thin"
-              disabled={isLoading}
             />
+            {isLoading && (
+              <button
+                type="button"
+                onClick={stopGeneration}
+                title="Generierung stoppen (Esc)"
+                aria-label="Generierung stoppen (Esc)"
+                className="flex items-center justify-center w-9 h-9 rounded-full bg-neutral-100 text-neutral-600 hover:bg-red-50 hover:text-red-600 transition-colors shrink-0 mb-0.5"
+              >
+                <Square size={13} className="fill-current" />
+              </button>
+            )}
             <button
               type="submit"
-              disabled={isLoading || (!inputValue.trim() && !attachedFile)}
-              aria-label="Senden"
+              disabled={!inputValue.trim() && !attachedFile}
+              aria-label={isLoading ? "In Warteschlange einreihen" : "Senden"}
+              title={isLoading ? "In Warteschlange einreihen" : "Senden"}
               className="send-btn flex items-center justify-center w-9 h-9 rounded-full bg-red-600 text-white hover:bg-red-700 disabled:opacity-30 transition-colors shrink-0 mb-0.5"
             >
-              {isLoading ? <Loader2 size={16} className="animate-spin" /> : <Send size={16} className="ml-0.5" />}
+              {isLoading ? <ListPlus size={16} /> : <Send size={16} className="ml-0.5" />}
             </button>
           </form>
         </div>

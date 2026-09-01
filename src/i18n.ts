@@ -8,7 +8,7 @@ export const T = {
     online: 'Online',
     limited: 'Eingeschränkt',
     welcome:
-      'Willkommen beim HAINBUCH Technical Advisor. Ich helfe bei allem rund um Zerspanung und Spanntechnik:\n\n📐 Zeichnung fotografieren oder als PDF/DXF anhängen → kompletter Arbeitsplan mit Spannmittel-Empfehlung\n🔧 Fertigungsfragen — Passungen (ISO 286), Schnittdaten, Toleranzen, Werkstoffe\n📦 Produktfragen — Spannbereiche, Drehzahlen, Baugrößen aus dem Katalog\n🛠️ Praxisprobleme — Rattern, Rundlauf, Spannkraft, Prozessauslegung\n🎓 Auch für Einsteiger — fragen Sie einfach, ich erkläre gern\n\nWomit kann ich helfen?',
+      'Willkommen beim HAINBUCH Technical Advisor. Ich helfe bei allem rund um Zerspanung und Spanntechnik:\n\n📐 Zeichnung fotografieren oder als PDF/DXF anhängen → kompletter Arbeitsplan mit Spannmittel-Empfehlung\n🔧 Fertigungsfragen — Passungen (ISO 286), Schnittdaten, Toleranzen, Werkstoffe\n📦 Produktfragen — Spannbereiche, Drehzahlen, Baugrößen aus dem Katalog\n🛠️ Praxisprobleme — Rattern, Rundlauf, Spannkraft, Prozessauslegung\n🎓 Auch für Einsteiger — fragen Sie einfach, ich erkläre gern\n\nHaben Sie bereits ein Spannfutter (z. B. HAINBUCH SPANNTOP, TOPlus, MANDO) — oder soll ich Ihnen passende Optionen vorschlagen?',
     inputPlaceholder: 'Werkstück beschreiben — z.B. Flansch aus C45, Ø80, Bohrung 22H7, 200 Stück',
     heroTitle1: 'Ihre Fertigungsanalyse.',
     heroTitle2: 'Fundiert und präzise.',
@@ -72,7 +72,7 @@ export const T = {
     online: 'Online',
     limited: 'Limited',
     welcome:
-      'Welcome to the HAINBUCH Technical Advisor.\n\nDescribe your application — workpiece, dimensions, fits, batch size. You can write in your own language.\n\nYou will receive a material recommendation, a process plan with machining times, an ISO 286 fit analysis and the matching workholding solutions.',
+      'Welcome to the HAINBUCH Technical Advisor.\n\nDescribe your application — workpiece, dimensions, fits, batch size. You can write in your own language.\n\nYou will receive a material recommendation, a process plan with machining times, an ISO 286 fit analysis and the matching workholding solutions.\n\nDo you already have a chuck or workholding device (e.g. HAINBUCH SPANNTOP, TOPlus, MANDO) — or shall I suggest suitable options?',
     inputPlaceholder: 'Describe your part — e.g. flange, C45 steel, Ø80, bore 22H7, 200 pcs',
     heroTitle1: 'Your manufacturing analysis.',
     heroTitle2: 'Grounded and precise.',
@@ -136,7 +136,7 @@ export const T = {
     online: '在线',
     limited: '受限',
     welcome:
-      '欢迎使用 HAINBUCH 技术顾问。\n\n请描述您的应用——工件、尺寸、配合、批量。您可以用自己的语言书写。\n\n您将获得材料推荐、带加工时间的工艺方案、ISO 286 配合分析以及合适的夹持方案。',
+      '欢迎使用 HAINBUCH 技术顾问。\n\n请描述您的应用——工件、尺寸、配合、批量。您可以用自己的语言书写。\n\n您将获得材料推荐、带加工时间的工艺方案、ISO 286 配合分析以及合适的夹持方案。\n\n您是否已有夹持卡盘或夹具(例如 HAINBUCH SPANNTOP、TOPlus、MANDO)——还是需要我为您推荐合适的选项?',
     inputPlaceholder: '描述您的工件——例如:法兰,C45 钢,Ø80,孔 22H7,200 件',
     heroTitle1: '您的制造分析。',
     heroTitle2: '有据可依,精确可靠。',
@@ -193,7 +193,7 @@ export const T = {
     online: 'En línea',
     limited: 'Limitado',
     welcome:
-      'Bienvenido al Asesor Técnico HAINBUCH.\n\nDescriba su aplicación — pieza, dimensiones, ajustes, cantidad. Puede escribir en su idioma.\n\nRecibirá recomendación de material, plan de trabajo con tiempos de mecanizado, análisis de ajustes según ISO 286 y las soluciones de amarre adecuadas.',
+      'Bienvenido al Asesor Técnico HAINBUCH.\n\nDescriba su aplicación — pieza, dimensiones, ajustes, cantidad. Puede escribir en su idioma.\n\nRecibirá recomendación de material, plan de trabajo con tiempos de mecanizado, análisis de ajustes según ISO 286 y las soluciones de amarre adecuadas.\n\n¿Ya dispone de una pinza o sujeción (p. ej. HAINBUCH SPANNTOP, TOPlus, MANDO) — o prefiere que le proponga opciones adecuadas?',
     inputPlaceholder: 'Describa su pieza — p. ej. brida, acero C45, Ø80, taladro 22H7, 200 uds',
     heroTitle1: 'Su análisis de fabricación.',
     heroTitle2: 'Fundamentado y preciso.',
@@ -250,7 +250,7 @@ export const T = {
     online: 'En ligne',
     limited: 'Limité',
     welcome:
-      'Bienvenue chez le Conseiller Technique HAINBUCH.\n\nDécrivez votre application — pièce, dimensions, ajustements, quantité. Vous pouvez écrire dans votre langue.\n\nVous recevrez une recommandation matière, une gamme d\'usinage avec les temps, une analyse des ajustements selon ISO 286 et les solutions de serrage adaptées.',
+      'Bienvenue chez le Conseiller Technique HAINBUCH.\n\nDécrivez votre application — pièce, dimensions, ajustements, quantité. Vous pouvez écrire dans votre langue.\n\nVous recevrez une recommandation matière, une gamme d\'usinage avec les temps, une analyse des ajustements selon ISO 286 et les solutions de serrage adaptées.\n\nAvez-vous déjà un mandrin ou un dispositif de serrage (p. ex. HAINBUCH SPANNTOP, TOPlus, MANDO) — ou souhaitez-vous que je vous propose des options adaptées ?',
     inputPlaceholder: 'Décrivez votre pièce — p. ex. bride, acier C45, Ø80, alésage 22H7, 200 pcs',
     heroTitle1: 'Votre analyse de fabrication.',
     heroTitle2: 'Fondée et précise.',
@@ -307,7 +307,7 @@ export const T = {
     online: 'Online',
     limited: 'Limitato',
     welcome:
-      'Benvenuto nel Consulente Tecnico HAINBUCH.\n\nDescriva la sua applicazione — pezzo, dimensioni, accoppiamenti, quantità. Può scrivere nella sua lingua.\n\nRiceverà raccomandazione del materiale, ciclo di lavoro con tempi, analisi degli accoppiamenti secondo ISO 286 e le soluzioni di serraggio adatte.',
+      'Benvenuto nel Consulente Tecnico HAINBUCH.\n\nDescriva la sua applicazione — pezzo, dimensioni, accoppiamenti, quantità. Può scrivere nella sua lingua.\n\nRiceverà raccomandazione del materiale, ciclo di lavoro con tempi, analisi degli accoppiamenti secondo ISO 286 e le soluzioni di serraggio adatte.\n\nHa già un mandrino o un dispositivo di serraggio (es. HAINBUCH SPANNTOP, TOPlus, MANDO) — oppure desidera che le proponga le opzioni adatte?',
     inputPlaceholder: 'Descriva il pezzo — es. flangia, acciaio C45, Ø80, foro 22H7, 200 pz',
     heroTitle1: 'La sua analisi di produzione.',
     heroTitle2: 'Fondata e precisa.',
@@ -364,7 +364,7 @@ export const T = {
     online: 'Çevrimiçi',
     limited: 'Sınırlı',
     welcome:
-      'HAINBUCH Teknik Danışmana hoş geldiniz.\n\nUygulamanızı tanımlayın — iş parçası, ölçüler, alıştırmalar, adet. Kendi dilinizde yazabilirsiniz.\n\nMalzeme önerisi, işleme süreli iş planı, ISO 286 alıştırma analizi ve uygun bağlama çözümleri alacaksınız.',
+      'HAINBUCH Teknik Danışmana hoş geldiniz.\n\nUygulamanızı tanımlayın — iş parçası, ölçüler, alıştırmalar, adet. Kendi dilinizde yazabilirsiniz.\n\nMalzeme önerisi, işleme süreli iş planı, ISO 286 alıştırma analizi ve uygun bağlama çözümleri alacaksınız.\n\nHalihazırda bir ayna veya bağlama aparanız var mı (örn. HAINBUCH SPANNTOP, TOPlus, MANDO) — yoksa uygun seçenekleri önermemi ister misiniz?',
     inputPlaceholder: 'Parçanızı tanımlayın — örn. flanş, C45 çeliği, Ø80, delik 22H7, 200 adet',
     heroTitle1: 'Üretim analiziniz.',
     heroTitle2: 'Sağlam temelli ve hassas.',

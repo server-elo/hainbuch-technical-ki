@@ -10,3 +10,5 @@ coverage/
 .tunnel_url
 .firebase/
 feedback.jsonl
+logs/*.jsonl
+logs/daily/*.jsonl
