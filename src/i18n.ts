@@ -14,11 +14,12 @@ export const T = {
     heroTitle2: 'Fundiert und präzise.',
     heroText:
       'Beschreiben Sie Ihr Werkstück — Sie erhalten eine vollständige technische Auswertung mit Spannmittel-Empfehlung.',
-    examplesLabel: 'Beispiele',
+    examplesLabel: 'Praxis-Beispiele & Auslegungen',
     examples: [
-      'Flansch aus C45, Ø80 x 20, Bohrung 22H7, 4x M8, 200 Stück',
-      'Buchse 1.4301: Außen-Ø 120, Bohrung 100H7, dünnwandig, 50 Stück',
-      'Lagerwelle 42CrMo4, Sitz ∅45k6, Passung mit 45H7 — Höchstspiel?',
+      'Dünnwandige Titan-Lagerhülse (3.7165): Außen-Ø 48 h6, Bohrung Ø 46 H7, Wandstärke 1,0 mm, Gewinde M14x1, Losgröße 250 Stk.',
+      'Getriebewelle 16MnCr5: Lagersitz Ø 35 h6, Passfedernut 8 P9 (DIN 6885), Querbohrung Ø 3,8 mm, 200 Stk. (Siemens CNC)',
+      'Hochdruck-Verteilerblock 1.4301: 60x60x135 mm, Hauptbohrung Ø 22 H7, Querpassung Ø 12 js6, 500 Stk.',
+      'Drehmaschine mit Kurzkegel A2-6: Zeit- & Kostenersparnis bei Umrüstung von 3-Backenfutter auf HAINBUCH SPANNTOP?',
     ],
     features: [
       { title: 'Werkstoff & Rohmaterial', text: 'Fundierte Empfehlung mit Begründung und Norm-Rohmaß.' },
@@ -78,11 +79,12 @@ export const T = {
     heroTitle2: 'Grounded and precise.',
     heroText:
       'Describe your workpiece — you get a complete technical evaluation with workholding recommendation.',
-    examplesLabel: 'Examples',
+    examplesLabel: 'Shop-Floor Examples',
     examples: [
-      'Flange, C45 steel, Ø80 x 20, bore 22H7, 4x M8, 200 pcs',
-      'Bushing 1.4301: OD 120, bore 100H7, thin-walled, 50 pcs',
-      'Bearing shaft 42CrMo4, seat ∅45k6, fit with 45H7 — max clearance?',
+      'Thin-walled Titanium sleeve (Grade 5 / 3.7165): OD 48 h6, bore 46 H7, wall thickness 1.0 mm, thread M14x1, batch 250 pcs',
+      'Transmission shaft 16MnCr5: Bearing seat Ø 35 h6, keyway 8 P9 (DIN 6885), cross bore Ø 3.8 mm, 200 pcs (Siemens CNC)',
+      'High-pressure manifold block 1.4301: 60x60x135 mm, main bore Ø 22 H7, cross fit Ø 12 js6, 500 pcs',
+      'CNC Lathe with A2-6 spindle: Time & cost savings upgrading from 3-jaw chuck to HAINBUCH SPANNTOP quick-change?',
     ],
     features: [
       { title: 'Material & raw stock', text: 'Grounded recommendation with reasoning and standard stock size.' },
