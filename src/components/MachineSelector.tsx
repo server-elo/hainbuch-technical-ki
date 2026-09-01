@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Cpu, ChevronDown, Check, Plus, Trash2, X, Save } from 'lucide-react';
+import { Cpu, ChevronDown, Check, Plus, Trash2, X, Save, Disc, Layers } from 'lucide-react';
 
 export interface MachineProfile {
   id: string;
@@ -17,41 +17,41 @@ export const PRESET_MACHINES: MachineProfile[] = [
     name: 'DMG Mori NLX 2500',
     type: 'lathe',
     spindle: 'Kurzkegel A2-6 (DIN 55026)',
-    drawtube: 'Hohlspannzylinder Ø 80 mm / Gewinde M70x2',
+    drawtube: 'Hohlspannzylinder Ø 80 mm / M70x2',
   },
   {
     id: 'mazak-qt200',
     name: 'Mazak QuickTurn 200',
     type: 'lathe',
     spindle: 'Kurzkegel A2-6 (DIN 55026)',
-    drawtube: 'Hohlspannzylinder Ø 65 mm / Gewinde M60x2',
+    drawtube: 'Hohlspannzylinder Ø 65 mm / M60x2',
   },
   {
     id: 'haas-st20',
     name: 'Haas ST-20 / ST-30',
     type: 'lathe',
     spindle: 'Kurzkegel A2-6 (DIN 55026)',
-    drawtube: 'Hohlspannzylinder Ø 52 mm / Gewinde M55x2',
+    drawtube: 'Hohlspannzylinder Ø 52 mm / M55x2',
   },
   {
     id: 'dmg-clx450',
     name: 'DMG Mori CLX 450',
     type: 'lathe',
     spindle: 'Kurzkegel A2-8 (DIN 55026)',
-    drawtube: 'Hohlspannzylinder Ø 80 mm / Gewinde M85x2',
+    drawtube: 'Hohlspannzylinder Ø 80 mm / M85x2',
   },
   {
     id: 'hermle-c400',
     name: 'Hermle C400 (5-Achs)',
     type: 'mill',
-    spindle: '5-Achs Schwenkrundtisch Ø 440 mm',
-    table: 'T-Nuten 14 mm H7 / 4 Spannkanäle',
+    spindle: '5-Achs Rundtisch Ø 440 mm',
+    table: 'T-Nuten 14 mm H7 / 4 Kanäle',
   },
   {
     id: 'universal',
     name: 'Universal-Maschine',
     type: 'millturn',
-    spindle: 'Direkte Flansch- & Zylinderanbindung',
+    spindle: 'Direkte Flanschanbindung',
   },
 ];
 
@@ -74,7 +74,17 @@ export default function MachineSelector({ selected, onSelect }: Props) {
   const [formDrawtube, setFormDrawtube] = useState('');
   const [formTable, setFormTable] = useState('');
 
-  // Load custom machines on mount
+  // Extract short spindle tag (e.g. A2-6, A2-8, 5-Achs)
+  const getSpindleTag = (s: string) => {
+    if (s.includes('A2-6')) return 'A2-6';
+    if (s.includes('A2-8')) return 'A2-8';
+    if (s.includes('A2-5')) return 'A2-5';
+    if (s.includes('A2-11')) return 'A2-11';
+    if (s.includes('5-Achs')) return '5-Achs';
+    if (s.includes('T-Nut')) return 'Tisch';
+    return 'Spindel';
+  };
+
   useEffect(() => {
     try {
       const saved = localStorage.getItem(STORAGE_KEY);
@@ -134,68 +144,81 @@ export default function MachineSelector({ selected, onSelect }: Props) {
 
   return (
     <div className="relative">
-      {/* Header Button Styled with clean HAINBUCH aesthetic */}
+      {/* High-End Industrial Machine Pill Button */}
       <button
         onClick={() => setOpen(o => !o)}
-        className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-white hover:bg-neutral-50 border border-neutral-300 hover:border-red-600 text-xs font-semibold text-neutral-800 hover:text-red-700 transition-all shadow-sm group"
-        title="Aktive CNC-Maschine für Flansch- und Zugrohrberechnung wählen"
+        className="flex items-center gap-2.5 px-3 py-1.5 rounded-xl bg-white hover:bg-neutral-50 border border-neutral-200/90 hover:border-red-500 shadow-sm hover:shadow transition-all group text-left"
+        title="CNC-Maschine & Spindelschnittstelle konfigurieren"
       >
-        <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></div>
-        <Cpu size={14} className="text-red-600 group-hover:scale-110 transition-transform shrink-0" />
-        <span className="truncate max-w-[120px] sm:max-w-[170px]">{selected.name}</span>
-        <ChevronDown size={12} className={`text-neutral-400 group-hover:text-red-600 transition-transform ${open ? 'rotate-180' : ''}`} />
+        <div className="w-7 h-7 rounded-lg bg-neutral-100 group-hover:bg-red-50 flex items-center justify-center text-neutral-600 group-hover:text-red-600 transition-colors shrink-0">
+          <Disc size={15} className="group-hover:rotate-90 transition-transform duration-300" />
+        </div>
+
+        <div className="min-w-0 pr-0.5">
+          <div className="flex items-center gap-1.5">
+            <span className="text-[9px] font-bold uppercase tracking-wider text-neutral-400 leading-none">Maschine</span>
+            <span className="text-[9px] font-mono font-bold px-1.5 py-0.2 bg-neutral-100 text-neutral-600 rounded text-[8px] leading-tight">
+              {getSpindleTag(selected.spindle)}
+            </span>
+          </div>
+          <div className="text-xs font-bold text-neutral-900 truncate max-w-[110px] sm:max-w-[150px] leading-tight mt-0.5">
+            {selected.name}
+          </div>
+        </div>
+
+        <ChevronDown size={13} className={`text-neutral-400 group-hover:text-red-600 transition-transform ml-0.5 shrink-0 ${open ? 'rotate-180' : ''}`} />
       </button>
 
       {/* Dropdown Menu */}
       {open && (
         <>
           <div className="fixed inset-0 z-40" onClick={() => { setOpen(false); setShowAddForm(false); }} />
-          <div className="absolute right-0 mt-1.5 w-80 bg-white border border-neutral-200 rounded-xl shadow-2xl z-50 overflow-hidden divide-y divide-neutral-100 animate-in fade-in zoom-in-95 duration-100 text-neutral-800">
+          <div className="absolute right-0 mt-2 w-84 bg-white border border-neutral-200/90 rounded-2xl shadow-2xl z-50 overflow-hidden divide-y divide-neutral-100 animate-in fade-in zoom-in-95 duration-150 text-neutral-800">
             
             {/* Header */}
-            <div className="px-3.5 py-2.5 bg-neutral-50 flex items-center justify-between border-b border-neutral-200">
+            <div className="px-4 py-3 bg-neutral-50/80 flex items-center justify-between border-b border-neutral-200/70">
               <div>
-                <span className="text-[10px] font-bold tracking-wider text-neutral-500 uppercase">Kunden-Maschinenpark</span>
-                <p className="text-[10px] text-neutral-400">Automatische Spindel- & Zugrohranpassung</p>
+                <span className="text-[10px] font-bold tracking-wider text-neutral-500 uppercase">Aktiver Maschinenpark</span>
+                <p className="text-[10px] text-neutral-400">Automatische Flansch- & Zylinderadaption</p>
               </div>
               <button
                 onClick={() => setShowAddForm(s => !s)}
-                className="flex items-center gap-1 px-2.5 py-1 bg-red-600 hover:bg-red-700 text-white rounded-md text-[10px] font-bold transition-colors shadow-sm"
+                className="flex items-center gap-1 px-2.5 py-1 bg-red-600 hover:bg-red-700 text-white rounded-lg text-[10px] font-bold transition-all shadow-sm active:scale-95"
               >
                 <Plus size={11} />
                 Eigene Maschine
               </button>
             </div>
 
-            {/* Custom Add Form inside Dropdown */}
+            {/* Custom Add Form */}
             {showAddForm ? (
-              <form onSubmit={handleSaveCustom} className="p-3.5 space-y-2.5 bg-neutral-50/50 text-xs">
+              <form onSubmit={handleSaveCustom} className="p-4 space-y-3 bg-neutral-50/50 text-xs">
                 <div className="flex justify-between items-center pb-1 border-b border-neutral-200">
-                  <span className="font-bold text-neutral-900 text-[11px]">Eigene CNC-Maschine eintragen</span>
+                  <span className="font-bold text-neutral-900 text-xs">Eigene CNC-Maschine anlegen</span>
                   <button type="button" onClick={() => setShowAddForm(false)} className="text-neutral-400 hover:text-neutral-700">
-                    <X size={13} />
+                    <X size={14} />
                   </button>
                 </div>
 
                 <div>
-                  <label className="text-[10px] text-neutral-600 block mb-0.5 font-semibold">Maschinenhersteller & Modell *</label>
+                  <label className="text-[10px] text-neutral-600 block mb-1 font-semibold">Maschinenhersteller & Modell *</label>
                   <input
                     type="text"
                     required
                     placeholder="z. B. Spinner TC600 / Index G200"
                     value={formName}
                     onChange={e => setFormName(e.target.value)}
-                    className="w-full bg-white border border-neutral-300 rounded-md px-2.5 py-1.5 text-xs text-neutral-900 focus:outline-none focus:border-red-600 focus:ring-1 focus:ring-red-600 shadow-sm"
+                    className="w-full bg-white border border-neutral-300 rounded-lg px-3 py-1.5 text-xs text-neutral-900 focus:outline-none focus:border-red-600 shadow-sm"
                   />
                 </div>
 
                 <div className="grid grid-cols-2 gap-2">
                   <div>
-                    <label className="text-[10px] text-neutral-600 block mb-0.5 font-semibold">Typ</label>
+                    <label className="text-[10px] text-neutral-600 block mb-1 font-semibold">Typ</label>
                     <select
                       value={formType}
                       onChange={e => setFormType(e.target.value as any)}
-                      className="w-full bg-white border border-neutral-300 rounded-md px-2 py-1.5 text-xs text-neutral-900 focus:outline-none focus:border-red-600 shadow-sm"
+                      className="w-full bg-white border border-neutral-300 rounded-lg px-2 py-1.5 text-xs text-neutral-900 focus:outline-none focus:border-red-600 shadow-sm"
                     >
                       <option value="lathe">Drehmaschine</option>
                       <option value="mill">Fräsmaschine / BAZ</option>
@@ -203,11 +226,11 @@ export default function MachineSelector({ selected, onSelect }: Props) {
                     </select>
                   </div>
                   <div>
-                    <label className="text-[10px] text-neutral-600 block mb-0.5 font-semibold">Spindelnase</label>
+                    <label className="text-[10px] text-neutral-600 block mb-1 font-semibold">Spindelnase</label>
                     <select
                       value={formSpindle}
                       onChange={e => setFormSpindle(e.target.value)}
-                      className="w-full bg-white border border-neutral-300 rounded-md px-2 py-1.5 text-xs text-neutral-900 focus:outline-none focus:border-red-600 shadow-sm"
+                      className="w-full bg-white border border-neutral-300 rounded-lg px-2 py-1.5 text-xs text-neutral-900 focus:outline-none focus:border-red-600 shadow-sm"
                     >
                       <option value="Kurzkegel A2-5 (DIN 55026)">Kurzkegel A2-5</option>
                       <option value="Kurzkegel A2-6 (DIN 55026)">Kurzkegel A2-6</option>
@@ -222,24 +245,24 @@ export default function MachineSelector({ selected, onSelect }: Props) {
 
                 {formType !== 'mill' ? (
                   <div>
-                    <label className="text-[10px] text-neutral-600 block mb-0.5 font-semibold">Zugrohr & Zylinder (optional)</label>
+                    <label className="text-[10px] text-neutral-600 block mb-1 font-semibold">Zugrohr & Zylinder (optional)</label>
                     <input
                       type="text"
                       placeholder="z. B. Ø 65 mm / Gewinde M60x2"
                       value={formDrawtube}
                       onChange={e => setFormDrawtube(e.target.value)}
-                      className="w-full bg-white border border-neutral-300 rounded-md px-2.5 py-1.5 text-xs text-neutral-900 focus:outline-none focus:border-red-600 shadow-sm"
+                      className="w-full bg-white border border-neutral-300 rounded-lg px-3 py-1.5 text-xs text-neutral-900 focus:outline-none focus:border-red-600 shadow-sm"
                     />
                   </div>
                 ) : (
                   <div>
-                    <label className="text-[10px] text-neutral-600 block mb-0.5 font-semibold">Frästisch-Spezifikation</label>
+                    <label className="text-[10px] text-neutral-600 block mb-1 font-semibold">Frästisch-Spezifikation</label>
                     <input
                       type="text"
                       placeholder="z. B. T-Nuten 14 mm H7 / 4 Kanäle"
                       value={formTable}
                       onChange={e => setFormTable(e.target.value)}
-                      className="w-full bg-white border border-neutral-300 rounded-md px-2.5 py-1.5 text-xs text-neutral-900 focus:outline-none focus:border-red-600 shadow-sm"
+                      className="w-full bg-white border border-neutral-300 rounded-lg px-3 py-1.5 text-xs text-neutral-900 focus:outline-none focus:border-red-600 shadow-sm"
                     />
                   </div>
                 )}
@@ -248,13 +271,13 @@ export default function MachineSelector({ selected, onSelect }: Props) {
                   <button
                     type="button"
                     onClick={() => setShowAddForm(false)}
-                    className="px-2.5 py-1 text-[11px] text-neutral-500 hover:text-neutral-900 font-medium"
+                    className="px-3 py-1.5 text-xs text-neutral-500 hover:text-neutral-900 font-medium"
                   >
                     Abbrechen
                   </button>
                   <button
                     type="submit"
-                    className="flex items-center gap-1 px-3 py-1.5 bg-red-600 hover:bg-red-700 text-white rounded-md text-[11px] font-bold shadow-sm"
+                    className="flex items-center gap-1.5 px-3.5 py-1.5 bg-red-600 hover:bg-red-700 text-white rounded-lg text-xs font-bold shadow-sm"
                   >
                     <Save size={12} />
                     Speichern & Aktivieren
@@ -263,7 +286,7 @@ export default function MachineSelector({ selected, onSelect }: Props) {
               </form>
             ) : (
               /* Machine List */
-              <div className="max-h-64 overflow-y-auto py-1 divide-y divide-neutral-100">
+              <div className="max-h-72 overflow-y-auto py-1.5 divide-y divide-neutral-100">
                 {allMachines.map((m) => {
                   const isSel = m.id === selected.id;
                   return (
@@ -273,31 +296,32 @@ export default function MachineSelector({ selected, onSelect }: Props) {
                         onSelect(m);
                         setOpen(false);
                       }}
-                      className={`w-full text-left px-3.5 py-2.5 text-xs flex items-center justify-between hover:bg-neutral-50 cursor-pointer transition-colors ${
-                        isSel ? 'bg-red-50/70 text-red-950 font-semibold' : 'text-neutral-700'
+                      className={`w-full text-left px-4 py-2.5 text-xs flex items-center justify-between hover:bg-neutral-50 cursor-pointer transition-colors ${
+                        isSel ? 'bg-red-50/60 text-red-950 font-semibold' : 'text-neutral-700'
                       }`}
                     >
                       <div className="min-w-0 pr-2">
-                        <div className="flex items-center gap-1.5">
-                          <span className="truncate">{m.name}</span>
+                        <div className="flex items-center gap-2">
+                          <span className="truncate text-[13px] font-bold text-neutral-900">{m.name}</span>
                           {m.isCustom && (
-                            <span className="text-[8px] px-1.5 py-0.2 bg-neutral-100 text-neutral-600 border border-neutral-300 rounded font-mono font-medium">EIGENE</span>
+                            <span className="text-[8px] px-1.5 py-0.2 bg-neutral-100 text-neutral-600 border border-neutral-300 rounded font-mono font-semibold">EIGENE</span>
                           )}
                           {isSel && (
-                            <span className="text-[8px] px-1.5 py-0.2 bg-red-600 text-white rounded font-mono font-bold">AKTIV</span>
+                            <span className="text-[8px] px-2 py-0.5 bg-red-600 text-white rounded-full font-mono font-black tracking-wider">AKTIV</span>
                           )}
                         </div>
-                        <div className="text-[10px] text-neutral-500 font-mono mt-0.5 truncate">{m.spindle}</div>
+                        <div className="text-[11px] text-neutral-500 mt-0.5 truncate">{m.spindle}</div>
+                        {m.drawtube && <div className="text-[10px] text-neutral-400 font-mono mt-0.5">{m.drawtube}</div>}
                       </div>
-                      <div className="flex items-center gap-1 shrink-0">
-                        {isSel && <Check size={14} className="text-red-600 shrink-0" />}
+                      <div className="flex items-center gap-1.5 shrink-0">
+                        {isSel && <Check size={16} className="text-red-600 shrink-0" />}
                         {m.isCustom && (
                           <button
                             onClick={(e) => handleDeleteCustom(m.id, e)}
-                            className="p-1 text-neutral-400 hover:text-red-600 transition-colors ml-1"
-                            title="Maschine entfernen"
+                            className="p-1.5 text-neutral-400 hover:text-red-600 hover:bg-red-50 rounded-md transition-colors"
+                            title="Maschine löschen"
                           >
-                            <Trash2 size={12} />
+                            <Trash2 size={13} />
                           </button>
                         )}
                       </div>
