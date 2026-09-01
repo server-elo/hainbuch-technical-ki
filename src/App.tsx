@@ -14,6 +14,7 @@ import OperationsChart from './components/OperationsChart';
 import FitDiagram from './components/FitDiagram';
 import SetupSheetModal, { SetupSheetData } from './components/SetupSheetModal';
 import MachineSelector, { MachineProfile, PRESET_MACHINES } from './components/MachineSelector';
+import RoiTimeCalculatorModal from './components/RoiTimeCalculatorModal';
 import { resolveImgUrl, parseSetupSheetFromMarkdown } from './utils';
 
 /** HAINBUCH collet mark — three jaws around a bore. Same geometry as the app icon. */
@@ -744,6 +745,7 @@ export default function App() {
   }, []);
   const [selectedMachine, setSelectedMachine] = useState<MachineProfile>(PRESET_MACHINES[0]);
   const [activeSetupSheet, setActiveSetupSheet] = useState<SetupSheetData | null>(null);
+  const [showRoiModal, setShowRoiModal] = useState(false);
   const [messages, setMessages] = useState<ChatMessage[]>([{
     role: "model",
     parts: [{ text: "" }]  // index 0 is always rendered from t.welcome
@@ -1058,7 +1060,15 @@ export default function App() {
             <span className="h-5 w-px bg-neutral-200 shrink-0" />
             <span className="subtitle text-sm text-neutral-500 truncate">{t.subtitle}</span>
           </div>
-          <div className="flex items-center gap-2 sm:gap-3 shrink-0">
+          <div className="flex items-center gap-2 sm:gap-2.5 shrink-0">
+            <button
+              onClick={() => setShowRoiModal(true)}
+              className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-white hover:bg-neutral-50 border border-neutral-300 hover:border-red-600 text-xs font-semibold text-neutral-800 hover:text-red-700 transition-all shadow-sm group"
+              title="Wirtschaftlichkeits- & Zeitrechner öffnen"
+            >
+              <Clock size={13} className="text-red-600 group-hover:rotate-45 transition-transform shrink-0" />
+              <span className="hidden md:inline">Zeitrechner</span>
+            </button>
             <MachineSelector selected={selectedMachine} onSelect={setSelectedMachine} />
             <StatusDot onlineLabel={t.online} limitedLabel={t.limited} />
             {!isEmpty && (
@@ -1323,6 +1333,13 @@ export default function App() {
           isOpen={!!activeSetupSheet}
           onClose={() => setActiveSetupSheet(null)}
           data={activeSetupSheet}
+        />
+      )}
+
+      {showRoiModal && (
+        <RoiTimeCalculatorModal
+          isOpen={showRoiModal}
+          onClose={() => setShowRoiModal(false)}
         />
       )}
 
