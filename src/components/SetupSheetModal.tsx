@@ -66,34 +66,34 @@ export default function SetupSheetModal({ isOpen, onClose, data }: Props) {
       <div className="bg-white text-neutral-900 w-full max-w-4xl rounded-2xl shadow-2xl border border-neutral-200 overflow-hidden flex flex-col my-auto max-h-[90vh] print:max-h-none print:shadow-none print:border-none print:rounded-none">
         
         {/* Action Header (Hidden in Print) */}
-        <div className="flex items-center justify-between px-6 py-4 bg-neutral-900 text-white print:hidden">
+        <div className="flex items-center justify-between px-6 py-3.5 bg-neutral-50 border-b border-neutral-200 text-neutral-900 print:hidden">
           <div className="flex items-center gap-3">
-            <div className="w-8 h-8 rounded-lg bg-red-600 flex items-center justify-center font-bold text-white tracking-wider text-xs">
+            <div className="w-8 h-8 rounded-lg bg-red-600 flex items-center justify-center font-bold text-white tracking-wider text-xs shadow-sm">
               HB
             </div>
             <div>
-              <h2 className="text-base font-bold tracking-tight">Werkstatt-Einrichteblatt (Setup Sheet)</h2>
-              <p className="text-xs text-neutral-400">DIN A4 Fertigungsdokument für Einrichter & Maschinenbediener</p>
+              <h2 className="text-base font-bold tracking-tight text-neutral-950">Werkstatt-Einrichteblatt (Setup Sheet)</h2>
+              <p className="text-xs text-neutral-500">DIN A4 Fertigungsdokument für Einrichter & Maschinenbediener</p>
             </div>
           </div>
           <div className="flex items-center gap-2">
             <button
               onClick={handleExportCsv}
-              className="flex items-center gap-1.5 px-3 py-1.5 bg-neutral-800 hover:bg-neutral-700 text-xs font-semibold text-neutral-200 rounded-lg transition-colors border border-neutral-700"
+              className="flex items-center gap-1.5 px-3 py-1.5 bg-white hover:bg-neutral-100 text-xs font-semibold text-neutral-700 rounded-lg transition-colors border border-neutral-300 shadow-sm"
             >
-              <Download size={14} className="text-red-400" />
+              <Download size={14} className="text-red-600" />
               BOM CSV Export
             </button>
             <button
               onClick={handlePrint}
-              className="flex items-center gap-1.5 px-3.5 py-1.5 bg-red-600 hover:bg-red-500 text-xs font-semibold text-white rounded-lg transition-colors shadow-sm"
+              className="flex items-center gap-1.5 px-3.5 py-1.5 bg-red-600 hover:bg-red-700 text-xs font-semibold text-white rounded-lg transition-colors shadow-sm"
             >
               <Printer size={14} />
               Drucken / PDF
             </button>
             <button
               onClick={onClose}
-              className="p-1.5 text-neutral-400 hover:text-white rounded-lg hover:bg-neutral-800 transition-colors ml-2"
+              className="p-1.5 text-neutral-400 hover:text-neutral-700 rounded-lg hover:bg-neutral-200 transition-colors ml-2"
             >
               <X size={18} />
             </button>

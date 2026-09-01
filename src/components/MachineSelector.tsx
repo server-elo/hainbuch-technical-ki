@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Cpu, ChevronDown, Check, Plus, Trash2, Settings, X, Save } from 'lucide-react';
+import { Cpu, ChevronDown, Check, Plus, Trash2, X, Save } from 'lucide-react';
 
 export interface MachineProfile {
   id: string;
@@ -134,68 +134,68 @@ export default function MachineSelector({ selected, onSelect }: Props) {
 
   return (
     <div className="relative">
-      {/* Header Button Styled like HAINBUCH Brand */}
+      {/* Header Button Styled with clean HAINBUCH aesthetic */}
       <button
         onClick={() => setOpen(o => !o)}
-        className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-neutral-900/90 hover:bg-neutral-900 border border-neutral-700/80 hover:border-red-600/60 text-xs font-semibold text-neutral-200 hover:text-white transition-all shadow-sm group"
+        className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-white hover:bg-neutral-50 border border-neutral-300 hover:border-red-600 text-xs font-semibold text-neutral-800 hover:text-red-700 transition-all shadow-sm group"
         title="Aktive CNC-Maschine für Flansch- und Zugrohrberechnung wählen"
       >
-        <div className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></div>
-        <Cpu size={13} className="text-red-500 group-hover:rotate-12 transition-transform shrink-0" />
+        <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></div>
+        <Cpu size={14} className="text-red-600 group-hover:scale-110 transition-transform shrink-0" />
         <span className="truncate max-w-[120px] sm:max-w-[170px]">{selected.name}</span>
-        <ChevronDown size={12} className={`text-neutral-400 transition-transform ${open ? 'rotate-180' : ''}`} />
+        <ChevronDown size={12} className={`text-neutral-400 group-hover:text-red-600 transition-transform ${open ? 'rotate-180' : ''}`} />
       </button>
 
       {/* Dropdown Menu */}
       {open && (
         <>
           <div className="fixed inset-0 z-40" onClick={() => { setOpen(false); setShowAddForm(false); }} />
-          <div className="absolute right-0 mt-1.5 w-80 bg-neutral-900 border border-neutral-700 rounded-xl shadow-2xl z-50 overflow-hidden divide-y divide-neutral-800 animate-in fade-in zoom-in-95 duration-100 text-neutral-200">
+          <div className="absolute right-0 mt-1.5 w-80 bg-white border border-neutral-200 rounded-xl shadow-2xl z-50 overflow-hidden divide-y divide-neutral-100 animate-in fade-in zoom-in-95 duration-100 text-neutral-800">
             
             {/* Header */}
-            <div className="px-3.5 py-2.5 bg-neutral-950 flex items-center justify-between">
+            <div className="px-3.5 py-2.5 bg-neutral-50 flex items-center justify-between border-b border-neutral-200">
               <div>
-                <span className="text-[10px] font-bold tracking-wider text-neutral-400 uppercase">Kunden-Maschinenpark</span>
-                <p className="text-[10px] text-neutral-500">Spindel & Zugrohr werden automatisch adaptiert</p>
+                <span className="text-[10px] font-bold tracking-wider text-neutral-500 uppercase">Kunden-Maschinenpark</span>
+                <p className="text-[10px] text-neutral-400">Automatische Spindel- & Zugrohranpassung</p>
               </div>
               <button
                 onClick={() => setShowAddForm(s => !s)}
-                className="flex items-center gap-1 px-2 py-1 bg-red-600 hover:bg-red-500 text-white rounded text-[10px] font-bold transition-colors shadow-sm"
+                className="flex items-center gap-1 px-2.5 py-1 bg-red-600 hover:bg-red-700 text-white rounded-md text-[10px] font-bold transition-colors shadow-sm"
               >
                 <Plus size={11} />
                 Eigene Maschine
               </button>
             </div>
 
-            {/* Custom Add Form Modal inside Dropdown */}
+            {/* Custom Add Form inside Dropdown */}
             {showAddForm ? (
-              <form onSubmit={handleSaveCustom} className="p-3.5 space-y-2.5 bg-neutral-950/80 text-xs">
-                <div className="flex justify-between items-center pb-1 border-b border-neutral-800">
-                  <span className="font-bold text-white text-[11px]">Eigene CNC-Maschine eintragen</span>
-                  <button type="button" onClick={() => setShowAddForm(false)} className="text-neutral-400 hover:text-white">
+              <form onSubmit={handleSaveCustom} className="p-3.5 space-y-2.5 bg-neutral-50/50 text-xs">
+                <div className="flex justify-between items-center pb-1 border-b border-neutral-200">
+                  <span className="font-bold text-neutral-900 text-[11px]">Eigene CNC-Maschine eintragen</span>
+                  <button type="button" onClick={() => setShowAddForm(false)} className="text-neutral-400 hover:text-neutral-700">
                     <X size={13} />
                   </button>
                 </div>
 
                 <div>
-                  <label className="text-[10px] text-neutral-400 block mb-0.5 font-semibold">Maschinenhersteller & Modell *</label>
+                  <label className="text-[10px] text-neutral-600 block mb-0.5 font-semibold">Maschinenhersteller & Modell *</label>
                   <input
                     type="text"
                     required
                     placeholder="z. B. Spinner TC600 / Index G200"
                     value={formName}
                     onChange={e => setFormName(e.target.value)}
-                    className="w-full bg-neutral-800 border border-neutral-700 rounded px-2 py-1 text-xs text-white focus:outline-none focus:border-red-500"
+                    className="w-full bg-white border border-neutral-300 rounded-md px-2.5 py-1.5 text-xs text-neutral-900 focus:outline-none focus:border-red-600 focus:ring-1 focus:ring-red-600 shadow-sm"
                   />
                 </div>
 
                 <div className="grid grid-cols-2 gap-2">
                   <div>
-                    <label className="text-[10px] text-neutral-400 block mb-0.5 font-semibold">Typ</label>
+                    <label className="text-[10px] text-neutral-600 block mb-0.5 font-semibold">Typ</label>
                     <select
                       value={formType}
                       onChange={e => setFormType(e.target.value as any)}
-                      className="w-full bg-neutral-800 border border-neutral-700 rounded px-1.5 py-1 text-xs text-white focus:outline-none focus:border-red-500"
+                      className="w-full bg-white border border-neutral-300 rounded-md px-2 py-1.5 text-xs text-neutral-900 focus:outline-none focus:border-red-600 shadow-sm"
                     >
                       <option value="lathe">Drehmaschine</option>
                       <option value="mill">Fräsmaschine / BAZ</option>
@@ -203,11 +203,11 @@ export default function MachineSelector({ selected, onSelect }: Props) {
                     </select>
                   </div>
                   <div>
-                    <label className="text-[10px] text-neutral-400 block mb-0.5 font-semibold">Spindelnase</label>
+                    <label className="text-[10px] text-neutral-600 block mb-0.5 font-semibold">Spindelnase</label>
                     <select
                       value={formSpindle}
                       onChange={e => setFormSpindle(e.target.value)}
-                      className="w-full bg-neutral-800 border border-neutral-700 rounded px-1.5 py-1 text-xs text-white focus:outline-none focus:border-red-500"
+                      className="w-full bg-white border border-neutral-300 rounded-md px-2 py-1.5 text-xs text-neutral-900 focus:outline-none focus:border-red-600 shadow-sm"
                     >
                       <option value="Kurzkegel A2-5 (DIN 55026)">Kurzkegel A2-5</option>
                       <option value="Kurzkegel A2-6 (DIN 55026)">Kurzkegel A2-6</option>
@@ -222,24 +222,24 @@ export default function MachineSelector({ selected, onSelect }: Props) {
 
                 {formType !== 'mill' ? (
                   <div>
-                    <label className="text-[10px] text-neutral-400 block mb-0.5 font-semibold">Zugrohr & Zylinder (optional)</label>
+                    <label className="text-[10px] text-neutral-600 block mb-0.5 font-semibold">Zugrohr & Zylinder (optional)</label>
                     <input
                       type="text"
                       placeholder="z. B. Ø 65 mm / Gewinde M60x2"
                       value={formDrawtube}
                       onChange={e => setFormDrawtube(e.target.value)}
-                      className="w-full bg-neutral-800 border border-neutral-700 rounded px-2 py-1 text-xs text-white focus:outline-none focus:border-red-500"
+                      className="w-full bg-white border border-neutral-300 rounded-md px-2.5 py-1.5 text-xs text-neutral-900 focus:outline-none focus:border-red-600 shadow-sm"
                     />
                   </div>
                 ) : (
                   <div>
-                    <label className="text-[10px] text-neutral-400 block mb-0.5 font-semibold">Frästisch-Spezifikation</label>
+                    <label className="text-[10px] text-neutral-600 block mb-0.5 font-semibold">Frästisch-Spezifikation</label>
                     <input
                       type="text"
                       placeholder="z. B. T-Nuten 14 mm H7 / 4 Kanäle"
                       value={formTable}
                       onChange={e => setFormTable(e.target.value)}
-                      className="w-full bg-neutral-800 border border-neutral-700 rounded px-2 py-1 text-xs text-white focus:outline-none focus:border-red-500"
+                      className="w-full bg-white border border-neutral-300 rounded-md px-2.5 py-1.5 text-xs text-neutral-900 focus:outline-none focus:border-red-600 shadow-sm"
                     />
                   </div>
                 )}
@@ -248,22 +248,22 @@ export default function MachineSelector({ selected, onSelect }: Props) {
                   <button
                     type="button"
                     onClick={() => setShowAddForm(false)}
-                    className="px-2.5 py-1 text-[11px] text-neutral-400 hover:text-white"
+                    className="px-2.5 py-1 text-[11px] text-neutral-500 hover:text-neutral-900 font-medium"
                   >
                     Abbrechen
                   </button>
                   <button
                     type="submit"
-                    className="flex items-center gap-1 px-3 py-1 bg-red-600 hover:bg-red-500 text-white rounded text-[11px] font-bold"
+                    className="flex items-center gap-1 px-3 py-1.5 bg-red-600 hover:bg-red-700 text-white rounded-md text-[11px] font-bold shadow-sm"
                   >
-                    <Save size={11} />
+                    <Save size={12} />
                     Speichern & Aktivieren
                   </button>
                 </div>
               </form>
             ) : (
               /* Machine List */
-              <div className="max-h-64 overflow-y-auto py-1 divide-y divide-neutral-800/40">
+              <div className="max-h-64 overflow-y-auto py-1 divide-y divide-neutral-100">
                 {allMachines.map((m) => {
                   const isSel = m.id === selected.id;
                   return (
@@ -273,28 +273,28 @@ export default function MachineSelector({ selected, onSelect }: Props) {
                         onSelect(m);
                         setOpen(false);
                       }}
-                      className={`w-full text-left px-3.5 py-2.5 text-xs flex items-center justify-between hover:bg-neutral-800/80 cursor-pointer transition-colors ${
-                        isSel ? 'bg-red-950/40 text-white font-semibold' : 'text-neutral-300'
+                      className={`w-full text-left px-3.5 py-2.5 text-xs flex items-center justify-between hover:bg-neutral-50 cursor-pointer transition-colors ${
+                        isSel ? 'bg-red-50/70 text-red-950 font-semibold' : 'text-neutral-700'
                       }`}
                     >
                       <div className="min-w-0 pr-2">
                         <div className="flex items-center gap-1.5">
                           <span className="truncate">{m.name}</span>
                           {m.isCustom && (
-                            <span className="text-[8px] px-1 bg-neutral-800 text-neutral-400 border border-neutral-700 rounded font-mono">EIGENE</span>
+                            <span className="text-[8px] px-1.5 py-0.2 bg-neutral-100 text-neutral-600 border border-neutral-300 rounded font-mono font-medium">EIGENE</span>
                           )}
                           {isSel && (
-                            <span className="text-[8px] px-1 bg-red-600/40 text-red-300 rounded font-mono font-bold">AKTIV</span>
+                            <span className="text-[8px] px-1.5 py-0.2 bg-red-600 text-white rounded font-mono font-bold">AKTIV</span>
                           )}
                         </div>
                         <div className="text-[10px] text-neutral-500 font-mono mt-0.5 truncate">{m.spindle}</div>
                       </div>
                       <div className="flex items-center gap-1 shrink-0">
-                        {isSel && <Check size={14} className="text-red-500 shrink-0" />}
+                        {isSel && <Check size={14} className="text-red-600 shrink-0" />}
                         {m.isCustom && (
                           <button
                             onClick={(e) => handleDeleteCustom(m.id, e)}
-                            className="p-1 text-neutral-500 hover:text-red-400 transition-colors ml-1"
+                            className="p-1 text-neutral-400 hover:text-red-600 transition-colors ml-1"
                             title="Maschine entfernen"
                           >
                             <Trash2 size={12} />
