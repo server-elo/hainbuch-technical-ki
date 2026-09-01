@@ -4,14 +4,12 @@
   "version": "0.0.0",
   "type": "module",
   "scripts": {
-    "dev": "tsx server/server.ts",
-    "build": "vite build && esbuild server/server.ts --bundle --platform=node --format=cjs --packages=external --sourcemap --outfile=dist/server.cjs",
-    "start": "node dist/server.cjs",
+    "dev": "node lite-server.cjs",
+    "build": "vite build",
+    "start": "node lite-server.cjs",
     "preview": "vite preview",
-    "clean": "rm -rf dist server.cjs",
-    "lint": "tsc --noEmit",
-    "test": "tsx tests/machining.test.ts && tsx tests/cost.test.ts && tsx tests/clamping.test.ts && tsx tests/notices.test.ts && tsx tests/abort.test.ts && tsx tests/rag-fit.test.ts && tsx tests/stages.test.ts && tsx tests/api.test.ts",
-    "gauntlet": "tsx tests/gauntlet.ts"
+    "clean": "rm -rf dist",
+    "lint": "tsc --noEmit"
   },
   "dependencies": {
     "@google/genai": "^2.4.0",

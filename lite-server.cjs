@@ -588,6 +588,11 @@ async function handleChat(req, res) {
       });
       catalogContext = `\n\nHAINBUCH-KATALOG-PRODUKTE MIT OFFIZIELLEN TECHNISCHEN DATEN (maßgeblich – diese Werte in Tabellen übernehmen; Fotos direkt einbinden):\n${lines.join("\n")}`;
     }
+    const machine = parsed.machine;
+    let machineContext = "";
+    if (machine && machine.name) {
+      machineContext = `\n\nKUNDEN-MASCHINENPROFIL:\n- Ausgewählte Maschine: ${machine.name}\n- Spindelschnittstelle: ${machine.spindle || "Standard"}\n${machine.drawtube ? "- Zugrohranbindung: " + machine.drawtube + "\n" : ""}${machine.table ? "- Maschinentisch: " + machine.table + "\n" : ""}Nutze diese Spindelnase für die exakte Adapterflansch-Auslegung und das Einrichteblatt!\n`;
+    }
     const goldContext = retrieveGoldStandards(combinedQuery);
     const heartbeat = setInterval(() => emit(res, { type: "ping" }), 15000);
     try {
@@ -598,7 +603,7 @@ async function handleChat(req, res) {
         body: JSON.stringify({
           model: MODEL_ID,
           messages: [
-            { role: "system", content: SYSTEM_PROMPT + goldContext + fitsContext + catalogContext + shopContext + context },
+            { role: "system", content: SYSTEM_PROMPT + machineContext + goldContext + fitsContext + catalogContext + shopContext + context },
             ...messages,
           ],
           tools: [{ google_search: {} }],

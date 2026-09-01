@@ -12,6 +12,9 @@ import { API_BASE, apiHeaders } from './config';
 import { num, eur } from './format';
 import OperationsChart from './components/OperationsChart';
 import FitDiagram from './components/FitDiagram';
+import SetupSheetModal, { SetupSheetData } from './components/SetupSheetModal';
+import MachineSelector, { MachineProfile, PRESET_MACHINES } from './components/MachineSelector';
+import { resolveImgUrl, parseSetupSheetFromMarkdown } from './utils';
 
 /** HAINBUCH collet mark — three jaws around a bore. Same geometry as the app icon. */
 function ColletMark({ size = 16, className = '' }: { size?: number; className?: string }) {
@@ -104,18 +107,6 @@ function ThinkingIndicator({ pipeline, fallback }: { pipeline: PipelineStatus; f
       </AnimatePresence>
     </div>
   );
-}
-
-function resolveImgUrl(url: string): string {
-  if (!url) return url;
-  if (url.startsWith('http://localhost') || url.startsWith('http://127.0.0.1')) {
-    const p = url.replace(/^https?:\/\/[^/]+/, '');
-    return API_BASE ? `${API_BASE}${p}` : p;
-  }
-  if (url.startsWith('/hero-img') || url.startsWith('/shop-img')) {
-    return API_BASE ? `${API_BASE}${url}` : url;
-  }
-  return url;
 }
 
 /** Minimal markdown renderer for assistant messages (###, **bold**, bullets). */
@@ -751,6 +742,8 @@ export default function App() {
       })
       .catch(() => { /* stay German */ });
   }, []);
+  const [selectedMachine, setSelectedMachine] = useState<MachineProfile>(PRESET_MACHINES[0]);
+  const [activeSetupSheet, setActiveSetupSheet] = useState<SetupSheetData | null>(null);
   const [messages, setMessages] = useState<ChatMessage[]>([{
     role: "model",
     parts: [{ text: "" }]  // index 0 is always rendered from t.welcome
@@ -838,7 +831,7 @@ export default function App() {
       const response = await fetch(`${API_BASE}/api/chat`, {
         method: 'POST',
         headers: apiHeaders(),
-        body: JSON.stringify({ messages: apiMessages, lastAnalysis }),
+        body: JSON.stringify({ messages: apiMessages, lastAnalysis, machine: selectedMachine }),
         signal: controller.signal,
       });
       if (!response.ok || !response.body) {
@@ -1065,7 +1058,8 @@ export default function App() {
             <span className="h-5 w-px bg-neutral-200 shrink-0" />
             <span className="subtitle text-sm text-neutral-500 truncate">{t.subtitle}</span>
           </div>
-          <div className="flex items-center gap-2 sm:gap-4 shrink-0">
+          <div className="flex items-center gap-2 sm:gap-3 shrink-0">
+            <MachineSelector selected={selectedMachine} onSelect={setSelectedMachine} />
             <StatusDot onlineLabel={t.online} limitedLabel={t.limited} />
             {!isEmpty && (
               <button
@@ -1138,7 +1132,19 @@ export default function App() {
                 ))}
                 {msg.analysis && <AnalysisBlock analysis={msg.analysis} t={t} lang={uiLang} />}
                 {msg.role === 'model' && index > 0 && (
-                  <div className="msg-actions no-print mt-2 flex justify-end items-center gap-3">
+                  <div className="msg-actions no-print mt-2.5 flex flex-wrap justify-end items-center gap-2">
+                    <button
+                      onClick={() => {
+                        const text = msg.parts.map(p => p.text).join('\n');
+                        const sheet = parseSetupSheetFromMarkdown(text);
+                        if (sheet) setActiveSetupSheet(sheet);
+                      }}
+                      className="flex items-center gap-1.5 px-2.5 py-1 text-xs font-semibold rounded-lg bg-red-50 text-red-700 hover:bg-red-100 transition-colors border border-red-200 shadow-sm"
+                      title="Werkstatt-Einrichteblatt öffnen & als PDF drucken"
+                    >
+                      <FileText size={13} className="text-red-600" />
+                      <span>Einrichteblatt (PDF)</span>
+                    </button>
                     <FeedbackButtons getText={() => messageToText(msg, t)} />
                     {msg.analysis && <PdfButton msg={msg} t={t} />}
                     <CopyButton getText={() => messageToText(msg, t)} labels={{ copy: t.copy, copied: t.copied }} />
@@ -1311,6 +1317,14 @@ export default function App() {
           </form>
         </div>
       </div>
+
+      {activeSetupSheet && (
+        <SetupSheetModal
+          isOpen={!!activeSetupSheet}
+          onClose={() => setActiveSetupSheet(null)}
+          data={activeSetupSheet}
+        />
+      )}
 
     </div>
   );
