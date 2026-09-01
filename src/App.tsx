@@ -743,19 +743,7 @@ export default function App() {
       })
       .catch(() => { /* stay German */ });
   }, []);
-  const [selectedMachine, setSelectedMachine] = useState<MachineProfile>(() => {
-    try {
-      const saved = localStorage.getItem('hainbuch_active_machine');
-      if (saved) return JSON.parse(saved);
-    } catch {}
-    return PRESET_MACHINES[1];
-  });
-
-  useEffect(() => {
-    try {
-      localStorage.setItem('hainbuch_active_machine', JSON.stringify(selectedMachine));
-    } catch {}
-  }, [selectedMachine]);
+  const [selectedMachine, setSelectedMachine] = useState<MachineProfile>(PRESET_MACHINES[0]);
 
   const [activeSetupSheet, setActiveSetupSheet] = useState<SetupSheetData | null>(null);
   const [showRoiModal, setShowRoiModal] = useState(false);
@@ -1266,19 +1254,6 @@ export default function App() {
               </button>
             </div></div>
           )}
-          {/* Persistent Active Machine Profile Indicator */}
-          <div className="measure mb-2 flex items-center justify-between px-3 py-1.5 bg-white border border-neutral-200/90 rounded-lg text-xs shadow-sm no-print">
-            <div className="flex items-center gap-2 min-w-0">
-              <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse shrink-0"></div>
-              <span className="text-neutral-500 text-[11px] shrink-0 font-medium">KI-Maschinenprofil:</span>
-              <strong className="text-neutral-900 truncate text-[11px]">{selectedMachine.name}</strong>
-              <span className="text-[10px] text-neutral-400 font-mono hidden sm:inline">({selectedMachine.spindle}{selectedMachine.control ? ` · ${selectedMachine.control}` : ''})</span>
-            </div>
-            <div className="flex items-center gap-1.5 shrink-0 ml-2">
-              <span className="text-[9px] font-bold px-1.5 py-0.5 bg-emerald-50 text-emerald-700 border border-emerald-200 rounded font-mono">GESPEICHERT & AKTIV</span>
-            </div>
-          </div>
-
           <form
             onSubmit={handleSubmit}
             onDragOver={(e) => { e.preventDefault(); setDragging(true); }}
