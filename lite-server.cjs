@@ -514,8 +514,9 @@ async function handleChat(req, res) {
     res.setHeader("X-Accel-Buffering", "no");
 
     let messages;
+    let parsed;
     try {
-      const parsed = JSON.parse(body);
+      parsed = JSON.parse(body);
       if (!Array.isArray(parsed.messages) || parsed.messages.length === 0) throw new Error();
       messages = parsed.messages.slice(-20).map((m) => {
         const role = m.role === "model" ? "assistant" : m.role;
