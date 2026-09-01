@@ -1139,10 +1139,10 @@ export default function App() {
                         const sheet = parseSetupSheetFromMarkdown(text);
                         if (sheet) setActiveSetupSheet(sheet);
                       }}
-                      className="flex items-center gap-1.5 px-2.5 py-1 text-xs font-semibold rounded-lg bg-red-50 text-red-700 hover:bg-red-100 transition-colors border border-red-200 shadow-sm"
-                      title="Werkstatt-Einrichteblatt öffnen & als PDF drucken"
+                      className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold rounded-lg bg-neutral-900 hover:bg-neutral-800 text-white transition-all border border-neutral-700 hover:border-red-600 shadow-sm group"
+                      title="Werkstatt-Einrichteblatt öffnen & als DIN A4 PDF drucken"
                     >
-                      <FileText size={13} className="text-red-600" />
+                      <FileText size={13} className="text-red-500 group-hover:scale-110 transition-transform" />
                       <span>Einrichteblatt (PDF)</span>
                     </button>
                     <FeedbackButtons getText={() => messageToText(msg, t)} />
