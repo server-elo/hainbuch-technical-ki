@@ -212,25 +212,36 @@ export default function MachineSelector({ selected, onSelect }: Props) {
   return (
     <div className="relative">
       
-      {/* Floating Tutorial Tooltip Hint (Shown until user interacts) */}
+      {/* Premium Floating Tutorial Tooltip Hint */}
       {showTutorial && !open && (
-        <div className="absolute top-full mt-2 right-0 z-40 w-72 bg-neutral-900 text-white text-xs p-3 rounded-xl shadow-2xl border border-red-500/40 animate-bounce">
-          <div className="flex items-start justify-between gap-2">
-            <div className="flex items-center gap-1.5 font-bold text-red-400">
-              <Sparkles size={14} />
-              <span>Maschine konfigurieren</span>
+        <div className="absolute top-full mt-2.5 right-0 z-40 w-80 bg-white text-neutral-900 text-xs p-4 rounded-2xl shadow-[0_12px_36px_-6px_rgba(0,0,0,0.18)] border-2 border-red-600 animate-in fade-in zoom-in-95 duration-200">
+          {/* Arrow pointing up */}
+          <div className="absolute -top-2.5 right-7 w-4 h-4 bg-white border-t-2 border-l-2 border-red-600 rotate-45"></div>
+          
+          <div className="flex items-start justify-between gap-2 relative z-10">
+            <div className="flex items-center gap-1.5 font-black text-xs text-red-600 tracking-tight">
+              <Sparkles size={14} className="text-red-600" />
+              <span>MASCHINE & G-CODE WÄHLEN</span>
             </div>
-            <button onClick={dismissTutorial} className="text-neutral-400 hover:text-white">
-              <X size={13} />
+            <button onClick={dismissTutorial} className="text-neutral-400 hover:text-neutral-700 p-0.5 rounded">
+              <X size={14} />
             </button>
           </div>
-          <p className="text-[11px] text-neutral-300 mt-1 leading-relaxed">
-            👉 Wählen Sie hier Ihre Maschine (oder <strong>Universal</strong>), damit alle Futter-Flansche und CNC-Zyklen automatisch passen!
+          
+          <p className="text-xs text-neutral-600 mt-2 leading-relaxed relative z-10">
+            Wählen Sie hier Ihre Maschine (oder <strong>Universal</strong>), damit die KI automatisch die passenden <strong>Adapterflansche, Zugrohranbindungen</strong> und <strong>G-Code-Zyklen</strong> berechnet.
           </p>
-          <div className="mt-2 flex justify-end">
+          
+          <div className="mt-3 flex items-center justify-end gap-2 relative z-10">
+            <button
+              onClick={dismissTutorial}
+              className="px-2.5 py-1 text-xs text-neutral-500 hover:text-neutral-900 font-medium transition-colors"
+            >
+              Später
+            </button>
             <button
               onClick={() => { dismissTutorial(); setOpen(true); }}
-              className="px-2.5 py-1 bg-red-600 hover:bg-red-700 text-white font-bold rounded text-[10px] shadow-sm"
+              className="px-3.5 py-1.5 bg-red-600 hover:bg-red-700 text-white font-bold rounded-lg text-xs shadow-sm active:scale-95 transition-all"
             >
               Jetzt wählen
             </button>
@@ -241,17 +252,17 @@ export default function MachineSelector({ selected, onSelect }: Props) {
       {/* Main Machine Badge Button */}
       <button
         onClick={() => { setOpen(o => !o); dismissTutorial(); }}
-        className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-white hover:bg-neutral-50 border border-neutral-300 hover:border-red-600 shadow-sm transition-all group text-left"
+        className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-white hover:bg-neutral-50 border border-neutral-300/90 hover:border-red-600 shadow-sm hover:shadow transition-all group text-left h-9"
         title="CNC-Maschine & Spindelprofil konfigurieren"
       >
-        <div className="w-6 h-6 rounded-lg bg-red-50 text-red-600 flex items-center justify-center font-bold text-xs shrink-0 group-hover:scale-105 transition-transform">
-          <Disc size={14} />
+        <div className="w-5 h-5 rounded-md bg-red-50 text-red-600 flex items-center justify-center font-bold text-xs shrink-0 group-hover:scale-110 transition-transform">
+          <Disc size={13} />
         </div>
 
         <div className="min-w-0 pr-0.5">
           <div className="flex items-center gap-1">
             <span className="text-[9px] font-bold uppercase tracking-wider text-neutral-400">Maschine:</span>
-            <span className="text-[10px] font-bold text-neutral-900 truncate max-w-[100px] sm:max-w-[140px]">
+            <span className="text-[11px] font-bold text-neutral-900 truncate max-w-[100px] sm:max-w-[140px]">
               {selected.name.replace(/\s*\(.*\)/, '')}
             </span>
           </div>

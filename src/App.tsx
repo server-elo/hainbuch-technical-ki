@@ -1064,7 +1064,7 @@ export default function App() {
           <div className="flex items-center gap-2 sm:gap-2.5 shrink-0">
             <button
               onClick={() => setShowRoiModal(true)}
-              className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-white hover:bg-neutral-50 border border-neutral-300 hover:border-red-600 text-xs font-semibold text-neutral-800 hover:text-red-700 transition-all shadow-sm group"
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white hover:bg-neutral-50 border border-neutral-300/90 hover:border-red-600 shadow-sm hover:shadow text-xs font-semibold text-neutral-800 hover:text-red-700 transition-all group h-9"
               title="Wirtschaftlichkeits- & Zeitrechner öffnen"
             >
               <Clock size={13} className="text-red-600 group-hover:rotate-45 transition-transform shrink-0" />
@@ -1171,18 +1171,21 @@ export default function App() {
               transition={{ delay: 0.15 }}
               className="pl-0 sm:pl-11 pr-0 sm:pr-2"
             >
-              <p className="text-[11px] font-semibold uppercase tracking-widest text-neutral-400 mb-2">
-                {t.examplesLabel}
+              <p className="text-[11px] font-bold uppercase tracking-widest text-neutral-400 mb-2.5 flex items-center gap-1.5">
+                <Sparkles size={13} className="text-red-600" />
+                <span>{t.examplesLabel}</span>
               </p>
-              <div className="grid gap-2 sm:grid-cols-2 max-w-3xl">
+              <div className="grid gap-2.5 sm:grid-cols-2 max-w-3xl">
                 {t.examples.map((ex, i) => (
                   <button
                     key={i}
                     onClick={() => submitText(ex)}
-                    className="chip group px-3 py-2.5 text-[12px] text-neutral-600 leading-relaxed flex items-start gap-2"
+                    className="p-3 rounded-xl bg-white hover:bg-red-50/30 border border-neutral-200/90 hover:border-red-500 shadow-sm hover:shadow transition-all group text-left flex items-start gap-2.5 cursor-pointer"
                   >
-                    <ChevronRight size={13} className="mt-0.5 shrink-0 text-neutral-300 group-hover:text-red-600 transition-colors" />
-                    <span>{ex}</span>
+                    <div className="w-5 h-5 rounded-md bg-neutral-100 group-hover:bg-red-600 text-neutral-500 group-hover:text-white flex items-center justify-center shrink-0 mt-0.5 transition-colors">
+                      <ChevronRight size={13} />
+                    </div>
+                    <span className="text-xs text-neutral-700 group-hover:text-neutral-950 font-medium leading-snug">{ex}</span>
                   </button>
                 ))}
               </div>
