@@ -4,7 +4,7 @@ const path = require("path");
 
 const PORT = process.env.PORT || 3002;
 const LLM_URL = process.env.LLM_URL || "http://127.0.0.1:8317/v1/chat/completions";
-const MODEL_ID = process.env.MODEL_ID || "gemini-3.7-flash-high";
+const MODEL_ID = process.env.MODEL_ID || "gemini-3.8-flash-medium";
 const APP_KEY = process.env.APP_KEY || "";
 const KB_PATH =
   process.env.KB_PATH ||
