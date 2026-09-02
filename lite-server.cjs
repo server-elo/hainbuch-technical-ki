@@ -513,6 +513,9 @@ function cleanLaTeX(t) {
   s = s.replace(/(###[^\n]*MANDO\s+T21[12][^\n]*\n[\s\S]*?)hero_(?:124|254|94|372)\.jpg/gi, '$1hero_178.jpg');
   s = s.replace(/(###[^\n]*MANDO\s+Adapt[^\n]*\n[\s\S]*?)hero_(?:124|254|94|372)\.jpg/gi, '$1hero_272.jpg');
   s = s.replace(/(###[^\n]*B-Top[^\n]*\n[\s\S]*?)hero_(?:404|458|94)\.jpg/gi, '$1hero_146.jpg');
+  // Sanitize links in Quellen to ensure only valid web URLs, not image links or third-party scraper domains
+  s = s.replace(/\[([^\]]+)\]\((https?:\/\/[^\s)]+\.(?:jpg|jpeg|png|gif|webp|svg))\)/gi, '[$1](https://www.hainbuch.com)');
+  s = s.replace(/\[([^\]]+)\]\((https?:\/\/(?:www\.)?(?:bisspecials|directindustry|traceparts)[^\s)]*)\)/gi, '[$1](https://www.hainbuch.com)');
   return s;
 }
 
