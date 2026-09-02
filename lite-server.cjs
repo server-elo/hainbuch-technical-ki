@@ -8,7 +8,7 @@ const MODEL_ID = process.env.MODEL_ID || "gemini-3.8-flash-medium";
 const APP_KEY = process.env.APP_KEY || "";
 const KB_PATH =
   process.env.KB_PATH ||
-  "/Users/lorenc/projects/hainbuch-technical-advisor/data/hainbuch-website/hainbuch_products.json";
+  path.join(__dirname, "data", "hainbuch_products.json");
 const IMG_PATH = process.env.IMG_PATH || path.join(__dirname, "hainbuch-images.json");
 const SHOP_DIR = process.env.SHOP_DIR || path.join(__dirname, "catalog", "shop");
 const SHOP_JSON = process.env.SHOP_JSON || path.join(__dirname, "catalog", "shop_accessories.json");
@@ -17,7 +17,10 @@ const MAP_JSON = process.env.MAP_JSON || path.join(__dirname, "catalog", "map.js
 const HERO_DIR = path.join(__dirname, "catalog");
 const BASE_URL = process.env.BASE_URL || `http://localhost:${PORT}`;
 const ADMIN_KEY = process.env.ADMIN_KEY || "";
-const TRUST_LOOPBACK = process.env.TRUST_LOOPBACK !== "0";
+// Default secure: loopback is NOT trusted unless explicitly enabled.
+// Cloudflared delivers every public request via loopback, so TRUST_LOOPBACK=1
+// would exempt the whole live site from rate limits AND open /api/admin.
+const TRUST_LOOPBACK = process.env.TRUST_LOOPBACK === "1";
 const RATE_PER_HOUR = Number(process.env.RATE_MAX_PER_HOUR || 120);
 const RATE_PER_DAY = Number(process.env.RATE_MAX_PER_DAY || 800);
 
@@ -184,6 +187,24 @@ function retrieveShop(query, top = 20) {
 
 let CATALOG = [];
 let HERO = {};
+try {
+  const catRaw = JSON.parse(fs.readFileSync(CATALOG_JSON, "utf8"));
+  CATALOG = Array.isArray(catRaw) ? catRaw : [];
+  console.log(`Katalog geladen: ${CATALOG.length} Produkte`);
+} catch (e) {
+  console.warn("Katalog nicht geladen:", e.message);
+}
+try {
+  const mapRaw = JSON.parse(fs.readFileSync(MAP_JSON, "utf8"));
+  if (Array.isArray(mapRaw)) {
+    for (const m of mapRaw) {
+      if (m && m.name && m.image) HERO[m.name] = m.image;
+    }
+  }
+  console.log(`Hero-Map geladen: ${Object.keys(HERO).length} Einträge`);
+} catch (e) {
+  console.warn("Hero-Map nicht geladen:", e.message);
+}
 const CANONICAL_HERO = {
   "inoflex vf": "hero_262.jpg",
   "inoflex vd": "hero_136.jpg",
@@ -224,9 +245,10 @@ const CANONICAL_HERO = {
 
 function getHeroForProduct(name) {
   const lower = (name || "").toLowerCase().trim();
-  // Check exact/prefix match first
-  for (const [k, img] of Object.entries(CANONICAL_HERO)) {
-    if (lower.includes(k)) return img;
+  // Longest keys first so "spanntop nova kombi axzug" wins over "spanntop nova".
+  const keys = Object.keys(CANONICAL_HERO).sort((a, b) => b.length - a.length);
+  for (const k of keys) {
+    if (lower.includes(k)) return CANONICAL_HERO[k];
   }
   if (HERO[name] && HERO[name] !== "hero_458.jpg") return HERO[name];
   return HERO[name] || null;
@@ -304,15 +326,23 @@ const IT = {
   7:  [10, 12, 15, 18, 21, 25, 30, 35, 40, 46, 52, 57, 63],
   8:  [14, 18, 22, 27, 33, 39, 46, 54, 63, 72, 81, 89, 97],
   9:  [25, 30, 36, 43, 52, 62, 74, 87, 100, 115, 130, 140, 155],
+  10: [40, 48, 58, 70, 84, 100, 120, 140, 160, 185, 210, 230, 250],
   11: [60, 75, 90, 110, 130, 160, 190, 220, 250, 290, 320, 360, 400],
 };
+// Fundamental deviations in µm per size step (ISO 286-1/2).
+// Shafts: h/g/f/e = upper deviation es; k/m/n/p = lower deviation ei;
+// js = symmetric ±IT/2. Bores: H = EI 0; P = upper deviation ES (keyways).
 const FUND = {
   h: { type: "shaft", es: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0] },
   g: { type: "shaft", es: [-2, -4, -5, -6, -7, -9, -10, -12, -14, -15, -17, -18, -20] },
   f: { type: "shaft", es: [-6, -10, -13, -16, -20, -25, -30, -36, -43, -50, -56, -62, -68] },
   e: { type: "shaft", es: [-14, -20, -25, -32, -40, -50, -60, -72, -85, -100, -110, -125, -135] },
-  k: { type: "shaft", ei: [2, 1, 1, 1, 2, 2, 2, 3, 3, 4, 4, 4, 5] },
+  k: { type: "shaft", ei: [0, 1, 1, 1, 2, 2, 2, 3, 3, 4, 4, 4, 5] },
+  m: { type: "shaft", ei: [2, 4, 6, 7, 8, 9, 11, 13, 15, 17, 20, 21, 23] },
+  n: { type: "shaft", ei: [4, 8, 10, 12, 15, 17, 20, 23, 27, 31, 34, 37, 40] },
+  p: { type: "shaft", ei: [6, 12, 15, 18, 22, 26, 32, 37, 43, 50, 56, 62, 68] },
   H: { type: "bore", EI: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0] },
+  P: { type: "bore", ES: [-6, -12, -15, -18, -22, -26, -32, -37, -43, -50, -56, -62, -68] },
 };
 function idxFor(d) {
   for (let i = 0; i < IT_RANGES.length; i++) if (d <= IT_RANGES[i]) return i;
@@ -320,34 +350,52 @@ function idxFor(d) {
 }
 function fmt(v) { return (v / 1000).toFixed(3).replace(".", ","); }
 function fitResult(dNom, boreGrade, shaftGrade) {
+  if (!boreGrade || !shaftGrade) return null;
   const i = idxFor(dNom);
-  if (i < 0) return null;
+  if (i < 0 || dNom <= 0 || dNom > 500) return null;
   const bDigit = boreGrade.replace(/[^0-9]/g, "");
+  const bLetter = boreGrade.replace(/[0-9]/g, "");
   const sDigit = shaftGrade.replace(/[^0-9]/g, "");
   const sLetter = shaftGrade.replace(/[0-9]/g, "");
   const itB = IT[bDigit]?.[i], itS = IT[sDigit]?.[i];
   if (!itB || !itS) return null;
-  const EI = FUND.H.EI[i];
-  const ES = EI + itB;
-  let es, ei;
-  const sf = FUND[sLetter];
-  if (sf?.es) { es = sf.es[i]; ei = es - itS; }
-  else if (sf?.ei) { ei = sf.ei[i]; es = ei + itS; }
+  // Bore side: H (EI = 0) or P (ES from table, e.g. keyways P9).
+  let EI, ES;
+  if (bLetter === "H") { EI = 0; ES = EI + itB; }
+  else if (bLetter === "P") {
+    const pES = FUND.P?.ES[i];
+    if (pES === undefined) return null;
+    ES = pES; EI = ES - itB;
+  }
   else return null;
+  // Shaft side: es-anchored (h/g/f/e), ei-anchored (k/m/n/p), symmetric (js).
+  let es, ei;
+  if (sLetter.toLowerCase() === "js") {
+    es = Math.ceil(itS / 2); ei = es - itS;
+  } else {
+    const key = Object.keys(FUND).find((k) => k === sLetter && FUND[k].type === "shaft");
+    const sfd = key ? FUND[key] : null;
+    if (sfd?.es !== undefined && sfd.es[i] !== undefined) { es = sfd.es[i]; ei = es - itS; }
+    else if (sfd?.ei !== undefined && sfd.ei[i] !== undefined) { ei = sfd.ei[i]; es = ei + itS; }
+    else return null;
+  }
   const Smax = ES - ei, Smin = EI - es;
   const art = Smin >= 0 ? "Spielpassung" : Smax <= 0 ? "Presspassung" : "Übergangspassung";
+  const sgn = (v) => (v >= 0 ? `+${v}` : `${v}`);
   const kenn = art === "Spielpassung"
     ? `S_min=${Smin} µm / S_max=${Smax} µm`
     : `${-Smax <= 0 ? "S" : "Ü"}_Werte: Spiel max=${Smax} µm, Übermaß max=${-Smin} µm`;
-  return `Ø${dNom} ${boreGrade}/${shaftGrade}: Bohrung EI=${EI} µm, ES=+${ES} µm, D_min=${fmt(dNom * 1000 + EI)} mm, D_max=${fmt(dNom * 1000 + ES)} mm | Welle es=${es >= 0 ? "+" + es : es} µm, ei=${ei >= 0 ? "+" + ei : ei} µm, d_max=${fmt(dNom * 1000 + es)} mm, d_min=${fmt(dNom * 1000 + ei)} mm | ${art} | ${kenn}`;
+  return `Ø${dNom} ${boreGrade}/${shaftGrade}: Bohrung EI=${sgn(EI)} µm, ES=${sgn(ES)} µm, D_min=${fmt(dNom * 1000 + EI)} mm, D_max=${fmt(dNom * 1000 + ES)} mm | Welle es=${sgn(es)} µm, ei=${sgn(ei)} µm, d_max=${fmt(dNom * 1000 + es)} mm, d_min=${fmt(dNom * 1000 + ei)} mm | ${art} | ${kenn}`;
 }
 
 function precomputeFits(question) {
   const found = [];
-  const re = /[Øø\s(]([0-9]{1,3}(?:,[0-9])?)\s*(?:mm)?\s*(H[5-9]|h[5-9]|k[4-7]|g[5-7]|f[6-8]|e[6-8]|js[5-8])\b(?:\s*\/\s*([Hh][5-9]|[kgefb][4-9]|js[5-8]))?/g;
+  const GRADE = "(?:H[5-9]|P[6-9]|[hH][5-9]|[kK][4-7]|[gG][5-7]|[fF][6-8]|[eE][6-8]|[mM][5-7]|[nN][5-7]|[pP][5-7]|[sS][5-7]|[jJ][sS]?[5-8])";
+  const re = new RegExp(`[Øø\\s(]([0-9]{1,3}(?:[.,][0-9]+)?)\\s*(?:mm)?\\s*(${GRADE})\\b(?:\\s*\\/\\s*(${GRADE}))?`, "g");
   let m;
   while ((m = re.exec(question)) !== null) {
     const d = parseFloat(m[1].replace(",", "."));
+    if (!(d > 0 && d <= 500)) continue;
     const g1 = m[2], g2 = m[3];
     found.push([d, g1, g2]);
   }
@@ -355,8 +403,9 @@ function precomputeFits(question) {
   const seen = new Set();
   for (const [d, g1, g2] of found) {
     const pairs = [];
-    const isBore = /^H/.test(g1);
-    const bg = isBore ? g1 : null;
+    // Case matters: uppercase H/P = bore, lowercase = shaft.
+    const isBore = /^[HP]/.test(g1);
+    const bg = isBore ? g1.toUpperCase() : null;
     const sg = !isBore ? g1 : g2 || null;
     if (isBore) {
       for (const s of [sg || "h6", "k6", "g6", "f7"]) pairs.push([d, bg, s]);
@@ -364,15 +413,17 @@ function precomputeFits(question) {
       for (const b of ["H7"]) pairs.push([d, b, sg]);
     }
     for (const [dd, b, s] of pairs) {
+      if (!s) continue;
       const key = `${dd}-${b}-${s}`;
       if (seen.has(key)) continue;
       seen.add(key);
       const r = fitResult(dd, b, s);
-      if (r) lines.push(r);
+      if (r) lines.push("- " + r);
+      else lines.push(`- Ø${dd} ${b}/${s}: NICHT tabelliert vorberechnet — Grenzmaße aus ISO-286-Tabelle übernehmen, NICHT schätzen.`);
     }
   }
   return lines.length
-    ? `\n\nVORBEBERECHNETE PASSUNGEN (exakt per Code nach ISO 286 gerechnet – ÜBERNIMM diese Werte 1:1, rechne Passungen NICHT selbst):\n${lines.map((l) => "- " + l).join("\n")}`
+    ? `\n\nVORBEBERECHNETE PASSUNGEN (exakt per Code nach ISO 286 gerechnet – ÜBERNIMM diese Werte 1:1, rechne Passungen NICHT selbst):\n${lines.join("\n")}`
     : "";
 }
 
@@ -540,7 +591,17 @@ function cleanLaTeX(t) {
 
 async function handleChat(req, res) {
   let body = "";
-  req.on("data", (c) => (body += c));
+  let tooLarge = false;
+  req.on("data", (c) => {
+    if (tooLarge) return;
+    body += c;
+    if (body.length > 15 * 1024 * 1024) {
+      tooLarge = true;
+      try { res.writeHead(413, { "Content-Type": "application/json" }); } catch {}
+      try { res.end(JSON.stringify({ error: "payload too large" })); } catch {}
+      try { req.destroy(); } catch {}
+    }
+  });
   req.on("end", async () => {
     res.setHeader("Content-Type", "application/x-ndjson; charset=utf-8");
     res.setHeader("Cache-Control", "no-cache");
@@ -552,7 +613,7 @@ async function handleChat(req, res) {
       parsed = JSON.parse(body);
       if (!Array.isArray(parsed.messages) || parsed.messages.length === 0) throw new Error();
       messages = parsed.messages.slice(-20).map((m) => {
-        const role = m.role === "model" ? "assistant" : m.role;
+        const role = m.role === "model" ? "assistant" : m.role === "system" ? "user" : m.role;
         if (Array.isArray(m.parts)) {
           const text = m.parts
             .map((p) => p.text || "")
@@ -564,7 +625,7 @@ async function handleChat(req, res) {
             .slice(0, 4)
             .map((p) => ({
               type: "image_url",
-              image_url: { url: `data:${p.inlineData.mimeType};base64,${p.inlineData.data}` },
+              image_url: { url: `data:${p.inlineData.mimeType};base64,${String(p.inlineData.data || "").slice(0, 5 * 1024 * 1024)}` },
             }));
           if (images.length) {
             return { role, content: [{ type: "text", text: text || "Bitte analysiere das angehängte Bild." }, ...images] };
@@ -726,7 +787,17 @@ const server = http.createServer((req, res) => {
   }
   const rawUrl = (req.url || "").split("?")[0];
   if ((req.method === "GET" || req.method === "HEAD") && (rawUrl.startsWith("/hero-img/") || rawUrl.startsWith("/shop-img/"))) {
-    const file = path.basename(decodeURIComponent(rawUrl.replace(/^\/(hero-img|shop-img)\//, '')));
+    let file;
+    try {
+      file = path.basename(decodeURIComponent(rawUrl.replace(/^\/(hero-img|shop-img)\//, '')));
+    } catch {
+      res.writeHead(400);
+      return res.end();
+    }
+    if (file.includes("..") || file.includes("/") || file.includes("\\")) {
+      res.writeHead(400);
+      return res.end();
+    }
     const heroFull = path.join(HERO_DIR, file);
     const shopFull = path.join(SHOP_DIR, file);
     const resolved = fs.existsSync(heroFull) ? heroFull : (fs.existsSync(shopFull) ? shopFull : null);
@@ -734,9 +805,16 @@ const server = http.createServer((req, res) => {
       res.writeHead(404);
       return res.end();
     }
-    res.writeHead(200, { "Content-Type": "image/jpeg", "Cache-Control": "public, max-age=86400" });
+    const ext = path.extname(resolved).toLowerCase();
+    const imgType = ext === ".png" ? "image/png" : ext === ".webp" ? "image/webp" : ext === ".svg" ? "image/svg+xml" : "image/jpeg";
+    res.writeHead(200, { "Content-Type": imgType, "Cache-Control": "public, max-age=86400" });
     if (req.method === "HEAD") return res.end();
-    return fs.createReadStream(resolved).pipe(res);
+    const imgStream = fs.createReadStream(resolved);
+    imgStream.on("error", () => {
+      try { res.writeHead(500); } catch {}
+      try { res.end(); } catch {}
+    });
+    return imgStream.pipe(res);
   }
   if (req.method === "POST" && req.url === "/api/chat") {
     if (APP_KEY && req.headers["x-app-key"] !== APP_KEY) {
@@ -753,7 +831,17 @@ const server = http.createServer((req, res) => {
     }
     if (rateLimited(req, res)) return;
     let fbBody = "";
-    req.on("data", (c) => (fbBody += c));
+    let fbTooLarge = false;
+    req.on("data", (c) => {
+      if (fbTooLarge) return;
+      fbBody += c;
+      if (fbBody.length > 256 * 1024) {
+        fbTooLarge = true;
+        res.writeHead(413, { "Content-Type": "application/json" });
+        try { res.end(JSON.stringify({ error: "payload too large" })); } catch {}
+        try { req.destroy(); } catch {}
+      }
+    });
     req.on("end", () => {
       let rating = null, message = "";
       try { const p = JSON.parse(fbBody || "{}"); rating = p.rating; message = p.message; } catch {}
@@ -776,11 +864,17 @@ const server = http.createServer((req, res) => {
     return;
   }
   if (req.method === "GET" && req.url === "/api/admin") {
-    if (!isLoopback(req)) {
-      if (process.env.ALLOW_REMOTE_ADMIN !== "1" || !ADMIN_KEY || req.headers["x-admin-key"] !== ADMIN_KEY) {
+    // If ADMIN_KEY is set, it is ALWAYS required — even on loopback.
+    // (Cloudflared public traffic arrives via loopback, so loopback alone
+    // proves nothing on a tunneled host.)
+    if (ADMIN_KEY) {
+      if (req.headers["x-admin-key"] !== ADMIN_KEY) {
         res.writeHead(req.headers["x-admin-key"] ? 401 : 403, { "Content-Type": "application/json" });
         return res.end(JSON.stringify({ error: "localhost only" }));
       }
+    } else if (!isLoopback(req)) {
+      res.writeHead(403, { "Content-Type": "application/json" });
+      return res.end(JSON.stringify({ error: "localhost only" }));
     }
     let feedback = [];
     try {
@@ -791,13 +885,30 @@ const server = http.createServer((req, res) => {
   }
 
   // Statische Auslieferung der gebauten UI (dist/) + SPA-Fallback
+  // Containment: never serve outside dist/ (blocks /../.app_key etc.).
+  // Unknown /api/* returns JSON 404 instead of index.html.
   if (req.method === "GET") {
-    const urlPath = decodeURIComponent(req.url.split("?")[0]);
+    let urlPath;
+    try {
+      urlPath = decodeURIComponent(req.url.split("?")[0]);
+    } catch {
+      res.writeHead(400);
+      return res.end();
+    }
+    if (urlPath.startsWith("/api/")) {
+      res.writeHead(404, { "Content-Type": "application/json" });
+      return res.end(JSON.stringify({ error: "not found" }));
+    }
+    const distDir = path.join(__dirname, "dist");
     const rel = urlPath === "/" ? "index.html" : urlPath.replace(/^\/+/, "");
-    const full = path.normalize(path.join(__dirname, "dist", rel));
+    const full = path.normalize(path.join(distDir, rel));
+    if (full !== distDir && !full.startsWith(distDir + path.sep)) {
+      res.writeHead(403);
+      return res.end();
+    }
     const candidates = fs.existsSync(full) && fs.statSync(full).isFile()
       ? [full]
-      : [path.join(__dirname, "dist", "index.html")];
+      : [path.join(distDir, "index.html")];
     const file = candidates[0];
     if (fs.existsSync(file)) {
       const types = {
@@ -815,11 +926,23 @@ const server = http.createServer((req, res) => {
       };
       const type = types[path.extname(file).toLowerCase()] || "application/octet-stream";
       res.writeHead(200, { "Content-Type": type, "Cache-Control": file.endsWith("index.html") ? "no-cache" : "public, max-age=3600" });
-      return fs.createReadStream(file).pipe(res);
+      const stream = fs.createReadStream(file);
+      stream.on("error", () => {
+        try { res.writeHead(500); } catch {}
+        try { res.end(); } catch {}
+      });
+      return stream.pipe(res);
     }
   }
   res.writeHead(404);
   res.end();
 });
 
-server.listen(PORT, () => console.log(`HAINBUCH Gemini-only API auf http://localhost:${PORT}`));
+server.listen(PORT, () => {
+  console.log(`HAINBUCH Gemini-only API auf http://localhost:${PORT}`);
+  if (!process.env.BASE_URL) {
+    console.warn("[Config] BASE_URL not set — photo URLs fall back to localhost and will be broken on the live site. Set BASE_URL=https://<tunnel-url>");
+  }
+  if (!APP_KEY) console.warn("[Config] APP_KEY not set — /api/chat + /api/feedback are open.");
+  if (!ADMIN_KEY) console.warn("[Config] ADMIN_KEY not set — /api/admin allows loopback without key.");
+});
