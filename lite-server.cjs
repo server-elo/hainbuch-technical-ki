@@ -134,28 +134,37 @@ let SHOP = [];
 try {
   const all = JSON.parse(fs.readFileSync(SHOP_JSON, "utf8"));
   SHOP = all
-    .filter((p) => p.image && p.title)
+    .filter((p) => p.title)
     .map((p) => ({
+      materialNo: p.materialNo || "",
       title: p.title,
       category: p.category || "",
-      image: p.image,
-      text: `${p.title} ${p.category}`.toLowerCase(),
+      size: p.size || "",
+      clampDiaMm: p.clampDiaMm || "",
+      fits: p.fits || "",
+      group: p.group || "",
+      image: p.image || "",
+      text: `${p.materialNo || ""} ${p.title} ${p.category || ""} ${p.size || ""} ${p.clampDiaMm ? "ø" + p.clampDiaMm + " " + p.clampDiaMm + "mm" : ""} ${p.fits || ""} ${p.group || ""}`.toLowerCase(),
     }));
-  console.log(`Shop-Produkte geladen: ${SHOP.length} (mit Foto)`);
+  console.log(`Shop-Produkte geladen: ${SHOP.length} (mit Foto & Details)`);
 } catch (e) {
   console.warn("Shop-Daten nicht geladen:", e.message);
 }
 
-function retrieveShop(query, top = 18) {
+function retrieveShop(query, top = 20) {
   const terms = query
     .toLowerCase()
     .replace(/[^\wäöüß\s-]/g, " ")
     .split(/\s+/)
-    .filter((t) => t.length > 2 && !STOP.has(t));
+    .filter((t) => t.length > 1 && !STOP.has(t));
   if (!terms.length) return [];
   const scored = SHOP.map((p) => {
     let score = 0;
-    for (const t of terms) if (p.text.includes(t)) score += 1;
+    for (const t of terms) {
+      if (p.text.includes(t)) {
+        score += (t === p.materialNo?.toLowerCase() || t === String(p.clampDiaMm) || t === `ø${p.clampDiaMm}`) ? 5 : 1;
+      }
+    }
     return { p, score };
   })
     .filter((s) => s.score > 0)
@@ -597,9 +606,9 @@ async function handleChat(req, res) {
     if (shopHits.length) {
       const lines = shopHits.map(
         (p) =>
-          `- ${p.title} (Kategorie: ${p.category}) | Foto: ![${p.title}](${BASE_URL}/shop-img/${p.image})`
+          `- ${p.title} | Mat-Nr: ${p.materialNo || "—"} | Größe: ${p.size || "—"}${p.clampDiaMm ? " | Spann-Ø: " + p.clampDiaMm + " mm" : ""}${p.fits ? " | Passend für: " + p.fits.replace(/\n/g, ", ") : ""}${p.image ? ` | Foto: ![${p.title}](${BASE_URL}/shop-img/${p.image})` : ""}`
       );
-      shopContext = `\n\nKONKRETE HAINBUCH-SHOP-PRODUKTE MIT FOTO ZU DIESER ANFRAGE (Foto-URLs direkt einbinden):\n${lines.join("\n")}`;
+      shopContext = `\n\nKONKRETE HAINBUCH-SHOP-PRODUKTE MIT MAT-NUMMERN & FOTO ZU DIESER ANFRAGE (übernimm diese realen Artikelnummern in Stücklisten und Einrichteblatt):\n${lines.join("\n")}`;
     }
     const catalogHits = retrieveCatalog(combinedQuery);
     const precomputed = precomputeFits(combinedQuery);
