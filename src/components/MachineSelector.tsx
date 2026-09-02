@@ -137,7 +137,10 @@ export default function MachineSelector({ selected, onSelect }: Props) {
   useEffect(() => {
     try {
       const savedCustom = localStorage.getItem(STORAGE_KEY);
-      if (savedCustom) setCustomMachines(JSON.parse(savedCustom));
+      if (savedCustom) {
+        const parsed = JSON.parse(savedCustom);
+        if (Array.isArray(parsed)) setCustomMachines(parsed.filter((m) => m && typeof m.id === 'string' && typeof m.name === 'string'));
+      }
 
       const dismissed = localStorage.getItem(TUTORIAL_DISMISSED_KEY);
       if (!dismissed) setShowTutorial(true);
@@ -145,6 +148,14 @@ export default function MachineSelector({ selected, onSelect }: Props) {
       // ignore
     }
   }, []);
+
+  // Close popover with Escape
+  useEffect(() => {
+    if (!open) return;
+    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') { setOpen(false); setShowAddForm(false); } };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [open]);
 
   const dismissTutorial = () => {
     setShowTutorial(false);
@@ -252,6 +263,8 @@ export default function MachineSelector({ selected, onSelect }: Props) {
       {/* Main Machine Badge Button */}
       <button
         onClick={() => { setOpen(o => !o); dismissTutorial(); }}
+        aria-expanded={open}
+        aria-haspopup="dialog"
         className="flex items-center gap-1.5 sm:gap-2 px-2 sm:px-3 py-1.5 rounded-xl bg-white hover:bg-neutral-50 border border-neutral-300/90 hover:border-red-600 shadow-sm hover:shadow transition-all group text-left h-9"
         title="CNC-Maschine & Spindelprofil konfigurieren"
       >
@@ -274,8 +287,8 @@ export default function MachineSelector({ selected, onSelect }: Props) {
       {/* Popover Card */}
       {open && (
         <>
-          <div className="fixed inset-0 z-40" onClick={() => { setOpen(false); setShowAddForm(false); }} />
-          <div className="absolute right-0 mt-2 w-96 max-w-[calc(100vw-1rem)] bg-white border border-neutral-200 rounded-2xl shadow-2xl z-50 overflow-hidden divide-y divide-neutral-100 text-neutral-800 animate-in fade-in zoom-in-95 duration-150">
+          <button aria-label="Auswahl schließen" className="fixed inset-0 z-40 cursor-default bg-transparent border-0 p-0" onClick={() => { setOpen(false); setShowAddForm(false); }} />
+          <div role="dialog" aria-label="Maschine wählen" className="absolute right-0 mt-2 w-96 max-w-[calc(100vw-1rem)] bg-white border border-neutral-200 rounded-2xl shadow-2xl z-50 overflow-hidden divide-y divide-neutral-100 text-neutral-800 animate-in fade-in zoom-in-95 duration-150">
             
             {/* Header & Category Tabs */}
             <div className="p-3.5 bg-neutral-50 border-b border-neutral-200">

@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { X, Printer, Download, ShieldCheck, QrCode, Wrench, Layers } from 'lucide-react';
 import { resolveImgUrl } from '../utils';
 
@@ -41,27 +41,43 @@ interface Props {
 }
 
 export default function SetupSheetModal({ isOpen, onClose, data }: Props) {
+  useEffect(() => {
+    if (!isOpen) return;
+    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose(); };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [isOpen, onClose]);
   if (!isOpen) return null;
 
   const handlePrint = () => {
     window.print();
   };
 
+  const csvCell = (v: string | number) => {
+    const s = String(v ?? '');
+    // Quote + escape inner quotes; prefix risky leading chars (formula injection).
+    const q = s.replace(/"/g, '""');
+    return (/^[=+\-@]/.test(s) ? `"'"${q}"` : `"${q}"`);
+  };
   const handleExportCsv = () => {
     const headers = ['Position', 'Materialnummer', 'Bezeichnung', 'Kategorie', 'Menge'];
-    const rows = data.bom.map(b => [b.pos, `"${b.matNr}"`, `"${b.name}"`, `"${b.category}"`, b.qty]);
-    const csvContent = 'data:text/csv;charset=utf-8,' + [headers.join(';'), ...rows.map(e => e.join(';'))].join('\n');
-    const encodedUri = encodeURI(csvContent);
+    const rows = data.bom.map(b => [b.pos, csvCell(b.matNr), csvCell(b.name), csvCell(b.category), b.qty].join(';'));
+    const blob = new Blob([`\uFEFF${headers.join(';')}\n${rows.join('\n')}`], { type: 'text/csv;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
-    link.setAttribute('href', encodedUri);
-    link.setAttribute('download', `HAINBUCH_BOM_${(data.drawingNo || 'Plan').replace(/[^a-zA-Z0-9]/g, '_')}.csv`);
+    link.href = url;
+    link.download = `HAINBUCH_BOM_${(data.drawingNo || 'Plan').replace(/[^a-zA-Z0-9]/g, '_')}.csv`;
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 overflow-y-auto print:p-0 print:bg-white print:static">
+    <div
+      role="dialog" aria-modal="true" aria-label="Werkstatt-Einrichteblatt"
+      onMouseDown={(e) => { if (e.target === e.currentTarget) onClose(); }}
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 overflow-y-auto print:p-0 print:bg-white print:static">
       {/* Modal Card */}
       <div className="bg-white text-neutral-900 w-full max-w-4xl rounded-2xl shadow-2xl border border-neutral-200 overflow-hidden flex flex-col my-auto max-h-[92dvh] print:max-h-none print:shadow-none print:border-none print:rounded-none">
         
@@ -97,6 +113,7 @@ export default function SetupSheetModal({ isOpen, onClose, data }: Props) {
             </button>
             <button
               onClick={onClose}
+              aria-label="Schließen"
               className="p-1.5 text-neutral-400 hover:text-neutral-700 rounded-lg hover:bg-neutral-200 transition-colors ml-1"
             >
               <X size={18} />

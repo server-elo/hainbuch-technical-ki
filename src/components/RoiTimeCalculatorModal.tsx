@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { X, TrendingDown, Clock, Euro, CheckCircle2, AlertTriangle, ArrowRight, Zap, RefreshCw } from 'lucide-react';
 
 interface Props {
@@ -12,6 +12,13 @@ export default function RoiTimeCalculatorModal({ isOpen, onClose, defaultBatchSi
   const [machineType, setMachineType] = useState<'lathe' | 'mill'>('lathe');
   const [hourlyRate, setHourlyRate] = useState<number>(95);
   const [partValue, setPartValue] = useState<number>(35);
+
+  useEffect(() => {
+    if (!isOpen) return;
+    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose(); };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [isOpen, onClose]);
 
   if (!isOpen) return null;
 
@@ -59,7 +66,10 @@ export default function RoiTimeCalculatorModal({ isOpen, onClose, defaultBatchSi
   const savedCost = Math.max(0, convCost - hbCost);
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-2 sm:p-4 overflow-y-auto">
+    <div
+      role="dialog" aria-modal="true" aria-label="Wirtschaftlichkeits- und Zeitrechner"
+      onMouseDown={(e) => { if (e.target === e.currentTarget) onClose(); }}
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-2 sm:p-4 overflow-y-auto">
       <div className="bg-white text-neutral-900 w-full max-w-5xl rounded-2xl shadow-2xl border border-neutral-200 overflow-hidden flex flex-col my-auto max-h-[92dvh]">
         
         {/* Modal Header */}
@@ -73,7 +83,7 @@ export default function RoiTimeCalculatorModal({ isOpen, onClose, defaultBatchSi
               <p className="text-[11px] sm:text-xs text-neutral-500 hidden xs:block">Direkter Spaltenvergleich: HAINBUCH Universal vs. Konventionelle Spanntechnik</p>
             </div>
           </div>
-          <button onClick={onClose} className="p-1.5 text-neutral-400 hover:text-neutral-700 rounded-lg hover:bg-neutral-200 transition-colors">
+          <button onClick={onClose} aria-label="Schließen" className="p-1.5 text-neutral-400 hover:text-neutral-700 rounded-lg hover:bg-neutral-200 transition-colors">
             <X size={18} />
           </button>
         </div>

@@ -2,7 +2,8 @@ import React, { useState, useRef, useEffect } from 'react';
 import {
   Send, User, ChevronRight, ChevronDown, Loader2, FileText,
   Image as ImageIcon, Paperclip, X, Clock, TrendingDown, Copy, Check,
-  ThumbsUp, ThumbsDown, FileDown, ArrowDown, PenLine, Square, ListPlus, Sparkles
+  ThumbsUp, ThumbsDown, FileDown, ArrowDown, PenLine, Square, ListPlus, Sparkles,
+  AlertTriangle, RotateCcw, Upload, ShieldCheck, ArrowRight
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import type { ChatMessage, PipelineStatus } from './types';
@@ -118,26 +119,38 @@ function MessageText({ text }: { text: string }) {
     imgParts.forEach((chunk, ci) => {
       const img = chunk.match(/^!\[([^\]]*)\]\(([^)]+)\)$/);
       if (img) {
-        const src = resolveImgUrl(img[2], img[1]);
-        out.push(
-          <img
-            key={`i${ci}`}
-            src={src}
-            alt={img[1]}
-            loading="lazy"
-            className="block max-h-56 w-auto rounded-lg border border-neutral-200 bg-white my-1.5 shadow-sm"
-          />
-        );
+        const rawSrc = img[2].trim();
+        const imgSafe = /^(https?:\/\/|\/|data:image\/)/i.test(rawSrc);
+        if (imgSafe) {
+          const src = resolveImgUrl(rawSrc, img[1]);
+          out.push(
+            <img
+              key={`i${ci}`}
+              src={src}
+              alt={img[1]}
+              loading="lazy"
+              className="block max-h-56 w-auto rounded-lg border border-neutral-200 bg-white my-1.5 shadow-sm"
+            />
+          );
+        } else {
+          out.push(<span key={`i${ci}`}>{img[1]}</span>);
+        }
         return;
       }
       chunk.split(/(\[[^\]]+\]\([^)]+\))/g).forEach((part, i) => {
         const link = part.match(/^\[([^\]]+)\]\(([^)]+)\)$/);
         if (link) {
+          const href = link[2].trim();
+          const safe = /^(https?:\/\/|\/|#)/i.test(href);
           out.push(
-            <a key={`a${ci}-${i}`} href={link[2]} target="_blank" rel="noreferrer"
-               className="text-red-600 underline underline-offset-2 hover:text-red-700">
-              {link[1]}
-            </a>
+            safe ? (
+              <a key={`a${ci}-${i}`} href={href} target="_blank" rel="noopener noreferrer"
+                 className="text-red-600 underline underline-offset-2 hover:text-red-700">
+                {link[1]}
+              </a>
+            ) : (
+              <span key={`a${ci}-${i}`}>{link[1]}</span>
+            )
           );
         } else {
           part.split(/(\*\*[^*]+\*\*)/g).forEach((b, bi) =>
@@ -310,7 +323,7 @@ function messageToText(msg: ChatMessage, t: (typeof T)[keyof typeof T]): string 
 }
 
 const esc = (s: string) =>
-  s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
 const nl2br = (s: string) => esc(s).replace(/\n/g, '<br>');
 
 /** Standalone A4 print view of one answer — browser print dialog → PDF. */
@@ -494,6 +507,52 @@ function CopyButton({ getText, labels }: { getText: () => string; labels: { copy
       {copied ? <Check size={12} className="text-green-600" /> : <Copy size={12} />}
       {copied ? labels.copied : ''}
     </button>
+  );
+}
+
+/** Live countdown from Retry-After seconds ("in 42 Min" / "in 3 Std 12 Min"). */
+function RetryCountdown({ sec, t }: { sec: number; t: (typeof T)[keyof typeof T] }) {
+  const [left, setLeft] = useState(sec);
+  useEffect(() => {
+    setLeft(sec);
+    if (sec <= 0) return;
+    const id = setInterval(() => setLeft(s => (s <= 1 ? 0 : s - 1)), 1000);
+    return () => clearInterval(id);
+  }, [sec]);
+  if (left <= 0) return null;
+  const h = Math.floor(left / 3600);
+  const m = Math.ceil((left % 3600) / 60);
+  const label = h > 0 ? `${h} ${t.hrsShort} ${m} ${t.minShort}` : `${m} ${t.minShort}`;
+  return <span className="font-mono font-semibold">{t.retryIn} {label}</span>;
+}
+
+/** Failed turn: red-tinted bubble with reason, live retry countdown, retry button. */
+function ErrorBubble({ kind, retryAfterSec, onRetry, t }: {
+  kind: 'rate' | 'offline' | 'server';
+  retryAfterSec?: number;
+  onRetry: () => void;
+  t: (typeof T)[keyof typeof T];
+}) {
+  const msg = kind === 'rate' ? t.errorRate : kind === 'offline' ? t.errorOffline : `${t.errorMsg}.`;
+  return (
+    <div className="text-sm leading-relaxed">
+      <div className="flex items-start gap-2">
+        <AlertTriangle size={16} className="text-red-600 shrink-0 mt-0.5" />
+        <p className="text-neutral-800 font-medium">{msg}</p>
+      </div>
+      {kind === 'rate' && retryAfterSec !== undefined && retryAfterSec > 0 && (
+        <p className="text-xs text-neutral-500 mt-1.5 ml-6">
+          <RetryCountdown sec={retryAfterSec} t={t} />
+        </p>
+      )}
+      <button
+        onClick={onRetry}
+        className="tap mt-2.5 ml-6 inline-flex items-center gap-1.5 px-3.5 py-2 bg-red-600 hover:bg-red-700 text-white text-xs font-semibold rounded-xl transition-colors shadow-sm"
+      >
+        <RotateCcw size={13} />
+        {t.retry}
+      </button>
+    </div>
   );
 }
 
@@ -791,6 +850,12 @@ export default function App() {
   const [attachedFile, setAttachedFile] = useState<File | null>(null);
   const [queuedMessages, setQueuedMessages] = useState<{ text: string; file: File | null }[]>([]);
   const abortControllerRef = useRef<AbortController | null>(null);
+  // Mirror of messages for use inside async submit (avoids side-effects
+  // inside setMessages updaters, which StrictMode double-invokes).
+  const messagesRef = useRef(messages);
+  useEffect(() => { messagesRef.current = messages; }, [messages]);
+  // Last outbound request (for the error-bubble retry button).
+  const lastRequestRef = useRef<ChatMessage[] | null>(null);
 
   const stopGeneration = () => {
     if (abortControllerRef.current) {
@@ -871,7 +936,11 @@ export default function App() {
         signal: controller.signal,
       });
       if (!response.ok || !response.body) {
-        throw new Error(`Server error (${response.status})`);
+        const retryAfter = Number(response.headers.get('Retry-After') || 0);
+        const err: any = new Error(`HTTP ${response.status}`);
+        err.status = response.status;
+        err.retryAfterSec = Number.isFinite(retryAfter) && retryAfter > 0 ? retryAfter : undefined;
+        throw err;
       }
       const reader = response.body.getReader();
       const decoder = new TextDecoder();
@@ -931,13 +1000,13 @@ export default function App() {
         return;
       }
       console.error('Chat API Error:', error);
+      const kind = error?.status === 429 ? 'rate'
+        : (error instanceof TypeError || error?.message === 'Failed to fetch') ? 'offline'
+        : 'server';
       setMessages(prev => [...prev, {
         role: 'model',
-        parts: [{
-          text: error?.message === 'NO_RESULT'
-            ? `${t.errorMsg}.`
-            : `${t.errorMsg} (${error.message || 'Error'}).`,
-        }]
+        parts: [{ text: '' }],
+        error: { kind, retryAfterSec: error?.retryAfterSec },
       }]);
     } finally {
       setIsLoading(false);
@@ -947,8 +1016,13 @@ export default function App() {
     }
   };
 
+  const MAX_UPLOAD_BYTES = 15 * 1024 * 1024;
   const convertFileToBase64 = (file: File): Promise<{base64: string, mimeType: string}> => {
     return new Promise((resolve, reject) => {
+      if (file.size > MAX_UPLOAD_BYTES) {
+        reject(new Error('file too large (max 15 MB)'));
+        return;
+      }
       const reader = new FileReader();
       // DXF/PDF: raw base64, no canvas processing (parsed server-side)
       if (/\.(dxf|pdf)$/i.test(file.name)) {
@@ -1006,11 +1080,23 @@ export default function App() {
       }
     }
     if (parts.length === 0) return;
+    const nextMsgs = [...messagesRef.current, { role: 'user' as const, parts }];
+    messagesRef.current = nextMsgs;
+    setMessages(nextMsgs);
+    lastRequestRef.current = nextMsgs;
+    void sendChat(nextMsgs);
+  };
+
+  const retryLast = () => {
+    if (isLoading || !lastRequestRef.current) return;
+    // Drop the error bubble, resend the last user request as-is.
     setMessages(prev => {
-      const nextMsgs = [...prev, { role: 'user' as const, parts }];
-      void sendChat(nextMsgs);
-      return nextMsgs;
+      const last = prev[prev.length - 1];
+      const next = last?.error ? prev.slice(0, -1) : prev;
+      messagesRef.current = next;
+      return next;
     });
+    void sendChat(lastRequestRef.current);
   };
 
   // Automatically process queued messages when loading finishes

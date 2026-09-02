@@ -19,6 +19,12 @@ export interface ChatMessagePart {
 export interface ChatMessage {
   role: "user" | "model";
   parts: ChatMessagePart[];
+  /** failed turn: rendered as styled error bubble with retry (not sent to API) */
+  error?: {
+    kind: "rate" | "offline" | "server";
+    /** seconds until retry makes sense (from Retry-After header) */
+    retryAfterSec?: number;
+  } | null;
   /** structured pipeline result rendered below the message text (not sent to the API) */
   analysis?: {
     manufacturingAnalysis?: ManufacturingAnalysis | null;

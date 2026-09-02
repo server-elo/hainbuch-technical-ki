@@ -1,4 +1,5 @@
 const http = require("http");
+const crypto = require("crypto");
 const fs = require("fs");
 const path = require("path");
 
@@ -54,20 +55,44 @@ function rateLimited(req, res) {
   const ip = (req.socket && req.socket.remoteAddress) || "unknown";
   const now = Date.now();
   const hits = (rateBuckets.get(ip) || []).filter((t) => now - t < 3_600_000);
-  const deny = (msg) => {
-    res.writeHead(429, { "Content-Type": "application/json" });
+  const deny = (msg, retryAfterSec) => {
+    res.writeHead(429, { "Content-Type": "application/json", "Retry-After": String(retryAfterSec) });
     res.end(JSON.stringify({ error: msg }));
     return true;
   };
-  if (hits.length >= RATE_PER_HOUR)
-    return deny("Zu viele Anfragen — bitte in einer Stunde erneut versuchen.");
+  if (hits.length >= RATE_PER_HOUR) {
+    const retryAfter = Math.max(1, Math.ceil((hits[0] + 3_600_000 - now) / 1000));
+    return deny("Zu viele Anfragen — bitte in einer Stunde erneut versuchen.", retryAfter);
+  }
   const today = new Date().toISOString().slice(0, 10);
   if (dayBudget.day !== today) dayBudget = { day: today, used: 0 };
-  if (dayBudget.used >= RATE_PER_DAY)
-    return deny("Tagesbudget erreicht — bitte morgen erneut versuchen.");
+  if (dayBudget.used >= RATE_PER_DAY) {
+    const midnight = new Date(`${today}T24:00:00Z`).getTime();
+    return deny("Tagesbudget erreicht — bitte morgen erneut versuchen.", Math.max(1, Math.ceil((midnight - now) / 1000)));
+  }
   hits.push(now);
   rateBuckets.set(ip, hits);
   dayBudget.used++;
+  return false;
+}
+
+// Dedicated feedback bucket: thumbs are best-effort, never allowed to eat
+// chat quota — and chat floods must not kill feedback either.
+const FEEDBACK_MAX_PER_HOUR = Number(process.env.FEEDBACK_MAX_PER_HOUR || 60);
+const fbBuckets = new Map();
+function feedbackLimited(req, res) {
+  if (TRUST_LOOPBACK && isLoopback(req)) return false;
+  const ip = (req.socket && req.socket.remoteAddress) || "unknown";
+  const now = Date.now();
+  const hits = (fbBuckets.get(ip) || []).filter((t) => now - t < 3_600_000);
+  if (hits.length >= FEEDBACK_MAX_PER_HOUR) {
+    const retryAfter = Math.max(1, Math.ceil((hits[0] + 3_600_000 - now) / 1000));
+    res.writeHead(429, { "Content-Type": "application/json", "Retry-After": String(retryAfter) });
+    res.end(JSON.stringify({ error: "rate limited" }));
+    return true;
+  }
+  hits.push(now);
+  fbBuckets.set(ip, hits);
   return false;
 }
 
@@ -540,7 +565,46 @@ FORMAT-REGELN (wichtig):
 - Dezimaltrennzeichen: Komma (45,025 mm). Einheiten mit Leerzeichen (25 µm). Unicode: Ø, µm, ×, −, →, ≈.`;
 
 function emit(res, obj) {
-  res.write(JSON.stringify(obj) + "\n");
+  if (res.writableEnded || res.destroyed) return;
+  try {
+    res.write(JSON.stringify(obj) + "\n");
+  } catch { /* client gone */ }
+}
+
+// ── P2 helpers: LLM health (cached), IP hashing, log redaction ────────
+const LLM_BASE = LLM_URL.replace(/\/chat\/completions\/?$/, "");
+let llmHealth = { ok: false, at: 0 };
+async function checkLlm() {
+  if (Date.now() - llmHealth.at < 30000) return llmHealth.ok;
+  try {
+    const r = await fetch(`${LLM_BASE}/models`, { signal: AbortSignal.timeout(2500) });
+    llmHealth = { ok: r.ok, at: Date.now() };
+  } catch {
+    llmHealth = { ok: false, at: Date.now() };
+  }
+  return llmHealth.ok;
+}
+function hashIp(ip) {
+  try {
+    return crypto.createHash("sha256").update(String(ip || "local")).digest("hex").slice(0, 12);
+  } catch {
+    return "unknown";
+  }
+}
+// Strip base64 image payloads before logging (disk bloat + PII).
+function redactMessages(msgs) {
+  return (msgs || []).map((m) => {
+    if (typeof m.content === "string") return { role: m.role, content: m.content.slice(0, 20000) };
+    if (Array.isArray(m.content)) {
+      return {
+        role: m.role,
+        content: m.content.map((c) =>
+          c.type === "image_url" ? { type: "image_url", image_url: "[omitted]" } : c
+        ),
+      };
+    }
+    return { role: m.role, content: "" };
+  });
 }
 
 function cleanLaTeX(t) {
@@ -689,7 +753,15 @@ async function handleChat(req, res) {
       machineContext = `\n\nKUNDEN-MASCHINENPROFIL:\n- Ausgewählte Maschine: ${machine.name}\n- Spindelschnittstelle: ${machine.spindle || "Standard"}\n- CNC-Steuerung & G-Code Format: ${machine.control || "Siemens Sinumerik / ISO"}\n${machine.drawtube ? "- Zugrohranbindung: " + machine.drawtube + "\n" : ""}${machine.table ? "- Maschinentisch: " + machine.table + "\n" : ""}WICHTIG: Nutze diese Spindelschnittstelle für die Flansch- und Einrichteblatt-Auslegung und formatiere eventuelle CNC-Programm-Zyklen exakt für die angegebene Steuerung (${machine.control || "Siemens / ISO"})!\n`;
     }
     const goldContext = retrieveGoldStandards(combinedQuery);
+    const startTime = Date.now();
     const heartbeat = setInterval(() => emit(res, { type: "ping" }), 15000);
+    // Client gone (tab closed, tunnel dropped) -> abort in-flight LLM calls
+    // instead of burning 2x Gemini on an answer nobody receives.
+    const aborter = new AbortController();
+    req.on("close", () => {
+      if (!res.writableEnded) aborter.abort();
+    });
+    const llmSignal = () => AbortSignal.any([AbortSignal.timeout(600000), aborter.signal]);
     try {
       emit(res, { type: "status", stage: "chat", label: "HAINBUCH-Wissen wird durchsucht…" });
       const upstream = await fetch(LLM_URL, {
@@ -703,7 +775,7 @@ async function handleChat(req, res) {
           ],
           tools: [{ google_search: {} }],
         }),
-        signal: AbortSignal.timeout(600000),
+        signal: llmSignal(),
       });
       const json = await upstream.json();
       const answer =
@@ -712,10 +784,8 @@ async function handleChat(req, res) {
             "Es ist ein Fehler bei der Modellabfrage aufgetreten. Bitte versuche es erneut."
         );
 
-    const startTime = Date.now();
     emit(res, { type: "status", stage: "chat", label: "Qualitätsprüfung der Auslegung…" });
-    let finalAnswer = answer;
-    try {
+    let finalAnswer = answer;    try {
       const qa = await fetch(LLM_URL, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -727,7 +797,7 @@ async function handleChat(req, res) {
           ],
           tools: [{ google_search: {} }],
         }),
-        signal: AbortSignal.timeout(600000),
+        signal: llmSignal(),
       });
       const qj = await qa.json();
       const fixed = qj.choices?.[0]?.message?.content;
@@ -736,9 +806,9 @@ async function handleChat(req, res) {
     const cleaned = cleanLaTeX(finalAnswer);
     const imagesCited = (cleaned.match(/!\[[^\]]*\]\(([^)]+)\)/g) || []);
     logChatInteraction({
-      ip: req.socket?.remoteAddress || "local",
+      ipHash: hashIp(req.socket?.remoteAddress),
       country: req.headers["cf-ipcountry"] || null,
-      messages,
+      messages: redactMessages(messages),
       question: questionText,
       response: cleaned,
       imagesCited,
@@ -747,24 +817,27 @@ async function handleChat(req, res) {
     });
     emit(res, { type: "result", data: { message: cleaned } });
     } catch (e) {
-      logChatInteraction({
-        ip: req.socket?.remoteAddress || "local",
-        country: req.headers["cf-ipcountry"] || null,
-        messages,
-        question: questionText,
-        error: e.message || "LLM-Fehler",
-        durationMs: Date.now() - startTime,
-        stage: "error",
-      });
-      emit(res, { type: "error", error: e.message || "LLM-Fehler" });
+      const aborted = aborter.signal.aborted;
+      if (!aborted) {
+        logChatInteraction({
+          ipHash: hashIp(req.socket?.remoteAddress),
+          country: req.headers["cf-ipcountry"] || null,
+          messages: redactMessages(messages),
+          question: questionText,
+          error: String(e.message || "LLM-Fehler").slice(0, 300),
+          durationMs: Date.now() - startTime,
+          stage: "error",
+        });
+        emit(res, { type: "error", error: "LLM-Fehler — bitte erneut versuchen." });
+      }
     } finally {
       clearInterval(heartbeat);
-      res.end();
+      try { res.end(); } catch {}
     }
   });
 }
 
-const server = http.createServer((req, res) => {
+const server = http.createServer(async (req, res) => {
   res.setHeader("Access-Control-Allow-Origin", "*");
   res.setHeader("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
   res.setHeader("Access-Control-Allow-Headers", "Content-Type, x-app-key, x-admin-key, x-request-id");
@@ -774,12 +847,14 @@ const server = http.createServer((req, res) => {
     return res.end();
   }
   if (req.method === "GET" && (req.url === "/api/status" || req.url === "/health")) {
+    const llmOnline = req.url === "/health" ? true : await checkLlm();
     res.writeHead(200, { "Content-Type": "application/json" });
     return res.end(JSON.stringify({
       model: MODEL_ID,
-      llmOnline: true,
+      llmOnline,
       mode: "hainbuch-gemini-only",
       kb: KB.length,
+      catalog: CATALOG.length,
       country: typeof req.headers["cf-ipcountry"] === "string"
         ? req.headers["cf-ipcountry"].toUpperCase()
         : null,
@@ -829,7 +904,7 @@ const server = http.createServer((req, res) => {
       res.writeHead(401, { "Content-Type": "application/json" });
       return res.end(JSON.stringify({ error: "unauthorized" }));
     }
-    if (rateLimited(req, res)) return;
+    if (feedbackLimited(req, res)) return;
     let fbBody = "";
     let fbTooLarge = false;
     req.on("data", (c) => {
