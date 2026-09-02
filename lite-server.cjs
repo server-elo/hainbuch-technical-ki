@@ -715,8 +715,9 @@ const server = http.createServer((req, res) => {
         : null,
     }));
   }
-  if (req.method === "GET" && (req.url.startsWith("/hero-img/") || req.url.startsWith("/shop-img/"))) {
-    const file = path.basename(decodeURIComponent(req.url.replace(/^\/(hero-img|shop-img)\//, '')));
+  const rawUrl = (req.url || "").split("?")[0];
+  if ((req.method === "GET" || req.method === "HEAD") && (rawUrl.startsWith("/hero-img/") || rawUrl.startsWith("/shop-img/"))) {
+    const file = path.basename(decodeURIComponent(rawUrl.replace(/^\/(hero-img|shop-img)\//, '')));
     const heroFull = path.join(HERO_DIR, file);
     const shopFull = path.join(SHOP_DIR, file);
     const resolved = fs.existsSync(heroFull) ? heroFull : (fs.existsSync(shopFull) ? shopFull : null);
@@ -725,6 +726,7 @@ const server = http.createServer((req, res) => {
       return res.end();
     }
     res.writeHead(200, { "Content-Type": "image/jpeg", "Cache-Control": "public, max-age=86400" });
+    if (req.method === "HEAD") return res.end();
     return fs.createReadStream(resolved).pipe(res);
   }
   if (req.method === "POST" && req.url === "/api/chat") {
