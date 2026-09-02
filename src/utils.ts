@@ -1,14 +1,32 @@
 import { API_BASE } from './config';
 import type { SetupSheetData } from './components/SetupSheetModal';
 
-export function resolveImgUrl(url: string): string {
+export function resolveImgUrl(url: string, alt?: string): string {
   if (!url) return url;
+  // If url is not a real image (e.g. was generic domain), recover the exact hero image from alt text
+  if (url.startsWith('https://www.hainbuch.com') || url.startsWith('http://www.hainbuch.com') || !/\.(jpg|jpeg|png|webp|svg)$/i.test(url)) {
+    const a = (alt || '').toLowerCase();
+    let hero = 'hero_94.jpg'; // default SPANNTOP nova
+    if (a.includes('inoflex')) hero = 'hero_136.jpg';
+    else if (a.includes('manok')) hero = 'hero_246.jpg';
+    else if (a.includes('mando adapt')) hero = 'hero_272.jpg';
+    else if (a.includes('mando')) hero = 'hero_178.jpg';
+    else if (a.includes('toplus mini')) hero = 'hero_28.jpg';
+    else if (a.includes('toplus')) hero = 'hero_60.jpg';
+    else if (a.includes('centrotex')) hero = 'hero_242.jpg';
+    else if (a.includes('b-top')) hero = 'hero_146.jpg';
+    else if (a.includes('spanntop mini')) hero = 'hero_74.jpg';
+    return API_BASE ? `${API_BASE}/hero-img/${hero}` : `/hero-img/${hero}`;
+  }
   if (url.startsWith('http://localhost') || url.startsWith('http://127.0.0.1')) {
     const p = url.replace(/^https?:\/\/[^/]+/, '');
     return API_BASE ? `${API_BASE}${p}` : p;
   }
   if (url.startsWith('/hero-img') || url.startsWith('/shop-img')) {
     return API_BASE ? `${API_BASE}${url}` : url;
+  }
+  if (/^hero_\d+\.jpg$/.test(url)) {
+    return API_BASE ? `${API_BASE}/hero-img/${url}` : `/hero-img/${url}`;
   }
   return url;
 }

@@ -505,17 +505,27 @@ function cleanLaTeX(t) {
   s = s.replace(/\\[,\s;!]/g, " ");
   s = s.replace(/\\\$/g, "$");
   s = s.replace(/  +/g, " ");
-  // Auto-correct any hero image mismatches in markdown sections
-  s = s.replace(/(###[^\n]*TOPlus\s+mini[^\n]*\n[\s\S]*?)hero_\d+\.jpg/gi, '$1hero_28.jpg');
-  s = s.replace(/(###[^\n]*TOPlus\s+(?:nova|premium|kombi)[^\n]*\n[\s\S]*?)hero_\d+\.jpg/gi, '$1hero_60.jpg');
-  s = s.replace(/(###[^\n]*InoFlex[^\n]*\n[\s\S]*?)hero_(?:372|458|94)\.jpg/gi, '$1hero_136.jpg');
-  s = s.replace(/(###[^\n]*MANOK[^\n]*\n[\s\S]*?)hero_(?:338|458|94)\.jpg/gi, '$1hero_246.jpg');
-  s = s.replace(/(###[^\n]*MANDO\s+T21[12][^\n]*\n[\s\S]*?)hero_(?:124|254|94|372)\.jpg/gi, '$1hero_178.jpg');
-  s = s.replace(/(###[^\n]*MANDO\s+Adapt[^\n]*\n[\s\S]*?)hero_(?:124|254|94|372)\.jpg/gi, '$1hero_272.jpg');
-  s = s.replace(/(###[^\n]*B-Top[^\n]*\n[\s\S]*?)hero_(?:404|458|94)\.jpg/gi, '$1hero_146.jpg');
-  // Sanitize links in Quellen to ensure only valid web URLs, not image links or third-party scraper domains
-  s = s.replace(/\[([^\]]+)\]\((https?:\/\/[^\s)]+\.(?:jpg|jpeg|png|gif|webp|svg))\)/gi, '[$1](https://www.hainbuch.com)');
-  s = s.replace(/\[([^\]]+)\]\((https?:\/\/(?:www\.)?(?:bisspecials|directindustry|traceparts)[^\s)]*)\)/gi, '[$1](https://www.hainbuch.com)');
+  // Auto-correct and guarantee exact hero images for every HAINBUCH solution
+  s = s.replace(/(###[^\n]*SPANNTOP\s+nova[^\n]*\n[\s\S]*?)!\[([^\]]*)\]\([^)]+\)/gi, `$1![$2](${BASE_URL}/hero-img/hero_94.jpg)`);
+  s = s.replace(/(###[^\n]*SPANNTOP\s+mini[^\n]*\n[\s\S]*?)!\[([^\]]*)\]\([^)]+\)/gi, `$1![$2](${BASE_URL}/hero-img/hero_74.jpg)`);
+  s = s.replace(/(###[^\n]*TOPlus\s+mini[^\n]*\n[\s\S]*?)!\[([^\]]*)\]\([^)]+\)/gi, `$1![$2](${BASE_URL}/hero-img/hero_28.jpg)`);
+  s = s.replace(/(###[^\n]*TOPlus\s+(?:nova|premium|kombi)[^\n]*\n[\s\S]*?)!\[([^\]]*)\]\([^)]+\)/gi, `$1![$2](${BASE_URL}/hero-img/hero_60.jpg)`);
+  s = s.replace(/(###[^\n]*InoFlex[^\n]*\n[\s\S]*?)!\[([^\]]*)\]\([^)]+\)/gi, `$1![$2](${BASE_URL}/hero-img/hero_136.jpg)`);
+  s = s.replace(/(###[^\n]*MANOK[^\n]*\n[\s\S]*?)!\[([^\]]*)\]\([^)]+\)/gi, `$1![$2](${BASE_URL}/hero-img/hero_246.jpg)`);
+  s = s.replace(/(###[^\n]*MANDO\s+T21[12][^\n]*\n[\s\S]*?)!\[([^\]]*)\]\([^)]+\)/gi, `$1![$2](${BASE_URL}/hero-img/hero_178.jpg)`);
+  s = s.replace(/(###[^\n]*MANDO\s+Adapt[^\n]*\n[\s\S]*?)!\[([^\]]*)\]\([^)]+\)/gi, `$1![$2](${BASE_URL}/hero-img/hero_272.jpg)`);
+  s = s.replace(/(###[^\n]*centroteX[^\n]*\n[\s\S]*?)!\[([^\]]*)\]\([^)]+\)/gi, `$1![$2](${BASE_URL}/hero-img/hero_242.jpg)`);
+  s = s.replace(/(###[^\n]*B-Top[^\n]*\n[\s\S]*?)!\[([^\]]*)\]\([^)]+\)/gi, `$1![$2](${BASE_URL}/hero-img/hero_146.jpg)`);
+
+  // Sanitize links ONLY in the '## Quellen' section, NEVER touching ![...](...) image tags
+  if (s.includes("## Quellen")) {
+    const qIdx = s.indexOf("## Quellen");
+    const bodyPart = s.slice(0, qIdx);
+    let quellenPart = s.slice(qIdx);
+    quellenPart = quellenPart.replace(/(?<!!)\[([^\]]+)\]\((https?:\/\/[^\s)]+\.(?:jpg|jpeg|png|gif|webp|svg))\)/gi, '[$1](https://www.hainbuch.com)');
+    quellenPart = quellenPart.replace(/(?<!!)\[([^\]]+)\]\((https?:\/\/(?:www\.)?(?:bisspecials|directindustry|traceparts)[^\s)]*)\)/gi, '[$1](https://www.hainbuch.com)');
+    s = bodyPart + quellenPart;
+  }
   return s;
 }
 

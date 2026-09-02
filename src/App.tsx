@@ -118,7 +118,7 @@ function MessageText({ text }: { text: string }) {
     imgParts.forEach((chunk, ci) => {
       const img = chunk.match(/^!\[([^\]]*)\]\(([^)]+)\)$/);
       if (img) {
-        const src = resolveImgUrl(img[2]);
+        const src = resolveImgUrl(img[2], img[1]);
         out.push(
           <img
             key={`i${ci}`}
