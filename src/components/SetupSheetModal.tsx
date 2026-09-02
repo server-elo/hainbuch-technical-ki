@@ -63,37 +63,41 @@ export default function SetupSheetModal({ isOpen, onClose, data }: Props) {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 overflow-y-auto print:p-0 print:bg-white print:static">
       {/* Modal Card */}
-      <div className="bg-white text-neutral-900 w-full max-w-4xl rounded-2xl shadow-2xl border border-neutral-200 overflow-hidden flex flex-col my-auto max-h-[90vh] print:max-h-none print:shadow-none print:border-none print:rounded-none">
+      <div className="bg-white text-neutral-900 w-full max-w-4xl rounded-2xl shadow-2xl border border-neutral-200 overflow-hidden flex flex-col my-auto max-h-[92dvh] print:max-h-none print:shadow-none print:border-none print:rounded-none">
         
         {/* Action Header (Hidden in Print) */}
-        <div className="flex items-center justify-between px-6 py-3.5 bg-neutral-50 border-b border-neutral-200 text-neutral-900 print:hidden">
-          <div className="flex items-center gap-3">
-            <div className="w-8 h-8 rounded-lg bg-red-600 flex items-center justify-center font-bold text-white tracking-wider text-xs shadow-sm">
+        <div className="flex items-center justify-between px-4 sm:px-6 py-3 sm:py-3.5 bg-neutral-50 border-b border-neutral-200 text-neutral-900 print:hidden shrink-0">
+          <div className="flex items-center gap-2.5 sm:gap-3 min-w-0">
+            <div className="w-8 h-8 rounded-lg bg-red-600 flex items-center justify-center font-bold text-white tracking-wider text-xs shadow-sm shrink-0">
               HB
             </div>
-            <div>
-              <h2 className="text-base font-bold tracking-tight text-neutral-950">Werkstatt-Einrichteblatt (Setup Sheet)</h2>
-              <p className="text-xs text-neutral-500">DIN A4 Fertigungsdokument für Einrichter & Maschinenbediener</p>
+            <div className="truncate">
+              <h2 className="text-sm sm:text-base font-bold tracking-tight text-neutral-950 truncate">Werkstatt-Einrichteblatt</h2>
+              <p className="text-[11px] sm:text-xs text-neutral-500 hidden sm:block">DIN A4 Fertigungsdokument für Einrichter & Maschinenbediener</p>
             </div>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
             <button
               onClick={handleExportCsv}
-              className="flex items-center gap-1.5 px-3 py-1.5 bg-white hover:bg-neutral-100 text-xs font-semibold text-neutral-700 rounded-lg transition-colors border border-neutral-300 shadow-sm"
+              className="flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 bg-white hover:bg-neutral-100 text-xs font-semibold text-neutral-700 rounded-xl transition-colors border border-neutral-300 shadow-sm h-9"
+              title="Stückliste als CSV herunterladen"
             >
-              <Download size={14} className="text-red-600" />
-              BOM CSV Export
+              <Download size={14} className="text-red-600 shrink-0" />
+              <span className="hidden sm:inline">BOM CSV Export</span>
+              <span className="sm:hidden">CSV</span>
             </button>
             <button
               onClick={handlePrint}
-              className="flex items-center gap-1.5 px-3.5 py-1.5 bg-red-600 hover:bg-red-700 text-xs font-semibold text-white rounded-lg transition-colors shadow-sm"
+              className="flex items-center gap-1.5 px-3 sm:px-3.5 py-1.5 bg-red-600 hover:bg-red-700 text-xs font-semibold text-white rounded-xl transition-colors shadow-sm h-9"
+              title="Als DIN A4 drucken oder PDF speichern"
             >
-              <Printer size={14} />
-              Drucken / PDF
+              <Printer size={14} className="shrink-0" />
+              <span className="hidden sm:inline">Drucken / PDF</span>
+              <span className="sm:hidden">Drucken</span>
             </button>
             <button
               onClick={onClose}
-              className="p-1.5 text-neutral-400 hover:text-neutral-700 rounded-lg hover:bg-neutral-200 transition-colors ml-2"
+              className="p-1.5 text-neutral-400 hover:text-neutral-700 rounded-lg hover:bg-neutral-200 transition-colors ml-1"
             >
               <X size={18} />
             </button>
@@ -101,7 +105,7 @@ export default function SetupSheetModal({ isOpen, onClose, data }: Props) {
         </div>
 
         {/* Printable Sheet Body */}
-        <div className="p-8 overflow-y-auto print:p-0 space-y-6 print:space-y-4 text-xs leading-relaxed">
+        <div className="p-4 sm:p-8 overflow-y-auto print:p-0 space-y-4 sm:space-y-6 text-xs leading-relaxed scroll-thin">
           
           {/* Header Grid */}
           <div className="border-b-2 border-neutral-900 pb-4 flex justify-between items-start">
@@ -172,30 +176,32 @@ export default function SetupSheetModal({ isOpen, onClose, data }: Props) {
             <h3 className="font-bold uppercase text-[11px] text-neutral-900 mb-2 flex items-center gap-1.5">
               Werkzeugbelegung & Schnittwerte
             </h3>
-            <table className="w-full border border-neutral-300 rounded-lg overflow-hidden text-left text-[11px]">
-              <thead className="bg-neutral-900 text-white font-semibold text-[10px] uppercase">
-                <tr>
-                  <th className="py-1.5 px-3">Platz</th>
-                  <th className="py-1.5 px-3">Werkzeugtyp</th>
-                  <th className="py-1.5 px-3">WSP / Schneidstoff</th>
-                  <th className="py-1.5 px-3 text-right">vc [m/min]</th>
-                  <th className="py-1.5 px-3 text-right">n [1/min]</th>
-                  <th className="py-1.5 px-3 text-right">vf [mm/min]</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-neutral-200">
-                {data.tools.map((t, i) => (
-                  <tr key={i} className={i % 2 === 1 ? 'bg-neutral-50' : 'bg-white'}>
-                    <td className="py-1.5 px-3 font-bold text-neutral-900">{t.slot}</td>
-                    <td className="py-1.5 px-3 text-neutral-800">{t.type}</td>
-                    <td className="py-1.5 px-3 font-mono text-neutral-700">{t.insert}</td>
-                    <td className="py-1.5 px-3 text-right font-mono">{t.vc}</td>
-                    <td className="py-1.5 px-3 text-right font-mono">{t.n}</td>
-                    <td className="py-1.5 px-3 text-right font-mono">{t.vf}</td>
+            <div className="overflow-x-auto rounded-xl border border-neutral-300 scroll-thin shadow-sm">
+              <table className="w-full min-w-[520px] text-left text-[11px]">
+                <thead className="bg-neutral-900 text-white font-semibold text-[10px] uppercase">
+                  <tr>
+                    <th className="py-2 px-3">Platz</th>
+                    <th className="py-2 px-3">Werkzeugtyp</th>
+                    <th className="py-2 px-3">WSP / Schneidstoff</th>
+                    <th className="py-2 px-3 text-right">vc [m/min]</th>
+                    <th className="py-2 px-3 text-right">n [1/min]</th>
+                    <th className="py-2 px-3 text-right">vf [mm/min]</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody className="divide-y divide-neutral-200">
+                  {data.tools.map((t, i) => (
+                    <tr key={i} className={i % 2 === 1 ? 'bg-neutral-50' : 'bg-white'}>
+                      <td className="py-2 px-3 font-bold text-neutral-900">{t.slot}</td>
+                      <td className="py-2 px-3 text-neutral-800">{t.type}</td>
+                      <td className="py-2 px-3 font-mono text-neutral-700">{t.insert}</td>
+                      <td className="py-2 px-3 text-right font-mono">{t.vc}</td>
+                      <td className="py-2 px-3 text-right font-mono">{t.n}</td>
+                      <td className="py-2 px-3 text-right font-mono">{t.vf}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           </div>
 
           {/* HAINBUCH Bill of Materials (BOM) */}
@@ -203,28 +209,30 @@ export default function SetupSheetModal({ isOpen, onClose, data }: Props) {
             <h3 className="font-bold uppercase text-[11px] text-neutral-900 mb-2 flex items-center gap-1.5">
               HAINBUCH Stückliste & Artikelnummern (BOM)
             </h3>
-            <table className="w-full border border-neutral-300 rounded-lg overflow-hidden text-left text-[11px]">
-              <thead className="bg-neutral-100 text-neutral-700 font-semibold text-[10px] uppercase border-b border-neutral-300">
-                <tr>
-                  <th className="py-1.5 px-3 w-10">Pos</th>
-                  <th className="py-1.5 px-3 w-28">Artikel-Nr.</th>
-                  <th className="py-1.5 px-3">Bezeichnung</th>
-                  <th className="py-1.5 px-3">Kategorie</th>
-                  <th className="py-1.5 px-3 text-right w-12">Menge</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-neutral-200">
-                {data.bom.map((b, i) => (
-                  <tr key={i}>
-                    <td className="py-1.5 px-3 text-neutral-500 font-mono">{b.pos}</td>
-                    <td className="py-1.5 px-3 font-mono font-bold text-red-700">{b.matNr || 'Auf Anfrage'}</td>
-                    <td className="py-1.5 px-3 text-neutral-900 font-medium">{b.name}</td>
-                    <td className="py-1.5 px-3 text-neutral-600">{b.category}</td>
-                    <td className="py-1.5 px-3 text-right font-bold">{b.qty}x</td>
+            <div className="overflow-x-auto rounded-xl border border-neutral-300 scroll-thin shadow-sm">
+              <table className="w-full min-w-[520px] text-left text-[11px]">
+                <thead className="bg-neutral-100 text-neutral-700 font-semibold text-[10px] uppercase border-b border-neutral-300">
+                  <tr>
+                    <th className="py-2 px-3 w-10">Pos</th>
+                    <th className="py-2 px-3 w-28">Artikel-Nr.</th>
+                    <th className="py-2 px-3">Bezeichnung</th>
+                    <th className="py-2 px-3">Kategorie</th>
+                    <th className="py-2 px-3 text-right w-12">Menge</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody className="divide-y divide-neutral-200">
+                  {data.bom.map((b, i) => (
+                    <tr key={i} className={i % 2 === 1 ? 'bg-neutral-50/50' : 'bg-white'}>
+                      <td className="py-2 px-3 text-neutral-500 font-mono">{b.pos}</td>
+                      <td className="py-2 px-3 font-mono font-bold text-red-700">{b.matNr || 'Auf Anfrage'}</td>
+                      <td className="py-2 px-3 text-neutral-900 font-medium">{b.name}</td>
+                      <td className="py-2 px-3 text-neutral-600">{b.category}</td>
+                      <td className="py-2 px-3 text-right font-bold">{b.qty}x</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           </div>
 
           {/* Signoff Footer */}

@@ -59,18 +59,18 @@ export default function RoiTimeCalculatorModal({ isOpen, onClose, defaultBatchSi
   const savedCost = Math.max(0, convCost - hbCost);
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4 overflow-y-auto">
-      <div className="bg-white text-neutral-900 w-full max-w-5xl rounded-2xl shadow-2xl border border-neutral-200 overflow-hidden flex flex-col my-auto max-h-[95vh]">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-2 sm:p-4 overflow-y-auto">
+      <div className="bg-white text-neutral-900 w-full max-w-5xl rounded-2xl shadow-2xl border border-neutral-200 overflow-hidden flex flex-col my-auto max-h-[92dvh]">
         
         {/* Modal Header */}
-        <div className="flex items-center justify-between px-6 py-4 bg-neutral-50 border-b border-neutral-200">
-          <div className="flex items-center gap-3">
-            <div className="w-8 h-8 rounded-lg bg-red-600 flex items-center justify-center font-bold text-white tracking-wider text-xs shadow-sm">
+        <div className="flex items-center justify-between px-4 sm:px-6 py-3 sm:py-4 bg-neutral-50 border-b border-neutral-200 shrink-0">
+          <div className="flex items-center gap-2.5 sm:gap-3">
+            <div className="w-8 h-8 rounded-lg bg-red-600 flex items-center justify-center font-bold text-white tracking-wider text-xs shadow-sm shrink-0">
               HB
             </div>
             <div>
-              <h2 className="text-base font-bold tracking-tight text-neutral-950">Wirtschaftlichkeits- & Zeitrechner</h2>
-              <p className="text-xs text-neutral-500">Direkter Spaltenvergleich: HAINBUCH Universal vs. Konventionelle Spanntechnik</p>
+              <h2 className="text-sm sm:text-base font-bold tracking-tight text-neutral-950">Wirtschaftlichkeits- & Zeitrechner</h2>
+              <p className="text-[11px] sm:text-xs text-neutral-500 hidden xs:block">Direkter Spaltenvergleich: HAINBUCH Universal vs. Konventionelle Spanntechnik</p>
             </div>
           </div>
           <button onClick={onClose} className="p-1.5 text-neutral-400 hover:text-neutral-700 rounded-lg hover:bg-neutral-200 transition-colors">
@@ -79,79 +79,79 @@ export default function RoiTimeCalculatorModal({ isOpen, onClose, defaultBatchSi
         </div>
 
         {/* Modal Controls Bar */}
-        <div className="p-5 bg-neutral-100/60 border-b border-neutral-200 grid grid-cols-1 sm:grid-cols-4 gap-4 text-xs">
-          <div>
+        <div className="p-3.5 sm:p-5 bg-neutral-100/60 border-b border-neutral-200 grid grid-cols-2 sm:grid-cols-4 gap-2.5 sm:gap-4 text-xs shrink-0">
+          <div className="col-span-2 sm:col-span-1">
             <label className="text-[10px] font-bold uppercase tracking-wider text-neutral-500 block mb-1">Maschinenart</label>
-            <div className="flex bg-white p-1 rounded-lg border border-neutral-300 shadow-sm">
+            <div className="flex bg-white p-0.5 rounded-lg border border-neutral-300 shadow-sm">
               <button
                 onClick={() => setMachineType('lathe')}
                 className={`flex-1 py-1 text-xs font-bold rounded-md transition-colors ${machineType === 'lathe' ? 'bg-red-600 text-white shadow-sm' : 'text-neutral-600 hover:text-neutral-900'}`}
               >
-                🔄 Drehmaschine
+                🔄 Dreh
               </button>
               <button
                 onClick={() => setMachineType('mill')}
                 className={`flex-1 py-1 text-xs font-bold rounded-md transition-colors ${machineType === 'mill' ? 'bg-red-600 text-white shadow-sm' : 'text-neutral-600 hover:text-neutral-900'}`}
               >
-                ⚙️ Fräsmaschine
+                ⚙️ Fräs
               </button>
             </div>
           </div>
 
           <div>
-            <label className="text-[10px] font-bold uppercase tracking-wider text-neutral-500 block mb-1">Losgröße (Stückzahl)</label>
+            <label className="text-[10px] font-bold uppercase tracking-wider text-neutral-500 block mb-1">Losgröße (Stk.)</label>
             <input
               type="number"
               min={1}
               max={100000}
               value={batchSize}
               onChange={e => setBatchSize(Math.max(1, parseInt(e.target.value) || 1))}
-              className="w-full bg-white border border-neutral-300 rounded-lg px-3 py-1.5 text-xs text-neutral-900 font-bold focus:outline-none focus:border-red-600 shadow-sm"
+              className="w-full bg-white border border-neutral-300 rounded-lg px-2.5 py-1.5 text-xs text-neutral-900 font-bold focus:outline-none focus:border-red-600 shadow-sm"
             />
           </div>
 
           <div>
-            <label className="text-[10px] font-bold uppercase tracking-wider text-neutral-500 block mb-1">Maschinenstundensatz (€/h)</label>
+            <label className="text-[10px] font-bold uppercase tracking-wider text-neutral-500 block mb-1">Stundensatz (€/h)</label>
             <input
               type="number"
               min={20}
               max={500}
               value={hourlyRate}
               onChange={e => setHourlyRate(Math.max(1, parseInt(e.target.value) || 1))}
-              className="w-full bg-white border border-neutral-300 rounded-lg px-3 py-1.5 text-xs text-neutral-900 font-bold focus:outline-none focus:border-red-600 shadow-sm"
+              className="w-full bg-white border border-neutral-300 rounded-lg px-2.5 py-1.5 text-xs text-neutral-900 font-bold focus:outline-none focus:border-red-600 shadow-sm"
             />
           </div>
 
           <div>
-            <label className="text-[10px] font-bold uppercase tracking-wider text-neutral-500 block mb-1">Rohteil-/Materialwert (€)</label>
+            <label className="text-[10px] font-bold uppercase tracking-wider text-neutral-500 block mb-1">Materialwert (€)</label>
             <input
               type="number"
               min={1}
               max={5000}
               value={partValue}
               onChange={e => setPartValue(Math.max(1, parseInt(e.target.value) || 1))}
-              className="w-full bg-white border border-neutral-300 rounded-lg px-3 py-1.5 text-xs text-neutral-900 font-bold focus:outline-none focus:border-red-600 shadow-sm"
+              className="w-full bg-white border border-neutral-300 rounded-lg px-2.5 py-1.5 text-xs text-neutral-900 font-bold focus:outline-none focus:border-red-600 shadow-sm"
             />
           </div>
         </div>
 
         {/* Comparison Table with 3 Columns */}
-        <div className="p-6 overflow-y-auto space-y-6">
+        <div className="p-3.5 sm:p-6 overflow-y-auto space-y-4 sm:space-y-6 scroll-thin">
           
           {/* Key Metric Highlights Box */}
-          <div className="bg-gradient-to-r from-emerald-50 to-teal-50 border border-emerald-200 rounded-xl p-4 flex flex-wrap items-center justify-between gap-4">
+          <div className="bg-gradient-to-r from-emerald-50 to-teal-50 border border-emerald-200 rounded-xl p-3 sm:p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-full bg-emerald-600 text-white flex items-center justify-center shadow-sm">
-                <Zap size={20} />
+              <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-emerald-600 text-white flex items-center justify-center shadow-sm shrink-0">
+                <Zap size={18} />
               </div>
               <div>
-                <span className="text-[11px] font-bold text-emerald-800 uppercase tracking-wider">Ihre Ersparnis bei {batchSize} Werkstücken:</span>
-                <div className="text-xl font-black text-emerald-950">
-                  {savedHours.toFixed(1)} Stunden Zeitersparnis & {savedCost.toLocaleString('de-DE', { style: 'currency', currency: 'EUR', maximumFractionDigits: 0 })} geringere Gesamtkosten
+                <span className="text-[10px] sm:text-[11px] font-bold text-emerald-800 uppercase tracking-wider block">Ihre Ersparnis bei {batchSize} Werkstücken:</span>
+                <div className="text-base sm:text-xl font-black text-emerald-950 leading-tight">
+                  {savedHours.toFixed(1)} h Zeitersparnis &amp; {savedCost.toLocaleString('de-DE', { style: 'currency', currency: 'EUR', maximumFractionDigits: 0 })}
                 </div>
               </div>
             </div>
-            <div className="text-right">
+            <div className="self-end sm:self-center">
               <span className="inline-flex items-center gap-1 text-xs font-bold text-emerald-700 bg-white px-2.5 py-1 rounded-md border border-emerald-200 shadow-sm">
                 <CheckCircle2 size={13} /> {((savedCost / Math.max(1, convCost)) * 100).toFixed(0)} % Ersparnis
               </span>

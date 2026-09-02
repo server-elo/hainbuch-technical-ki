@@ -161,6 +161,27 @@ function MessageText({ text }: { text: string }) {
   while (i < lines.length) {
     const t = lines[i].trim();
     if (!t) { blocks.push(<div key={`s${i}`} className="h-1" />); i++; continue; }
+    
+    // Fenced Code Blocks (e.g. ```gcode or ```text)
+    if (t.startsWith('```')) {
+      const codeLines: string[] = [];
+      i++;
+      while (i < lines.length && !lines[i].trim().startsWith('```')) {
+        codeLines.push(lines[i]);
+        i++;
+      }
+      if (i < lines.length && lines[i].trim().startsWith('```')) {
+        i++; // skip closing fence
+      }
+      blocks.push(
+        <div key={`c${i}`} className="my-2.5 overflow-x-auto rounded-xl bg-neutral-900 text-neutral-100 p-3 font-mono text-xs border border-neutral-800 shadow-sm leading-relaxed -mx-1 sm:mx-0">
+          <pre className="whitespace-pre">{codeLines.join('\n')}</pre>
+        </div>
+      );
+      continue;
+    }
+
+    // Markdown Tables with mobile-optimized horizontal scrolling
     if (t.startsWith('|') && i + 1 < lines.length && /^\|[\s:|-]+\|?$/.test(lines[i + 1].trim())) {
       const rows: string[][] = [];
       const head = t.split('|').slice(1, -1).map(c => c.trim());
@@ -170,14 +191,26 @@ function MessageText({ text }: { text: string }) {
         i++;
       }
       blocks.push(
-        <div key={`t${i}`} className="overflow-x-auto my-2">
-          <table className="text-xs border-collapse w-full">
+        <div key={`t${i}`} className="overflow-x-auto my-3 -mx-1 sm:mx-0 rounded-xl border border-neutral-200/90 shadow-sm bg-white scroll-thin">
+          <table className="text-xs border-collapse w-full min-w-[480px]">
             <thead>
-              <tr>{head.map((c, ci) => <th key={ci} className="border border-neutral-300 bg-neutral-100 px-2 py-1.5 text-left font-semibold">{renderInline(c)}</th>)}</tr>
+              <tr className="border-b border-neutral-200 bg-neutral-100/80">
+                {head.map((c, ci) => (
+                  <th key={ci} className="px-3 py-2 text-left font-bold text-neutral-800 tracking-tight">
+                    {renderInline(c)}
+                  </th>
+                ))}
+              </tr>
             </thead>
-            <tbody>
+            <tbody className="divide-y divide-neutral-200/70">
               {rows.map((r, ri) => (
-                <tr key={ri}>{r.map((c, ci) => <td key={ci} className="border border-neutral-300 px-2 py-1.5 align-top">{renderInline(c)}</td>)}</tr>
+                <tr key={ri} className={ri % 2 === 1 ? 'bg-neutral-50/60 hover:bg-red-50/30 transition-colors' : 'hover:bg-red-50/30 transition-colors'}>
+                  {r.map((c, ci) => (
+                    <td key={ci} className="px-3 py-2 align-top text-neutral-700">
+                      {renderInline(c)}
+                    </td>
+                  ))}
+                </tr>
               ))}
             </tbody>
           </table>
@@ -187,7 +220,7 @@ function MessageText({ text }: { text: string }) {
     }
     if (t.startsWith('###') || t.startsWith('##')) {
       blocks.push(
-        <p key={`h${i}`} className="font-semibold text-neutral-900 mt-2.5 text-sm">
+        <p key={`h${i}`} className="font-bold text-neutral-950 mt-3 text-sm tracking-tight">
           {t.replace(/^#+\s*/, '')}
         </p>
       );
@@ -196,15 +229,15 @@ function MessageText({ text }: { text: string }) {
     }
     if (/^[-•]\s/.test(t)) {
       blocks.push(
-        <p key={`l${i}`} className="pl-4 relative">
-          <span className="absolute left-1 text-red-600">•</span>
+        <p key={`l${i}`} className="pl-4 relative text-neutral-800">
+          <span className="absolute left-1 text-red-600 font-bold">•</span>
           {renderInline(t.replace(/^[-•]\s/, ''))}
         </p>
       );
       i++;
       continue;
     }
-    blocks.push(<p key={`p${i}`}>{renderInline(line0(lines[i]))}</p>);
+    blocks.push(<p key={`p${i}`} className="text-neutral-800">{renderInline(line0(lines[i]))}</p>);
     i++;
   }
 
@@ -1054,20 +1087,20 @@ export default function App() {
             </div>
           </div>
         )}
-        <header className="app-header header-compact px-4 sm:px-6 py-3 sm:py-4 flex items-center justify-between z-10 shrink-0 sticky top-0">
-          <div className="flex items-center gap-2.5 min-w-0">
+        <header className="app-header header-compact px-3 sm:px-6 py-2.5 sm:py-3.5 flex items-center justify-between z-10 shrink-0 sticky top-0">
+          <div className="flex items-center gap-2 sm:gap-2.5 min-w-0">
             <ColletMark size={22} className="text-red-600 shrink-0" />
             <span className="hainbuch-brand text-lg sm:text-xl font-black tracking-tight text-red-600">HAINBUCH</span>
-            <span className="h-5 w-px bg-neutral-200 shrink-0" />
-            <span className="subtitle text-sm text-neutral-500 truncate">{t.subtitle}</span>
+            <span className="h-4 sm:h-5 w-px bg-neutral-200 shrink-0 hidden xs:inline" />
+            <span className="subtitle text-xs sm:text-sm text-neutral-500 truncate hidden sm:inline">{t.subtitle}</span>
           </div>
-          <div className="flex items-center gap-2 sm:gap-2.5 shrink-0">
+          <div className="flex items-center gap-1.5 sm:gap-2.5 shrink-0">
             <button
               onClick={() => setShowRoiModal(true)}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white hover:bg-neutral-50 border border-neutral-300/90 hover:border-red-600 shadow-sm hover:shadow text-xs font-semibold text-neutral-800 hover:text-red-700 transition-all group h-9"
+              className="flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-xl bg-white hover:bg-neutral-50 border border-neutral-300/90 hover:border-red-600 shadow-sm hover:shadow text-xs font-semibold text-neutral-800 hover:text-red-700 transition-all group h-9"
               title="Wirtschaftlichkeits- & Zeitrechner öffnen"
             >
-              <Clock size={13} className="text-red-600 group-hover:rotate-45 transition-transform shrink-0" />
+              <Clock size={14} className="text-red-600 group-hover:rotate-45 transition-transform shrink-0" />
               <span className="hidden md:inline">Zeitrechner</span>
             </button>
             <MachineSelector selected={selectedMachine} onSelect={setSelectedMachine} />
@@ -1078,10 +1111,10 @@ export default function App() {
                 disabled={isLoading}
                 title={t.newChat}
                 aria-label={t.newChat}
-                className="flex items-center gap-1.5 text-xs text-neutral-500 hover:text-red-600 disabled:opacity-30 transition-colors rounded-md px-2 py-1 hover:bg-neutral-100"
+                className="flex items-center gap-1.5 text-xs text-neutral-600 hover:text-red-600 disabled:opacity-30 transition-colors rounded-xl px-2.5 py-1.5 bg-white border border-neutral-200/90 hover:border-red-300 shadow-sm h-9"
               >
-                <PenLine size={14} />
-                <span className="hidden sm:inline">{t.newChat}</span>
+                <PenLine size={14} className="shrink-0" />
+                <span className="hidden sm:inline font-medium">{t.newChat}</span>
               </button>
             )}
           </div>

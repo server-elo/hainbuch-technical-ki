@@ -214,13 +214,13 @@ export default function MachineSelector({ selected, onSelect }: Props) {
       
       {/* Premium Floating Tutorial Tooltip Hint */}
       {showTutorial && !open && (
-        <div className="absolute top-full mt-2.5 right-0 z-40 w-80 bg-white text-neutral-900 text-xs p-4 rounded-2xl shadow-[0_12px_36px_-6px_rgba(0,0,0,0.18)] border-2 border-red-600 animate-in fade-in zoom-in-95 duration-200">
+        <div className="absolute top-full mt-2.5 right-0 z-40 w-80 max-w-[calc(100vw-1.5rem)] bg-white text-neutral-900 text-xs p-4 rounded-2xl shadow-[0_12px_36px_-6px_rgba(0,0,0,0.18)] border-2 border-red-600 animate-in fade-in zoom-in-95 duration-200">
           {/* Arrow pointing up */}
           <div className="absolute -top-2.5 right-7 w-4 h-4 bg-white border-t-2 border-l-2 border-red-600 rotate-45"></div>
           
           <div className="flex items-start justify-between gap-2 relative z-10">
             <div className="flex items-center gap-1.5 font-black text-xs text-red-600 tracking-tight">
-              <Sparkles size={14} className="text-red-600" />
+              <Sparkles size={14} className="text-red-600 shrink-0" />
               <span>MASCHINE & G-CODE WÄHLEN</span>
             </div>
             <button onClick={dismissTutorial} className="text-neutral-400 hover:text-neutral-700 p-0.5 rounded">
@@ -252,7 +252,7 @@ export default function MachineSelector({ selected, onSelect }: Props) {
       {/* Main Machine Badge Button */}
       <button
         onClick={() => { setOpen(o => !o); dismissTutorial(); }}
-        className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-white hover:bg-neutral-50 border border-neutral-300/90 hover:border-red-600 shadow-sm hover:shadow transition-all group text-left h-9"
+        className="flex items-center gap-1.5 sm:gap-2 px-2 sm:px-3 py-1.5 rounded-xl bg-white hover:bg-neutral-50 border border-neutral-300/90 hover:border-red-600 shadow-sm hover:shadow transition-all group text-left h-9"
         title="CNC-Maschine & Spindelprofil konfigurieren"
       >
         <div className="w-5 h-5 rounded-md bg-red-50 text-red-600 flex items-center justify-center font-bold text-xs shrink-0 group-hover:scale-110 transition-transform">
@@ -261,8 +261,8 @@ export default function MachineSelector({ selected, onSelect }: Props) {
 
         <div className="min-w-0 pr-0.5">
           <div className="flex items-center gap-1">
-            <span className="text-[9px] font-bold uppercase tracking-wider text-neutral-400">Maschine:</span>
-            <span className="text-[11px] font-bold text-neutral-900 truncate max-w-[100px] sm:max-w-[140px]">
+            <span className="text-[9px] font-bold uppercase tracking-wider text-neutral-400 hidden xs:inline">Maschine:</span>
+            <span className="text-[11px] font-bold text-neutral-900 truncate max-w-[80px] xs:max-w-[110px] sm:max-w-[140px]">
               {selected.name.replace(/\s*\(.*\)/, '')}
             </span>
           </div>
@@ -275,7 +275,7 @@ export default function MachineSelector({ selected, onSelect }: Props) {
       {open && (
         <>
           <div className="fixed inset-0 z-40" onClick={() => { setOpen(false); setShowAddForm(false); }} />
-          <div className="absolute right-0 mt-2 w-96 max-w-[94vw] bg-white border border-neutral-200 rounded-2xl shadow-2xl z-50 overflow-hidden divide-y divide-neutral-100 text-neutral-800 animate-in fade-in zoom-in-95 duration-150">
+          <div className="absolute right-0 mt-2 w-96 max-w-[calc(100vw-1rem)] bg-white border border-neutral-200 rounded-2xl shadow-2xl z-50 overflow-hidden divide-y divide-neutral-100 text-neutral-800 animate-in fade-in zoom-in-95 duration-150">
             
             {/* Header & Category Tabs */}
             <div className="p-3.5 bg-neutral-50 border-b border-neutral-200">
