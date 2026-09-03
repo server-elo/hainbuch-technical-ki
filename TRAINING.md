@@ -12,7 +12,9 @@ Every chat turn (user question + assistant answer + thumbs feedback) is stored:
    node scripts/export_training.cjs            # all time
    node scripts/export_training.cjs 2026-09-01 # since date
    ```
-   → `data/training/export-<date>.jsonl` with `{type:"message"|"feedback", …}` lines.
+   → `data/training/export-<date>.jsonl` with `{type:"message"|"feedback"|"chat", …}` lines
+   (sanitized: salted id-hashes, dead hosts → `__BACKEND__`, base64 stripped).
+   Cost lens: `node scripts/cost.cjs` shows calls/tokens/latency per model.
 2. **Review**: open the file, search thumbs-down (`"rating":"down"`) first —
    those are your highest-value fixes. Note the pattern:
    wrong product photo? invented mat number? wrong fit class? missing source?

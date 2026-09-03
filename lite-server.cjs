@@ -325,6 +325,48 @@ function getHeroForProduct(name) {
   return HERO[name] || null;
 }
 
+// ── LLM with retry + fallback + usage accounting ───────────────────────
+// Primary model × LLM_URLS (1 retry each), then fallback model × LLM_URLS.
+// User aborts / timeouts are never retried. Every attempt lands in llm_stats
+// (calls, errors, tokens when the upstream reports usage, latency).
+const LLM_URLS = (process.env.LLM_URLS || LLM_URL).split(",").map((s) => s.trim()).filter(Boolean);
+const MODEL_FALLBACK = process.env.MODEL_FALLBACK || "gemini-3.1-flash-lite";
+function statLlm(kind, model, ms, usage, error) {
+  try {
+    if (histDb && histDb.recordLlmStat) histDb.recordLlmStat({ kind, model, ms, usage, error });
+  } catch {}
+}
+async function llmFetch(payload, signal, kind) {
+  const models = [payload.model || MODEL_ID];
+  if (MODEL_FALLBACK && !models.includes(MODEL_FALLBACK)) models.push(MODEL_FALLBACK);
+  let lastErr = null;
+  for (const m of models) {
+    for (const u of LLM_URLS) {
+      for (let t = 0; t < 2; t++) {
+        const started = Date.now();
+        try {
+          const r = await fetch(u, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ ...payload, model: m }),
+            signal,
+          });
+          if (!r.ok) throw new Error(`HTTP ${r.status}`);
+          const j = await r.json();
+          statLlm(kind, m, Date.now() - started, j.usage, null);
+          return { res: j, model: m };
+        } catch (e) {
+          lastErr = e;
+          statLlm(kind, m, Date.now() - started, null, String((e && e.message) || e).slice(0, 120));
+          if (e && e.name === "AbortError") throw e;
+          await new Promise((r) => setTimeout(r, 400 * (t + 1)));
+        }
+      }
+    }
+  }
+  throw lastErr;
+}
+
 // ── Persistent Chat Logging ──────────────────────────────────────────
 const LOGS_DIR = path.join(__dirname, "logs");
 const DAILY_LOGS_DIR = path.join(LOGS_DIR, "daily");
@@ -378,7 +420,7 @@ function firebaseMode() {
 
 // Persist one chat turn to SQLite (users → conversations → messages).
 // Never throws, never blocks chat on failure. Returns conversationId or null.
-async function persistChatTurn(req, parsed, questionText, cleaned, durationMs) {
+async function persistChatTurn(req, parsed, questionText, cleaned, durationMs, model) {
   try {
     if (!histDb || !histDb.ok()) return null;
     const auth = histAuth ? await histAuth.getAuth(req).catch(() => null) : null;
@@ -405,7 +447,7 @@ async function persistChatTurn(req, parsed, questionText, cleaned, durationMs) {
     }
     if (!convId) return null;
     histDb.addMessage({ conversationId: convId, role: "user", content: questionText });
-    histDb.addMessage({ conversationId: convId, role: "assistant", content: cleaned, model: MODEL_ID, durationMs });
+    histDb.addMessage({ conversationId: convId, role: "assistant", content: cleaned, model: model || MODEL_ID, durationMs });
     return convId;
   } catch (e) {
     console.warn("[history] persist failed:", e.message);
@@ -923,19 +965,13 @@ async function handleChat(req, res) {
     try {
       if (isSmalltalk) {
         emit(res, { type: "status", stage: "chat", label: "Einen Moment…" });
-        const small = await fetch(LLM_URL, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            model: MODEL_ID,
-            messages: [
-              { role: "system", content: "Du bist der HAINBUCH Technical Advisor. Antworte kurz und freundlich auf Deutsch (1-2 Sätze): begrüße, stelle dich als Spanntechnik-Berater vor und bitte um Werkstückdaten / Zeichnung / Toleranzen. Keine Arbeitspläne, keine Tabellen, keine Quellen." },
-              ...messages.slice(-4),
-            ],
-          }),
-          signal: llmSignal(),
-        });
-        const sj = await small.json();
+        const { res: sj, model: fastModel } = await llmFetch({
+          model: MODEL_ID,
+          messages: [
+            { role: "system", content: "Du bist der HAINBUCH Technical Advisor. Antworte kurz und freundlich auf Deutsch (1-2 Sätze): begrüße, stelle dich als Spanntechnik-Berater vor und bitte um Werkstückdaten / Zeichnung / Toleranzen. Keine Arbeitspläne, keine Tabellen, keine Quellen." },
+            ...messages.slice(-4),
+          ],
+        }, llmSignal(), "fast");
         const sText = cleanLaTeX(sj.choices?.[0]?.message?.content ?? "Hallo! Ich bin der HAINBUCH Technical Advisor für Spanntechnik. Beschreiben Sie gern Ihr Werkstück oder laden Sie eine Zeichnung hoch!");
         logChatInteraction({
           ipHash: hashIp(clientIp(req)),
@@ -948,7 +984,7 @@ async function handleChat(req, res) {
           stage: "success",
           fastPath: true,
         });
-        const convIdFast = await persistChatTurn(req, parsed, questionText, sText, Date.now() - startTime);
+        const convIdFast = await persistChatTurn(req, parsed, questionText, sText, Date.now() - startTime, fastModel);
         emit(res, { type: "result", data: { message: sText, conversationId: convIdFast } });
         return;
       }
@@ -956,20 +992,14 @@ async function handleChat(req, res) {
       const tools = hasImages ? undefined : [{ google_search: {} }];
 
       emit(res, { type: "status", stage: "chat", label: hasImages ? "Zeichnung / Bild wird analysiert…" : "HAINBUCH-Wissen wird durchsucht…" });
-      const upstream = await fetch(LLM_URL, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          model: MODEL_ID,
-          messages: [
-            { role: "system", content: SYSTEM_PROMPT + machineContext + goldContext + followupContext + fitsContext + catalogContext + shopContext + context },
-            ...messages,
-          ],
-          ...(tools ? { tools } : {}),
-        }),
-        signal: llmSignal(),
-      });
-      const json = await upstream.json();
+      const { res: json, model: mainModel } = await llmFetch({
+        model: MODEL_ID,
+        messages: [
+          { role: "system", content: SYSTEM_PROMPT + machineContext + goldContext + followupContext + fitsContext + catalogContext + shopContext + context },
+          ...messages,
+        ],
+        ...(tools ? { tools } : {}),
+      }, llmSignal(), "main");
       const answer =
         cleanLaTeX(
           json.choices?.[0]?.message?.content ??
@@ -993,20 +1023,14 @@ async function handleChat(req, res) {
     );
     if (needsQa) {
     try {
-      const qa = await fetch(LLM_URL, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          model: MODEL_ID,
-          messages: [
+      const { res: qj } = await llmFetch({
+        model: MODEL_ID,
+        messages: [
             { role: "system", content: "Du bist ein strenger QA-Prüfer für HAINBUCH-Auslegungen. Prüfe den Entwurf gegen diese Checkliste und korrigiere alle Mängel direkt:\n0) STRIKTER 2-STUFIGER ABLAUF (PFLICHT):\n- STUFE 1 (Erstkontakt / Bestand unklar): Wenn der Nutzer das Werkstück neu beschreibt und noch KEIN Futter genannt hat und noch NICHT nach Optionen gefragt hat: Der Entwurf MUSS kurz sein (1-2 Sätze technische Einleitung/Passungen) und ZWINGEND mit der Bestandsfrage enden: 'Haben Sie bereits ein Spannfutter bzw. HAINBUCH-Spannmittel in Ihrer Fertigung (z. B. SPANNTOP, TOPlus, MANDO, InoFlex, B-Top, MANOK) – oder soll ich Ihnen passende Optionen vorschlagen?'. Falls der Entwurf fälschlicherweise schon den vollen Arbeitsplan enthält, KÜRZE ihn und füge die Bestandsfrage ein! (WICHTIGE AUSNAHME: Wenn eine technische Zeichnung oder ein Werkstückbild hochgeladen wurde, MUSS die Zeichnung IMMER vollständig ausgewertet werden mit Maßen, Passungen, Werkstoff und passenden HAINBUCH-Spannmitteln!)\n- STUFE 2 (Nach Kundenantwort): Wenn der Kunde sein Futter nennt (z. B. 'habe SPANNTOP nova'), MUSS die Auslegung zu 100% auf dieses Futter angepasst sein (Spannköpfe, Dorn-Adaption MANDO Adapt, Arbeitsplan, Werkzeuge)! Wenn der Kunde kein Futter hat / nach Optionen fragt ('schlag mir vor'), MUSS die vollständige Auslegung mit 3-5 Lösungen, Arbeitsplan, Schnittdaten, ISO-Zeiten, Werkzeugen, Anti-Polygon-Check, ROI und Fotos enthalten sein!\n1) ECHTE und PASSENDE Markdown-Fotos ![Name](URL) (InoFlex -> hero_136.jpg / hero_262.jpg, B-Top -> hero_146.jpg / hero_150.jpg, centroteX -> hero_242.jpg, MANOK plus -> hero_246.jpg, MANOK -> hero_242.jpg, MANDO -> hero_178.jpg, MANDO Adapt -> hero_272.jpg, SPANNTOP nova -> hero_94.jpg, SPANNTOP mini -> hero_74.jpg; NIEMALS falsche Bilder wie Kran für InoFlex oder Messkoffer für Spannfutter kopieren!).\n2) Tabellen max. 5 Spalten, Lösungen als Zeilen.\n3) KEIN LaTeX, keine $-Zeichen; Formeln im Klartext (z. B. t_h = L / vf); deutsche Komma-Dezimalzahlen.\n4) Passungswerte aus dem VORBEBERECHNETEN Block 1:1 übernehmen; alle Rechnungen nachprüfen und Fehler korrigieren.\n5) Abschließend Sektion '## Quellen' mit klickbaren [Titel](URL)-Links (min. 2).\n6) LÄNGEN- & ABSTICH-KONSISTENZ: Prüfe peinlich genau die Gesamtlänge des Werkstücks! Wenn das Teil z. B. Hülse 75 mm + Zapfen 25 mm hat (Gesamtlänge 100 mm), darf in OP 10 NIEMALS auf 76 mm abgestochen werden! Die Abstichlänge MUSS mindestens die Gesamtlänge + Aufmaß sein (z. B. Abstechen auf 102–103 mm). Korrigiere fehlerhafte Abstichlängen im Arbeitsplan sofort!\n7) REIBEN vs. FEINDREHEN: Bei Sacklochbohrungen mit Radius (z. B. R0,3) oder flachem Grund darf KEINE Reibahle verwendet werden (Anschnittkollision). Ersetze Reibahle durch Feindreh-Bohrstange!\n8) ISO 1101 FORM-TOLERANZEN: Reine Formtoleranzen (Rundheit, Zylindrizität, Geradheit, Ebenheit) dürfen laut ISO 1101 NIEMALS ein Bezugselement (z. B. | A) besitzen. Entferne unzulässige Bezüge bei Formtoleranzen!\nAntworte NUR mit der vollständigen korrigierten finalen Antwort – kein Kommentar, keine Begründung der Änderungen." },
             { role: "user", content: `NUTZERFRAGE:\n${questionText}\n\nVORBEBERECHNETE PASSUNGEN:\n${precomputed || "—"}\n\nKATALOG-KONTEXT:\n${catalogContext || "—"}\n\nSHOP-KONTEXT:\n${shopContext || "—"}\n\nENTWURF ZU PRÜFEN:\n${answer}` },
           ],
           ...(tools ? { tools } : {}),
-        }),
-        signal: llmSignal(),
-      });
-      const qj = await qa.json();
+        }, llmSignal(), "qa");
       const fixed = qj.choices?.[0]?.message?.content;
       if (fixed && fixed.length > 500) finalAnswer = fixed;
     } catch {}
@@ -1023,7 +1047,7 @@ async function handleChat(req, res) {
       durationMs: Date.now() - startTime,
       stage: "success",
     });
-    const convId = await persistChatTurn(req, parsed, questionText, cleaned, Date.now() - startTime);
+    const convId = await persistChatTurn(req, parsed, questionText, cleaned, Date.now() - startTime, mainModel);
     emit(res, { type: "result", data: { message: cleaned, conversationId: convId } });
     } catch (e) {
       const aborted = aborter.signal.aborted;
@@ -1177,7 +1201,7 @@ const server = http.createServer(async (req, res) => {
     } catch { /* none yet */ }
     res.writeHead(200, { "Content-Type": "application/json" });
     const dbStats = histDb ? histDb.stats() : { disabled: "no module" };
-    return res.end(JSON.stringify({ feedback, dayBudget, ratePerHour: RATE_PER_HOUR, ratePerDay: RATE_PER_DAY, rateBucketIps: rateBuckets.size, db: dbStats, authMode: histAuth ? histAuth.mode() : "none" }));
+    return res.end(JSON.stringify({ feedback, dayBudget, ratePerHour: RATE_PER_HOUR, ratePerDay: RATE_PER_DAY, rateBucketIps: rateBuckets.size, db: dbStats, authMode: histAuth ? histAuth.mode() : "none", llm: histDb ? histDb.getLlmStats(7) : [] }));
   }
   // ── Training-data export for the model-improvement loop (ADMIN_KEY, like /api/admin) ──
   if (req.method === "GET" && rawUrl === "/api/admin/export") {
