@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect, useId } from 'react';
+import React, { useState, useRef, useEffect, useId, Suspense } from 'react';
 import {
   Send, User, ChevronRight, ChevronDown, Loader2, FileText,
   Image as ImageIcon, Paperclip, X, Clock, TrendingDown, Copy, Check,
@@ -14,15 +14,18 @@ import { API_BASE, apiHeaders } from './config';
 import { num, eur } from './format';
 import OperationsChart from './components/OperationsChart';
 import FitDiagram from './components/FitDiagram';
-import SetupSheetModal, { SetupSheetData } from './components/SetupSheetModal';
+import type { SetupSheetData } from './components/SetupSheetModal';
 import MachineSelector, { MachineProfile, PRESET_MACHINES } from './components/MachineSelector';
-import RoiTimeCalculatorModal from './components/RoiTimeCalculatorModal';
+// Below-the-fold modals: split into own chunks, fetched on first open.
+// (MachineSelector stays in the main chunk — its button is always visible.)
+const SetupSheetModal = React.lazy(() => import('./components/SetupSheetModal'));
+const RoiTimeCalculatorModal = React.lazy(() => import('./components/RoiTimeCalculatorModal'));
+const AuthModal = React.lazy(() => import('./components/AuthModal'));
+const CountryLangPicker = React.lazy(() => import('./components/CountryLangPicker'));
+const HistorySidebar = React.lazy(() => import('./components/HistorySidebar'));
 import { resolveImgUrl, parseSetupSheetFromMarkdown } from './utils';
 import { loadProfile, saveProfile, clearProfile, suggestedLangFor, type Profile } from './lib/profile';
 import { listHist, getHist, renameHist, deleteHist, type HistoryItem } from './lib/historyApi';
-import AuthModal from './components/AuthModal';
-import CountryLangPicker from './components/CountryLangPicker';
-import HistorySidebar from './components/HistorySidebar';
 
 /** HAINBUCH collet mark — three jaws around a bore. Same geometry as the app icon. */
 function ColletMark({ size = 16, className = '' }: { size?: number; className?: string }) {
@@ -1724,30 +1727,37 @@ export default function App() {
       </div>
 
       {activeSetupSheet && (
+        <Suspense fallback={null}>
         <SetupSheetModal
           isOpen={!!activeSetupSheet}
           onClose={() => setActiveSetupSheet(null)}
           data={activeSetupSheet}
         />
+        </Suspense>
       )}
 
       {showRoiModal && (
+        <Suspense fallback={null}>
         <RoiTimeCalculatorModal
           isOpen={showRoiModal}
           onClose={() => setShowRoiModal(false)}
         />
+        </Suspense>
       )}
 
       {showAuth && (
+        <Suspense fallback={null}>
         <AuthModal
           t={t}
           initialCountry={profile.country || geoCountry}
           onClose={() => setShowAuth(false)}
           onSaved={handleAuthSaved}
         />
+        </Suspense>
       )}
 
       {showCountry && (
+        <Suspense fallback={null}>
         <CountryLangPicker
           t={t}
           country={profile.country}
@@ -1755,8 +1765,11 @@ export default function App() {
           onClose={() => setShowCountry(false)}
           onPick={handleCountryPick}
         />
+        </Suspense>
       )}
 
+      {showHistory && (
+      <Suspense fallback={null}>
       <HistorySidebar
         open={showHistory}
         t={t}
@@ -1778,6 +1791,8 @@ export default function App() {
         }}
         onNew={() => { resetChat(); setShowHistory(false); }}
       />
+      </Suspense>
+      )}
 
       {/* Lightbox / Technische Zeichnung Vergrößerung */}
       {previewImage && (
