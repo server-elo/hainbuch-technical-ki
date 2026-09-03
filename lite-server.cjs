@@ -1260,20 +1260,41 @@ const server = http.createServer(async (req, res) => {
       return res.end(JSON.stringify({ error: "valid email required" }));
     }
     const prev = histDb.getUserByEmail(email);
-    // Login tab: unknown e-mail is NOT auto-created — tell the client to register.
-    if (p.loginOnly && !prev) {
-      res.writeHead(404, { "Content-Type": "application/json" });
-      return res.end(JSON.stringify({ error: "not-registered" }));
+    const password = String(p.password || "").trim();
+
+    // Login mode:
+    if (p.loginOnly) {
+      if (!prev) {
+        res.writeHead(404, { "Content-Type": "application/json" });
+        return res.end(JSON.stringify({ error: "not-registered" }));
+      }
+      if (prev.password_hash) {
+        if (!password || !histDb.verifyPassword(password, prev.password_hash)) {
+          res.writeHead(401, { "Content-Type": "application/json" });
+          return res.end(JSON.stringify({ error: "wrong-password" }));
+        }
+      } else if (password && password.length >= 6) {
+        histDb.upsertUser({ email, password });
+      }
+    } else {
+      // Register mode:
+      if (!password || password.length < 6) {
+        res.writeHead(400, { "Content-Type": "application/json" });
+        return res.end(JSON.stringify({ error: "password-too-short" }));
+      }
+      if (prev && prev.password_hash) {
+        res.writeHead(409, { "Content-Type": "application/json" });
+        return res.end(JSON.stringify({ error: "already-registered" }));
+      }
+      if ((!prev || !prev.consent_terms_at) && !p.consentTerms) {
+        res.writeHead(400, { "Content-Type": "application/json" });
+        return res.end(JSON.stringify({ error: "terms-required" }));
+      }
     }
-    // GDPR: accounts without recorded terms consent require it now — covers
-    // brand-new registrations AND legacy rows created implicitly by chat
-    // (consent_terms_at empty). Logins of consenting users are unaffected.
-    if (!p.loginOnly && (!prev || !prev.consent_terms_at) && !p.consentTerms) {
-      res.writeHead(400, { "Content-Type": "application/json" });
-      return res.end(JSON.stringify({ error: "terms-required" }));
-    }
-    const userId = prev ? prev.id : (histDb.upsertUser({
+
+    const userId = prev ? (password && !prev.password_hash ? (histDb.upsertUser({ email, password }) || {}).id : prev.id) : (histDb.upsertUser({
       email,
+      password,
       displayName: String(p.displayName || "").slice(0, 80),
       country: String(p.country || req.headers["cf-ipcountry"] || "").slice(0, 4),
       uiLang: String(p.uiLang || req.headers["x-ui-lang"] || "").slice(0, 8),

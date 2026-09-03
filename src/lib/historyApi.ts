@@ -33,9 +33,9 @@ async function req(path: string, init?: RequestInit) {
   return r.json();
 }
 
-/** Register / login with email (stub phase). Returns { token, user }. */
+/** Register / login with email & password. Returns { token, user }. */
 export async function syncProfile(body: {
-  email: string; displayName?: string; country?: string; uiLang?: string;
+  email: string; password?: string; displayName?: string; country?: string; uiLang?: string;
   consentTerms?: boolean; consentMarketing?: boolean; loginOnly?: boolean;
 }): Promise<{ token: string; user: { id: string; email: string; displayName: string; country: string; uiLang: string } }> {
   return req('/api/auth/sync', { method: 'POST', body: JSON.stringify(body) });
