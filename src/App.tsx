@@ -3,7 +3,8 @@ import {
   Send, User, ChevronRight, ChevronDown, Loader2, FileText,
   Image as ImageIcon, Paperclip, X, Clock, TrendingDown, Copy, Check,
   ThumbsUp, ThumbsDown, FileDown, ArrowDown, PenLine, Square, ListPlus, Sparkles,
-  AlertTriangle, RotateCcw, Upload, ShieldCheck, ArrowRight, Layers, Ruler, Cog
+  AlertTriangle, RotateCcw, Upload, ShieldCheck, ArrowRight, Layers, Ruler, Cog,
+  History, Globe, LogIn, LogOut
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import type { ChatMessage, PipelineStatus } from './types';
@@ -17,6 +18,11 @@ import SetupSheetModal, { SetupSheetData } from './components/SetupSheetModal';
 import MachineSelector, { MachineProfile, PRESET_MACHINES } from './components/MachineSelector';
 import RoiTimeCalculatorModal from './components/RoiTimeCalculatorModal';
 import { resolveImgUrl, parseSetupSheetFromMarkdown } from './utils';
+import { loadProfile, saveProfile, clearProfile, suggestedLangFor, type Profile } from './lib/profile';
+import { listHist, getHist, renameHist, deleteHist, type HistoryItem } from './lib/historyApi';
+import AuthModal from './components/AuthModal';
+import CountryLangPicker from './components/CountryLangPicker';
+import HistorySidebar from './components/HistorySidebar';
 
 /** HAINBUCH collet mark — three jaws around a bore. Same geometry as the app icon. */
 function ColletMark({ size = 16, className = '' }: { size?: number; className?: string }) {
@@ -448,7 +454,7 @@ function PdfButton({ msg, t }: { msg: ChatMessage; t: (typeof T)[keyof typeof T]
   );
 }
 
-function FeedbackButtons({ getText }: { getText: () => string }) {
+function FeedbackButtons({ getText, conversationId }: { getText: () => string; conversationId?: string | null }) {
   const [sent, setSent] = useState<'up' | 'down' | null>(null);
   const send = (rating: 'up' | 'down') => {
     if (sent) return;
@@ -456,7 +462,7 @@ function FeedbackButtons({ getText }: { getText: () => string }) {
     fetch(`${API_BASE}/api/feedback`, {
       method: 'POST',
       headers: apiHeaders(),
-      body: JSON.stringify({ rating, message: getText().slice(0, 2000) }),
+      body: JSON.stringify({ rating, message: getText().slice(0, 2000), conversationId: conversationId || undefined }),
     }).catch(() => { /* feedback is best-effort */ });
   };
   return (
@@ -851,7 +857,7 @@ function StatusDot({ onlineLabel, limitedLabel }: { onlineLabel: string; limited
     const load = () =>
       fetch(`${API_BASE}/api/status`)
         .then(r => r.json())
-        .then(s => setOnline(s.llmOnline && s.ragOnline))
+        .then(s => setOnline(!!s.llmOnline))
         .catch(() => setOnline(false));
     load();
     const t = setInterval(load, 60000);
@@ -879,26 +885,52 @@ const COUNTRY_LANG: Record<string, UiLang> = {
 };
 
 export default function App() {
-  // Language is automatic by IP country (Cloudflare geolocation via /api/status):
-  // DACH → German, China → Chinese, other supported regions their language,
-  // rest of the world English. Without a country (localhost, tunnel down)
-  // the app stays German — that is the home market.
-  const [uiLang, setUiLang] = useState<UiLang>('de');
+  // Language: stored choice wins (country picker / profile). Geo suggestion
+  // applies only when the user never chose (no profile, no ui-lang key).
+  const [profile, setProfile] = useState<Profile>(() => loadProfile());
+  const [uiLang, setUiLang] = useState<UiLang>(() => profile.uiLangOverride || 'de');
+  const [geoCountry, setGeoCountry] = useState('');
   const t = T[uiLang];
 
+  // IP drives the language: every load asks /api/status for the Cloudflare
+  // country and follows it — UNLESS the user picked a language manually
+  // (stored override always wins, on every device state).
   useEffect(() => {
     fetch(`${API_BASE}/api/status`)
       .then(r => r.json())
       .then(s => {
-        if (s.country && COUNTRY_LANG[s.country]) setUiLang(COUNTRY_LANG[s.country]);
-        else if (s.country) setUiLang('en');
+        const cc = typeof s.country === 'string' ? s.country : '';
+        if (cc) setGeoCountry(cc);
+        // A manual pick in the country picker pins the language (stored
+        // override). Everything else follows the IP country on every load.
+        let override = '';
+        try {
+          override = loadProfile().uiLangOverride || '';
+        } catch { /* ignore */ }
+        if (override || !cc) return;
+        if (COUNTRY_LANG[cc]) setUiLang(COUNTRY_LANG[cc]);
+        else setUiLang('en');
       })
-      .catch(() => { /* stay German */ });
+      .catch(() => { /* stay with stored/default */ });
   }, []);
+  // Keep the current language visible to apiHeaders (x-ui-lang) on every change.
+  useEffect(() => {
+    try {
+      localStorage.setItem('ui-lang', uiLang);
+    } catch { /* ignore */ }
+  }, [uiLang]);
+  // History + auth UI state
+  const [showAuth, setShowAuth] = useState(false);
+  const [showCountry, setShowCountry] = useState(false);
+  const [showHistory, setShowHistory] = useState(false);
+  const [histItems, setHistItems] = useState<HistoryItem[]>([]);
+  const [histLoading, setHistLoading] = useState(false);
+  const [conversationId, setConversationId] = useState<string | null>(null);
   const [selectedMachine, setSelectedMachine] = useState<MachineProfile>(PRESET_MACHINES[0]);
 
   const [activeSetupSheet, setActiveSetupSheet] = useState<SetupSheetData | null>(null);
   const [showRoiModal, setShowRoiModal] = useState(false);
+  const [previewImage, setPreviewImage] = useState<string | null>(null);
   const [messages, setMessages] = useState<ChatMessage[]>([{
     role: "model",
     parts: [{ text: "" }]  // index 0 is always rendered from t.welcome
@@ -992,15 +1024,17 @@ export default function App() {
       const apiMessages = newMessages
         .filter((msg, idx) => !(idx === 0 && msg.role === 'model'))
         .map(({ role, parts }) => ({ role, parts }));
-      // The latest calculated plan travels along so the server can use it
-      // for follow-up questions without re-planning.
-      const lastAnalysis =
-        [...newMessages].reverse().find(m => m.analysis?.manufacturingAnalysis)
-          ?.analysis?.manufacturingAnalysis ?? null;
       const response = await fetch(`${API_BASE}/api/chat`, {
         method: 'POST',
         headers: apiHeaders(),
-        body: JSON.stringify({ messages: apiMessages, lastAnalysis, machine: selectedMachine }),
+        body: JSON.stringify({
+          messages: apiMessages,
+          machine: selectedMachine,
+          conversationId: conversationId || undefined,
+          email: profile.email || undefined,
+          country: profile.country || undefined,
+          uiLang,
+        }),
         signal: controller.signal,
       });
       if (!response.ok || !response.body) {
@@ -1042,6 +1076,7 @@ export default function App() {
       }
       if (errMsg) throw new Error(errMsg);
       if (!result) throw new Error('NO_RESULT');
+      if (result.conversationId) setConversationId(result.conversationId);
 
       const hasAnalysis =
         (result.manufacturingAnalysis && typeof result.manufacturingAnalysis === 'object') ||
@@ -1207,9 +1242,71 @@ export default function App() {
   const resetChat = () => {
     if (isLoading) stopGeneration();
     setQueuedMessages([]);
+    setConversationId(null);
     setMessages([{ role: 'model', parts: [{ text: '' }] }]);
     setInputValue('');
     setAttachedFile(null);
+  };
+
+  // ── History: list / open / rename / delete (login via AuthModal) ──
+  const refreshHistList = async () => {
+    if (!profile.email && !profile.token) return;
+    setHistLoading(true);
+    try {
+      setHistItems(await listHist());
+    } catch { /* offline — sidebar shows empty state */ }
+    finally {
+      setHistLoading(false);
+    }
+  };
+  const openHistoryPanel = () => {
+    setShowHistory(true);
+    void refreshHistList();
+  };
+  const openConversation = async (id: string) => {
+    const c = await getHist(id);
+    if (!c) return;
+    const msgs: ChatMessage[] = [{ role: 'model', parts: [{ text: '' }] }];
+    for (const m of c.messages || []) {
+      if (m.role === 'user') msgs.push({ role: 'user', parts: [{ text: m.content }] });
+      else msgs.push({ role: 'model', parts: [{ text: m.content }] });
+    }
+    if (isLoading) stopGeneration();
+    setQueuedMessages([]);
+    setConversationId(id);
+    setMessages(msgs.length > 1 ? msgs : [{ role: 'model', parts: [{ text: '' }] }]);
+    setShowHistory(false);
+  };
+  const handleAuthSaved = (r: { email: string; displayName: string; country: string; token: string }) => {
+    const next: Profile = {
+      ...profile,
+      email: r.email,
+      displayName: r.displayName,
+      country: r.country || profile.country || geoCountry,
+      token: r.token,
+    };
+    // Fresh login without a manual language choice follows the IP country.
+    if (!next.uiLangOverride) {
+      const s = (next.country && suggestedLangFor(next.country))
+        || (geoCountry && COUNTRY_LANG[geoCountry]) || null;
+      if (s) setUiLang(s);
+    }
+    setProfile(next);
+    saveProfile(next);
+    setShowAuth(false);
+    void refreshHistList();
+  };
+  const handleLogout = () => {
+    clearProfile();
+    setProfile(loadProfile());
+    setHistItems([]);
+    resetChat();
+  };
+  const handleCountryPick = (country: string, lang: UiLang) => {
+    setUiLang(lang);
+    const next: Profile = { ...profile, country, uiLangOverride: lang };
+    setProfile(next);
+    saveProfile(next);
   };
 
   const acceptDrop = (f: File | undefined) => {
@@ -1258,6 +1355,44 @@ export default function App() {
           </div>
           <div className="flex items-center gap-1.5 sm:gap-2.5 shrink-0">
             <StatusDot onlineLabel={t.online} limitedLabel={t.limited} />
+            <button
+              onClick={() => (profile.email || profile.token ? openHistoryPanel() : setShowAuth(true))}
+              title={t.history}
+              aria-label={t.history}
+              className="flex items-center gap-1 text-xs text-neutral-600 hover:text-red-600 transition-colors rounded-xl px-2.5 py-1.5 bg-white border border-neutral-200/90 hover:border-red-300 shadow-sm h-9"
+            >
+              <History size={14} className="shrink-0" />
+            </button>
+            <button
+              onClick={() => setShowCountry(true)}
+              title={`${t.country} / ${t.language}`}
+              aria-label={`${t.country} / ${t.language}`}
+              className="flex items-center gap-1 text-xs text-neutral-600 hover:text-red-600 transition-colors rounded-xl px-2.5 py-1.5 bg-white border border-neutral-200/90 hover:border-red-300 shadow-sm h-9"
+            >
+              <Globe size={14} className="shrink-0" />
+              {profile.country && <span className="font-mono font-semibold">{profile.country}</span>}
+            </button>
+            {profile.email ? (
+              <button
+                onClick={handleLogout}
+                title={`${profile.email} — ${t.logout}`}
+                aria-label={t.logout}
+                className="flex items-center gap-1 text-xs text-neutral-600 hover:text-red-600 transition-colors rounded-xl px-2.5 py-1.5 bg-white border border-neutral-200/90 hover:border-red-300 shadow-sm h-9"
+              >
+                <LogOut size={14} className="shrink-0" />
+                <span className="hidden sm:inline font-medium max-w-[120px] truncate">{profile.displayName || profile.email}</span>
+              </button>
+            ) : (
+              <button
+                onClick={() => setShowAuth(true)}
+                title={t.login}
+                aria-label={t.login}
+                className="flex items-center gap-1 text-xs text-neutral-600 hover:text-red-600 transition-colors rounded-xl px-2.5 py-1.5 bg-white border border-neutral-200/90 hover:border-red-300 shadow-sm h-9"
+              >
+                <LogIn size={14} className="shrink-0" />
+                <span className="hidden sm:inline font-medium">{t.login}</span>
+              </button>
+            )}
             {!isEmpty && (
               <button
                 onClick={resetChat}
@@ -1338,10 +1473,33 @@ export default function App() {
                       <MessageText text={index === 0 && msg.role === 'model' ? t.welcome : (part.text || '')} />
                     )}
                     {part.inlineData && (
-                      <div className="mt-2 p-2 bg-neutral-50 rounded flex items-center gap-2 border border-neutral-200 text-xs text-neutral-500">
-                        {part.inlineData.mimeType === 'application/pdf' ? <FileText size={14} /> : <ImageIcon size={14} />}
-                        {part.inlineData.mimeType === 'application/pdf' ? t.pdfAttached : t.drawingAttached}
-                      </div>
+                      part.inlineData.mimeType.startsWith('image/') ? (
+                        <div className="mt-2.5 rounded-xl overflow-hidden border border-neutral-200/90 shadow-sm max-w-sm bg-white group">
+                          <img
+                            src={`data:${part.inlineData.mimeType};base64,${part.inlineData.data}`}
+                            alt="Hochgeladene technische Zeichnung"
+                            className="w-full max-h-64 object-contain bg-neutral-50/60 cursor-pointer group-hover:scale-[1.01] transition-transform duration-200"
+                            onClick={() => setPreviewImage(`data:${part.inlineData!.mimeType};base64,${part.inlineData!.data}`)}
+                          />
+                          <div
+                            className="px-3 py-1.5 bg-white border-t border-neutral-100 flex items-center justify-between text-xs text-neutral-600 cursor-pointer"
+                            onClick={() => setPreviewImage(`data:${part.inlineData!.mimeType};base64,${part.inlineData!.data}`)}
+                          >
+                            <span className="flex items-center gap-1.5 font-medium text-neutral-700">
+                              <ImageIcon size={14} className="text-red-600 shrink-0" />
+                              {t.drawingAttached || 'Zeichnung'}
+                            </span>
+                            <span className="text-[11px] text-neutral-400 group-hover:text-red-600 transition-colors">
+                              Vergrößern 🔍
+                            </span>
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="mt-2 p-2 bg-neutral-50 rounded flex items-center gap-2 border border-neutral-200 text-xs text-neutral-500">
+                          {part.inlineData.mimeType === 'application/pdf' ? <FileText size={14} /> : <ImageIcon size={14} />}
+                          {part.inlineData.mimeType === 'application/pdf' ? t.pdfAttached : t.drawingAttached}
+                        </div>
+                      )
                     )}
                   </div>
                 ))}</>
@@ -1361,7 +1519,7 @@ export default function App() {
                       <FileText size={14} className="text-red-600 group-hover:scale-110 transition-transform shrink-0" />
                       <span>Einrichteblatt (PDF)</span>
                     </button>
-                    <FeedbackButtons getText={() => messageToText(msg, t)} />
+                    <FeedbackButtons getText={() => messageToText(msg, t)} conversationId={conversationId} />
                     {msg.analysis && <PdfButton msg={msg} t={t} />}
                     <CopyButton getText={() => messageToText(msg, t)} labels={{ copy: t.copy, copied: t.copied }} />
                   </div>
@@ -1578,6 +1736,71 @@ export default function App() {
           isOpen={showRoiModal}
           onClose={() => setShowRoiModal(false)}
         />
+      )}
+
+      {showAuth && (
+        <AuthModal
+          t={t}
+          initialCountry={profile.country || geoCountry}
+          onClose={() => setShowAuth(false)}
+          onSaved={handleAuthSaved}
+        />
+      )}
+
+      {showCountry && (
+        <CountryLangPicker
+          t={t}
+          country={profile.country}
+          lang={uiLang}
+          onClose={() => setShowCountry(false)}
+          onPick={handleCountryPick}
+        />
+      )}
+
+      <HistorySidebar
+        open={showHistory}
+        t={t}
+        items={histItems}
+        loading={histLoading}
+        activeId={conversationId}
+        onClose={() => setShowHistory(false)}
+        onOpen={(id) => { void openConversation(id); }}
+        onRename={(id, title) => {
+          void renameHist(id, title).then((ok) => { if (ok) void refreshHistList(); });
+        }}
+        onDelete={(id) => {
+          void deleteHist(id).then((ok) => {
+            if (ok) {
+              if (conversationId === id) resetChat();
+              void refreshHistList();
+            }
+          });
+        }}
+        onNew={() => { resetChat(); setShowHistory(false); }}
+      />
+
+      {/* Lightbox / Technische Zeichnung Vergrößerung */}
+      {previewImage && (
+        <div
+          className="fixed inset-0 z-50 bg-black/85 backdrop-blur-sm flex items-center justify-center p-3 sm:p-6 animate-fade-in"
+          onClick={() => setPreviewImage(null)}
+        >
+          <div className="relative max-w-5xl max-h-[90vh] flex flex-col items-center" onClick={e => e.stopPropagation()}>
+            <button
+              type="button"
+              onClick={() => setPreviewImage(null)}
+              className="absolute -top-11 right-0 text-white/80 hover:text-white bg-white/10 hover:bg-white/20 rounded-full p-2 transition-colors cursor-pointer"
+              title="Schließen (Klick außerhalb schließt ebenfalls)"
+            >
+              <X size={20} />
+            </button>
+            <img
+              src={previewImage}
+              alt="Technische Zeichnung vergrößert"
+              className="max-h-[85vh] max-w-full rounded-xl shadow-2xl object-contain bg-white border border-neutral-800"
+            />
+          </div>
+        </div>
       )}
 
     </div>
