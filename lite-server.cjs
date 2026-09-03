@@ -3,6 +3,13 @@ const crypto = require("crypto");
 const fs = require("fs");
 const path = require("path");
 
+// History + auth (Phase 1: email stub, Phase 2: Firebase). Guarded so the
+// chat pipeline keeps working even if the DB can't open.
+let histDb = null;
+let histAuth = null;
+try { histDb = require("./lib/db.cjs"); } catch (e) { console.warn("[history] db module unavailable:", e.message); }
+try { histAuth = require("./lib/auth.cjs"); } catch (e) { console.warn("[history] auth module unavailable:", e.message); }
+
 const PORT = process.env.PORT || 3002;
 const LLM_URL = process.env.LLM_URL || "http://127.0.0.1:8317/v1/chat/completions";
 const MODEL_ID = process.env.MODEL_ID || "gemini-3.8-flash-medium";
@@ -50,9 +57,23 @@ function isLoopback(req) {
   );
 }
 
+// Per-visitor IP behind Cloudflare / reverse proxies. All quick-tunnel traffic
+// arrives via loopback, so the raw socket IP would put every visitor in ONE
+// global bucket. Prefer the Cloudflare / proxy headers (set by the edge, not
+// by the client) and fall back to the socket address.
+function clientIp(req) {
+  const cf = req.headers["cf-connecting-ip"];
+  if (typeof cf === "string" && cf.trim()) return cf.trim().slice(0, 64);
+  const xff = req.headers["x-forwarded-for"];
+  if (typeof xff === "string" && xff.trim()) return xff.split(",")[0].trim().slice(0, 64);
+  const xr = req.headers["x-real-ip"];
+  if (typeof xr === "string" && xr.trim()) return xr.trim().slice(0, 64);
+  return (req.socket && req.socket.remoteAddress) || "unknown";
+}
+
 function rateLimited(req, res) {
   if (TRUST_LOOPBACK && isLoopback(req)) return false;
-  const ip = (req.socket && req.socket.remoteAddress) || "unknown";
+  const ip = clientIp(req);
   const now = Date.now();
   const hits = (rateBuckets.get(ip) || []).filter((t) => now - t < 3_600_000);
   const deny = (msg, retryAfterSec) => {
@@ -82,7 +103,7 @@ const FEEDBACK_MAX_PER_HOUR = Number(process.env.FEEDBACK_MAX_PER_HOUR || 60);
 const fbBuckets = new Map();
 function feedbackLimited(req, res) {
   if (TRUST_LOOPBACK && isLoopback(req)) return false;
-  const ip = (req.socket && req.socket.remoteAddress) || "unknown";
+  const ip = clientIp(req);
   const now = Date.now();
   const hits = (fbBuckets.get(ip) || []).filter((t) => now - t < 3_600_000);
   if (hits.length >= FEEDBACK_MAX_PER_HOUR) {
@@ -184,8 +205,13 @@ function retrieveShop(query, top = 20) {
     .toLowerCase()
     .replace(/[^\wäöüß\s-]/g, " ")
     .split(/\s+/)
-    .filter((t) => t.length > 1 && !STOP.has(t));
+    .filter((t) => t.length > 1 && !STOP.has(t))
+    .slice(0, 12);
   if (!terms.length) return [];
+  // Tiny LRU-style cache: repeated follow-ups ("und davon die größte?") reuse results.
+  const cacheKey = terms.slice().sort().join("|") + "#" + top;
+  const cached = retrieveShop._cache?.get(cacheKey);
+  if (cached) return cached;
   const scored = SHOP.map((p) => {
     let score = 0;
     for (const t of terms) {
@@ -206,6 +232,12 @@ function retrieveShop(query, top = 20) {
     perGroup.set(g, n + 1);
     out.push(s.p);
     if (out.length >= top) break;
+  }
+  if (!retrieveShop._cache) retrieveShop._cache = new Map();
+  retrieveShop._cache.set(cacheKey, out);
+  if (retrieveShop._cache.size > 200) {
+    const first = retrieveShop._cache.keys().next().value;
+    retrieveShop._cache.delete(first);
   }
   return out;
 }
@@ -297,6 +329,65 @@ function logChatInteraction(entry) {
     fs.appendFileSync(path.join(DAILY_LOGS_DIR, `${today}.jsonl`), line, "utf8");
   } catch (err) {
     console.error("Chat logging error:", err.message);
+  }
+}
+
+// Small JSON-body reader for the history/auth API (separate from the
+// streaming chat handler below).
+function readJsonBody(req, limit = 256 * 1024) {
+  return new Promise((resolve) => {
+    let body = "";
+    let done = false;
+    const finish = (v) => { if (!done) { done = true; resolve(v); } };
+    req.on("data", (c) => {
+      if (done) return;
+      body += c;
+      if (body.length > limit) {
+        try { req.destroy(); } catch {}
+        finish({ __tooLarge: true });
+      }
+    });
+    req.on("end", () => {
+      if (done) return;
+      try { finish(JSON.parse(body || "{}")); } catch { finish({ __invalid: true }); }
+    });
+    req.on("error", () => finish({ __invalid: true }));
+  });
+}
+
+// Persist one chat turn to SQLite (users → conversations → messages).
+// Never throws, never blocks chat on failure. Returns conversationId or null.
+async function persistChatTurn(req, parsed, questionText, cleaned, durationMs) {
+  try {
+    if (!histDb || !histDb.ok()) return null;
+    const auth = histAuth ? await histAuth.getAuth(req).catch(() => null) : null;
+    const email = histDb.normalizeEmail((parsed && parsed.email) || (auth && auth.email) || req.headers["x-user-email"]);
+    let userId = (auth && auth.uid) || "";
+    let user = userId ? histDb.getUserById(userId) : null;
+    if (!user && email) user = histDb.getUserByEmail(email) || histDb.upsertUser({ email });
+    if (!user && !email) return null; // anonymous guest: jsonl log only
+    if (user) userId = user.id;
+    const uiLang = String((parsed && parsed.uiLang) || req.headers["x-ui-lang"] || "").slice(0, 8);
+    const country = String((parsed && parsed.country) || req.headers["cf-ipcountry"] || "").slice(0, 4);
+    let convId = parsed && parsed.conversationId;
+    if (convId) {
+      const c = histDb.getConversation(convId, userId);
+      if (!c) convId = null;
+    }
+    if (!convId) {
+      const conv = histDb.createConversation({
+        userId, title: String(questionText || "Beratung").slice(0, 120) || "Beratung",
+        country, uiLang, machine: parsed && parsed.machine,
+      });
+      convId = conv && conv.id;
+    }
+    if (!convId) return null;
+    histDb.addMessage({ conversationId: convId, role: "user", content: questionText });
+    histDb.addMessage({ conversationId: convId, role: "assistant", content: cleaned, model: MODEL_ID, durationMs });
+    return convId;
+  } catch (e) {
+    console.warn("[history] persist failed:", e.message);
+    return null;
   }
 }
 
@@ -511,6 +602,20 @@ ZEICHNUNGS-AUSLESE-REGELN (wichtig – häufige Fehler vermeiden):
 - Bohrungen können durch ZIRKULARFRÄSEN/Helical-Fräsen entstehen (nicht nur Bohren/Reiben) – das ist bei großen Durchmessern oder asymmetrischen Teilen oft die richtige Wahl und gehört mit Zeitformel in den Arbeitsplan.
 - Prüfe jede Ø-Angabe: Ist es (a) eine echte Bohrung, (b) ein Außendurchmesser, (c) ein Teilkreis, (d) ein Radius? Erst danach Passungen/Bearbeitungen zuordnen.
 
+FERTIGUNGSTECHNISCHE MATHEMATIK- & LÄNGENLOGIK (STRIKTE PFLICHT):
+- GESAMTLÄNGE & ABSTECHEN (OP 10 -> OP 20):
+  Berechne VOR der Arbeitsplan-Erstellung IMMER die ECHTE GESAMTLÄNGE des fertigen Werkstücks!
+  Besteht ein Werkstück aus mehreren Längenabschnitten (z. B. Hülse L = 75 mm + anschließender Zapfen L = 25 mm -> Gesamtlänge = 100 mm):
+  * Die Abstichlänge in OP 10 MUSS MINDESTENS der vollen Gesamtlänge zzgl. Bearbeitungsaufmaß entsprechen (z. B. Abstechen auf L ≥ 102–103 mm)!
+  * Niemals auf die Teillänge eines einzelnen Abschnitts (z. B. 76 mm) abstechen, wenn in OP 20 weitere Abschnitte (Zapfen, Absätze) gefertigt werden müssen (sonst fehlen 24 mm Material und das Bauteil ist Schrott)!
+  * Alternativ: Prüfe, ob die OP-Reihenfolge umgedreht werden muss (OP 10: Zapfen + Gewinde fertigen; OP 20: Am Zapfen/Körper spannen und Hülse ausdrehen).
+- SACKLOCH-BEARBEITUNG vs. REIBEN:
+  Eine Reibahle besitzt bauartbedingt einen Anschnitt (Fase/Konus) und kann eine Sacklochbohrung mit ebenem Grund oder kleinem Bodenradius (z. B. R0,3) NIEMALS scharfkantig bis auf den Grund auf Passmaß reiben!
+  In solchen Fällen im Arbeitsplan IMMER eine Feindreh-Bohrstange (Schlicht-Bohrstange mit Feinkornhartmetall-/CBN-Platte) vorsehen, KEINE Reibahle!
+- GPS- & FORM-TOLERANZEN (DIN EN ISO 1101):
+  Reine Formtoleranzen (Rundheit, Zylindrizität, Geradheit, Ebenheit) dürfen laut ISO 1101 NIEMALS ein Bezugselement (z. B. | A) besitzen!
+  Nur Lage- und Lauftoleranzen (Rundlauf, Gesamtlauf, Koaxialität, Rechtwinkligkeit, Position) haben Bezüge.
+
 BILDER & ZEICHNUNGEN: Der Nutzer kann technische Zeichnungen, Skizzen, Fotos von Werkstücken und Screenshots hochladen. Analysiere sie sorgfältig: Nennmaße, Toleranzen, Passungen, Werkstoffangaben, Oberflächen, Geometrie entnehmen und für Spannmittel-Empfehlung, Arbeitsplan und Berechnungen verwenden. Fehlende kritische Maße (z. B. Dicke) aktiv nachfragen. Beziehe die Analyse immer auf die HAINBUCH-Spannlösung.
 
 Antworte präzise, sachlich und praxisnah auf Deutsch (oder in der Sprache des Nutzers).
@@ -629,17 +734,19 @@ function cleanLaTeX(t) {
   s = s.replace(/\\[,\s;!]/g, " ");
   s = s.replace(/\\\$/g, "$");
   s = s.replace(/  +/g, " ");
-  // Auto-correct and guarantee exact hero images for every HAINBUCH solution
-  s = s.replace(/(###[^\n]*SPANNTOP\s+nova[^\n]*\n[\s\S]*?)!\[([^\]]*)\]\([^)]+\)/gi, `$1![$2](${BASE_URL}/hero-img/hero_94.jpg)`);
-  s = s.replace(/(###[^\n]*SPANNTOP\s+mini[^\n]*\n[\s\S]*?)!\[([^\]]*)\]\([^)]+\)/gi, `$1![$2](${BASE_URL}/hero-img/hero_74.jpg)`);
-  s = s.replace(/(###[^\n]*TOPlus\s+mini[^\n]*\n[\s\S]*?)!\[([^\]]*)\]\([^)]+\)/gi, `$1![$2](${BASE_URL}/hero-img/hero_28.jpg)`);
-  s = s.replace(/(###[^\n]*TOPlus\s+(?:nova|premium|kombi)[^\n]*\n[\s\S]*?)!\[([^\]]*)\]\([^)]+\)/gi, `$1![$2](${BASE_URL}/hero-img/hero_60.jpg)`);
-  s = s.replace(/(###[^\n]*InoFlex[^\n]*\n[\s\S]*?)!\[([^\]]*)\]\([^)]+\)/gi, `$1![$2](${BASE_URL}/hero-img/hero_136.jpg)`);
-  s = s.replace(/(###[^\n]*MANOK[^\n]*\n[\s\S]*?)!\[([^\]]*)\]\([^)]+\)/gi, `$1![$2](${BASE_URL}/hero-img/hero_246.jpg)`);
-  s = s.replace(/(###[^\n]*MANDO\s+T21[12][^\n]*\n[\s\S]*?)!\[([^\]]*)\]\([^)]+\)/gi, `$1![$2](${BASE_URL}/hero-img/hero_178.jpg)`);
-  s = s.replace(/(###[^\n]*MANDO\s+Adapt[^\n]*\n[\s\S]*?)!\[([^\]]*)\]\([^)]+\)/gi, `$1![$2](${BASE_URL}/hero-img/hero_272.jpg)`);
-  s = s.replace(/(###[^\n]*centroteX[^\n]*\n[\s\S]*?)!\[([^\]]*)\]\([^)]+\)/gi, `$1![$2](${BASE_URL}/hero-img/hero_242.jpg)`);
-  s = s.replace(/(###[^\n]*B-Top[^\n]*\n[\s\S]*?)!\[([^\]]*)\]\([^)]+\)/gi, `$1![$2](${BASE_URL}/hero-img/hero_146.jpg)`);
+  // Auto-correct and guarantee exact hero images for every HAINBUCH solution.
+  // NOTE: [^#]*? instead of [\s\S]*? so a replacement never crosses into the
+  // next ### section and rewrites another product's image.
+  s = s.replace(/(###[^#\n]*SPANNTOP\s+nova[^#\n]*\n[^#]*?)!\[([^\]]*)\]\([^)]+\)/gi, `$1![$2](${BASE_URL}/hero-img/hero_94.jpg)`);
+  s = s.replace(/(###[^#\n]*SPANNTOP\s+mini[^#\n]*\n[^#]*?)!\[([^\]]*)\]\([^)]+\)/gi, `$1![$2](${BASE_URL}/hero-img/hero_74.jpg)`);
+  s = s.replace(/(###[^#\n]*TOPlus\s+mini[^#\n]*\n[^#]*?)!\[([^\]]*)\]\([^)]+\)/gi, `$1![$2](${BASE_URL}/hero-img/hero_28.jpg)`);
+  s = s.replace(/(###[^#\n]*TOPlus\s+(?:nova|premium|kombi)[^#\n]*\n[^#]*?)!\[([^\]]*)\]\([^)]+\)/gi, `$1![$2](${BASE_URL}/hero-img/hero_60.jpg)`);
+  s = s.replace(/(###[^#\n]*InoFlex[^#\n]*\n[^#]*?)!\[([^\]]*)\]\([^)]+\)/gi, `$1![$2](${BASE_URL}/hero-img/hero_136.jpg)`);
+  s = s.replace(/(###[^#\n]*MANOK[^#\n]*\n[^#]*?)!\[([^\]]*)\]\([^)]+\)/gi, `$1![$2](${BASE_URL}/hero-img/hero_246.jpg)`);
+  s = s.replace(/(###[^#\n]*MANDO\s+T21[12][^#\n]*\n[^#]*?)!\[([^\]]*)\]\([^)]+\)/gi, `$1![$2](${BASE_URL}/hero-img/hero_178.jpg)`);
+  s = s.replace(/(###[^#\n]*MANDO\s+Adapt[^#\n]*\n[^#]*?)!\[([^\]]*)\]\([^)]+\)/gi, `$1![$2](${BASE_URL}/hero-img/hero_272.jpg)`);
+  s = s.replace(/(###[^#\n]*centroteX[^#\n]*\n[^#]*?)!\[([^\]]*)\]\([^)]+\)/gi, `$1![$2](${BASE_URL}/hero-img/hero_242.jpg)`);
+  s = s.replace(/(###[^#\n]*B-Top[^#\n]*\n[^#]*?)!\[([^\]]*)\]\([^)]+\)/gi, `$1![$2](${BASE_URL}/hero-img/hero_146.jpg)`);
 
   // Sanitize links ONLY in the '## Quellen' section, NEVER touching ![...](...) image tags
   if (s.includes("## Quellen")) {
@@ -753,6 +860,16 @@ async function handleChat(req, res) {
       machineContext = `\n\nKUNDEN-MASCHINENPROFIL:\n- Ausgewählte Maschine: ${machine.name}\n- Spindelschnittstelle: ${machine.spindle || "Standard"}\n- CNC-Steuerung & G-Code Format: ${machine.control || "Siemens Sinumerik / ISO"}\n${machine.drawtube ? "- Zugrohranbindung: " + machine.drawtube + "\n" : ""}${machine.table ? "- Maschinentisch: " + machine.table + "\n" : ""}WICHTIG: Nutze diese Spindelschnittstelle für die Flansch- und Einrichteblatt-Auslegung und formatiere eventuelle CNC-Programm-Zyklen exakt für die angegebene Steuerung (${machine.control || "Siemens / ISO"})!\n`;
     }
     const goldContext = retrieveGoldStandards(combinedQuery);
+    // Backward compat: older frontends send lastAnalysis for follow-ups.
+    // New frontend omits it to save bytes; if present, reuse as extra context.
+    const prevPlan = parsed?.lastAnalysis;
+    let followupContext = "";
+    if (prevPlan && typeof prevPlan === "object") {
+      try {
+        const s = JSON.stringify(prevPlan).slice(0, 2000);
+        if (s.length > 20) followupContext = `\n\nVORHERIGER ARBEITSPLAN (Folgefrage bezieht sich ggf. darauf):\n${s}`;
+      } catch {}
+    }
     const startTime = Date.now();
     const heartbeat = setInterval(() => emit(res, { type: "ping" }), 15000);
     // Client gone (tab closed, tunnel dropped) -> abort in-flight LLM calls
@@ -765,7 +882,49 @@ async function handleChat(req, res) {
       if (!res.writableEnded) aborter.abort();
     });
     const llmSignal = () => AbortSignal.any([AbortSignal.timeout(600000), aborter.signal]);
+    const hasImagesEarly = messages.some((m) => Array.isArray(m.content) && m.content.some((c) => c.type === "image_url"));
+    // Fast-path for smalltalk ("Hey", "Danke", ...): one cheap call, no RAG,
+    // no google_search tool, no QA pass. Previously even "Hey" cost ~7s + 2x LLM.
+    const isSmalltalk = (() => {
+      if (hasImagesEarly) return false;
+      const q = (questionText || "").trim();
+      if (!q || q.length > 40) return false;
+      if (/\d/.test(q)) return false;
+      if (/[Øø]|\bmm\b|\bµm\b|\bISO\b|\bH7\b|\bh6\b|\bk6\b|spann|futter|mando|toplus|manok|inoflex|centrotex|dreh|fräs|bohr|reib|werkst|passung|schnitt|maschine/i.test(q)) return false;
+      return /^(hi|hey|hello|hallo|guten\s*(tag|morgen|abend)?|moin|servus|grüezi|danke|thanks?|bitte|ok|okay|ja|nein|tschüss|bye|ciao)\b[.!?\s]*$/i.test(q);
+    })();
     try {
+      if (isSmalltalk) {
+        emit(res, { type: "status", stage: "chat", label: "Einen Moment…" });
+        const small = await fetch(LLM_URL, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            model: MODEL_ID,
+            messages: [
+              { role: "system", content: "Du bist der HAINBUCH Technical Advisor. Antworte kurz und freundlich auf Deutsch (1-2 Sätze): begrüße, stelle dich als Spanntechnik-Berater vor und bitte um Werkstückdaten / Zeichnung / Toleranzen. Keine Arbeitspläne, keine Tabellen, keine Quellen." },
+              ...messages.slice(-4),
+            ],
+          }),
+          signal: llmSignal(),
+        });
+        const sj = await small.json();
+        const sText = cleanLaTeX(sj.choices?.[0]?.message?.content ?? "Hallo! Ich bin der HAINBUCH Technical Advisor für Spanntechnik. Beschreiben Sie gern Ihr Werkstück oder laden Sie eine Zeichnung hoch!");
+        logChatInteraction({
+          ipHash: hashIp(clientIp(req)),
+          country: req.headers["cf-ipcountry"] || null,
+          messages: redactMessages(messages),
+          question: questionText,
+          response: sText,
+          imagesCited: [],
+          durationMs: Date.now() - startTime,
+          stage: "success",
+          fastPath: true,
+        });
+        const convIdFast = await persistChatTurn(req, parsed, questionText, sText, Date.now() - startTime);
+        emit(res, { type: "result", data: { message: sText, conversationId: convIdFast } });
+        return;
+      }
       const hasImages = messages.some((m) => Array.isArray(m.content) && m.content.some((c) => c.type === "image_url"));
       const tools = hasImages ? undefined : [{ google_search: {} }];
 
@@ -776,7 +935,7 @@ async function handleChat(req, res) {
         body: JSON.stringify({
           model: MODEL_ID,
           messages: [
-            { role: "system", content: SYSTEM_PROMPT + machineContext + goldContext + fitsContext + catalogContext + shopContext + context },
+            { role: "system", content: SYSTEM_PROMPT + machineContext + goldContext + followupContext + fitsContext + catalogContext + shopContext + context },
             ...messages,
           ],
           ...(tools ? { tools } : {}),
@@ -791,14 +950,19 @@ async function handleChat(req, res) {
         );
 
     emit(res, { type: "status", stage: "chat", label: "Qualitätsprüfung der Auslegung…" });
-    let finalAnswer = answer;    try {
+    let finalAnswer = answer;
+    // Skip the 2nd (QA) LLM pass for short answers — halves cost/latency.
+    // QA only pays off for full Auslegungen with tables + photos.
+    const needsQa = answer.length > 2000;
+    if (needsQa) {
+    try {
       const qa = await fetch(LLM_URL, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           model: MODEL_ID,
           messages: [
-            { role: "system", content: "Du bist ein strenger QA-Prüfer für HAINBUCH-Auslegungen. Prüfe den Entwurf gegen diese Checkliste und korrigiere alle Mängel direkt:\n0) STRIKTER 2-STUFIGER ABLAUF (PFLICHT):\n- STUFE 1 (Erstkontakt / Bestand unklar): Wenn der Nutzer das Werkstück neu beschreibt und noch KEIN Futter genannt hat und noch NICHT nach Optionen gefragt hat: Der Entwurf MUSS kurz sein (1-2 Sätze technische Einleitung/Passungen) und ZWINGEND mit der Bestandsfrage enden: 'Haben Sie bereits ein Spannfutter bzw. HAINBUCH-Spannmittel in Ihrer Fertigung (z. B. SPANNTOP, TOPlus, MANDO, InoFlex, B-Top, MANOK) – oder soll ich Ihnen passende Optionen vorschlagen?'. Falls der Entwurf fälschlicherweise schon den vollen Arbeitsplan enthält, KÜRZE ihn und füge die Bestandsfrage ein! (WICHTIGE AUSNAHME: Wenn eine technische Zeichnung oder ein Werkstückbild hochgeladen wurde, MUSS die Zeichnung IMMER vollständig ausgewertet werden mit Maßen, Passungen, Werkstoff und passenden HAINBUCH-Spannmitteln!)\n- STUFE 2 (Nach Kundenantwort): Wenn der Kunde sein Futter nennt (z. B. 'habe SPANNTOP nova'), MUSS die Auslegung zu 100% auf dieses Futter angepasst sein (Spannköpfe, Dorn-Adaption MANDO Adapt, Arbeitsplan, Werkzeuge)! Wenn der Kunde kein Futter hat / nach Optionen fragt ('schlag mir vor'), MUSS die vollständige Auslegung mit 3-5 Lösungen, Arbeitsplan, Schnittdaten, ISO-Zeiten, Werkzeugen, Anti-Polygon-Check, ROI und Fotos enthalten sein!\n1) ECHTE und PASSENDE Markdown-Fotos ![Name](URL) (InoFlex -> hero_136.jpg / hero_262.jpg, B-Top -> hero_146.jpg / hero_150.jpg, centroteX -> hero_242.jpg, MANOK plus -> hero_246.jpg, MANOK -> hero_242.jpg, MANDO -> hero_178.jpg, MANDO Adapt -> hero_272.jpg, SPANNTOP nova -> hero_94.jpg, SPANNTOP mini -> hero_74.jpg; NIEMALS falsche Bilder wie Kran für InoFlex oder Messkoffer für Spannfutter kopieren!).\n2) Tabellen max. 5 Spalten, Lösungen als Zeilen.\n3) KEIN LaTeX, keine $-Zeichen; Formeln im Klartext (z. B. t_h = L / vf); deutsche Komma-Dezimalzahlen.\n4) Passungswerte aus dem VORBEBERECHNETEN Block 1:1 übernehmen; alle Rechnungen nachprüfen und Fehler korrigieren.\n5) Abschließend Sektion '## Quellen' mit klickbaren [Titel](URL)-Links (min. 2).\nAntworte NUR mit der vollständigen korrigierten finalen Antwort – kein Kommentar, keine Begründung der Änderungen." },
+            { role: "system", content: "Du bist ein strenger QA-Prüfer für HAINBUCH-Auslegungen. Prüfe den Entwurf gegen diese Checkliste und korrigiere alle Mängel direkt:\n0) STRIKTER 2-STUFIGER ABLAUF (PFLICHT):\n- STUFE 1 (Erstkontakt / Bestand unklar): Wenn der Nutzer das Werkstück neu beschreibt und noch KEIN Futter genannt hat und noch NICHT nach Optionen gefragt hat: Der Entwurf MUSS kurz sein (1-2 Sätze technische Einleitung/Passungen) und ZWINGEND mit der Bestandsfrage enden: 'Haben Sie bereits ein Spannfutter bzw. HAINBUCH-Spannmittel in Ihrer Fertigung (z. B. SPANNTOP, TOPlus, MANDO, InoFlex, B-Top, MANOK) – oder soll ich Ihnen passende Optionen vorschlagen?'. Falls der Entwurf fälschlicherweise schon den vollen Arbeitsplan enthält, KÜRZE ihn und füge die Bestandsfrage ein! (WICHTIGE AUSNAHME: Wenn eine technische Zeichnung oder ein Werkstückbild hochgeladen wurde, MUSS die Zeichnung IMMER vollständig ausgewertet werden mit Maßen, Passungen, Werkstoff und passenden HAINBUCH-Spannmitteln!)\n- STUFE 2 (Nach Kundenantwort): Wenn der Kunde sein Futter nennt (z. B. 'habe SPANNTOP nova'), MUSS die Auslegung zu 100% auf dieses Futter angepasst sein (Spannköpfe, Dorn-Adaption MANDO Adapt, Arbeitsplan, Werkzeuge)! Wenn der Kunde kein Futter hat / nach Optionen fragt ('schlag mir vor'), MUSS die vollständige Auslegung mit 3-5 Lösungen, Arbeitsplan, Schnittdaten, ISO-Zeiten, Werkzeugen, Anti-Polygon-Check, ROI und Fotos enthalten sein!\n1) ECHTE und PASSENDE Markdown-Fotos ![Name](URL) (InoFlex -> hero_136.jpg / hero_262.jpg, B-Top -> hero_146.jpg / hero_150.jpg, centroteX -> hero_242.jpg, MANOK plus -> hero_246.jpg, MANOK -> hero_242.jpg, MANDO -> hero_178.jpg, MANDO Adapt -> hero_272.jpg, SPANNTOP nova -> hero_94.jpg, SPANNTOP mini -> hero_74.jpg; NIEMALS falsche Bilder wie Kran für InoFlex oder Messkoffer für Spannfutter kopieren!).\n2) Tabellen max. 5 Spalten, Lösungen als Zeilen.\n3) KEIN LaTeX, keine $-Zeichen; Formeln im Klartext (z. B. t_h = L / vf); deutsche Komma-Dezimalzahlen.\n4) Passungswerte aus dem VORBEBERECHNETEN Block 1:1 übernehmen; alle Rechnungen nachprüfen und Fehler korrigieren.\n5) Abschließend Sektion '## Quellen' mit klickbaren [Titel](URL)-Links (min. 2).\n6) LÄNGEN- & ABSTICH-KONSISTENZ: Prüfe peinlich genau die Gesamtlänge des Werkstücks! Wenn das Teil z. B. Hülse 75 mm + Zapfen 25 mm hat (Gesamtlänge 100 mm), darf in OP 10 NIEMALS auf 76 mm abgestochen werden! Die Abstichlänge MUSS mindestens die Gesamtlänge + Aufmaß sein (z. B. Abstechen auf 102–103 mm). Korrigiere fehlerhafte Abstichlängen im Arbeitsplan sofort!\n7) REIBEN vs. FEINDREHEN: Bei Sacklochbohrungen mit Radius (z. B. R0,3) oder flachem Grund darf KEINE Reibahle verwendet werden (Anschnittkollision). Ersetze Reibahle durch Feindreh-Bohrstange!\n8) ISO 1101 FORM-TOLERANZEN: Reine Formtoleranzen (Rundheit, Zylindrizität, Geradheit, Ebenheit) dürfen laut ISO 1101 NIEMALS ein Bezugselement (z. B. | A) besitzen. Entferne unzulässige Bezüge bei Formtoleranzen!\nAntworte NUR mit der vollständigen korrigierten finalen Antwort – kein Kommentar, keine Begründung der Änderungen." },
             { role: "user", content: `NUTZERFRAGE:\n${questionText}\n\nVORBEBERECHNETE PASSUNGEN:\n${precomputed || "—"}\n\nKATALOG-KONTEXT:\n${catalogContext || "—"}\n\nSHOP-KONTEXT:\n${shopContext || "—"}\n\nENTWURF ZU PRÜFEN:\n${answer}` },
           ],
           ...(tools ? { tools } : {}),
@@ -809,10 +973,11 @@ async function handleChat(req, res) {
       const fixed = qj.choices?.[0]?.message?.content;
       if (fixed && fixed.length > 500) finalAnswer = fixed;
     } catch {}
+    } // end needsQa
     const cleaned = cleanLaTeX(finalAnswer);
     const imagesCited = (cleaned.match(/!\[[^\]]*\]\(([^)]+)\)/g) || []);
     logChatInteraction({
-      ipHash: hashIp(req.socket?.remoteAddress),
+      ipHash: hashIp(clientIp(req)),
       country: req.headers["cf-ipcountry"] || null,
       messages: redactMessages(messages),
       question: questionText,
@@ -821,12 +986,13 @@ async function handleChat(req, res) {
       durationMs: Date.now() - startTime,
       stage: "success",
     });
-    emit(res, { type: "result", data: { message: cleaned } });
+    const convId = await persistChatTurn(req, parsed, questionText, cleaned, Date.now() - startTime);
+    emit(res, { type: "result", data: { message: cleaned, conversationId: convId } });
     } catch (e) {
       const aborted = aborter.signal.aborted;
       if (!aborted) {
         logChatInteraction({
-          ipHash: hashIp(req.socket?.remoteAddress),
+          ipHash: hashIp(clientIp(req)),
           country: req.headers["cf-ipcountry"] || null,
           messages: redactMessages(messages),
           question: questionText,
@@ -861,6 +1027,8 @@ const server = http.createServer(async (req, res) => {
       mode: "hainbuch-gemini-only",
       kb: KB.length,
       catalog: CATALOG.length,
+      history: !!(histDb && histDb.ok()),
+      authMode: histAuth ? histAuth.mode() : "none",
       country: typeof req.headers["cf-ipcountry"] === "string"
         ? req.headers["cf-ipcountry"].toUpperCase()
         : null,
@@ -925,7 +1093,8 @@ const server = http.createServer(async (req, res) => {
     });
     req.on("end", () => {
       let rating = null, message = "";
-      try { const p = JSON.parse(fbBody || "{}"); rating = p.rating; message = p.message; } catch {}
+      let conversationId = "";
+      try { const p = JSON.parse(fbBody || "{}"); rating = p.rating; message = p.message; conversationId = p.conversationId || ""; } catch {}
       if (rating !== "up" && rating !== "down") {
         res.writeHead(400, { "Content-Type": "application/json" });
         return res.end(JSON.stringify({ error: "rating must be up|down" }));
@@ -939,6 +1108,14 @@ const server = http.createServer(async (req, res) => {
       fs.appendFile(path.join(__dirname, "feedback.jsonl"), JSON.stringify(entry) + "\n", (err) => {
         if (err) console.error("[Feedback]", err);
       });
+      // Mirror into SQLite for the training loop (best-effort, never blocks).
+      try {
+        if (histDb && histDb.ok()) {
+          const em = histDb.normalizeEmail(req.headers["x-user-email"]);
+          const u = em ? (histDb.getUserByEmail(em) || null) : null;
+          histDb.saveFeedback({ userId: u ? u.id : "", conversationId: String(conversationId).slice(0, 64), rating, message: entry.message });
+        }
+      } catch (e) { console.warn("[Feedback] db mirror failed:", e.message); }
       res.writeHead(200, { "Content-Type": "application/json" });
       res.end(JSON.stringify({ ok: true }));
     });
@@ -962,7 +1139,147 @@ const server = http.createServer(async (req, res) => {
       feedback = fs.readFileSync(path.join(__dirname, "feedback.jsonl"), "utf8").trim().split("\n").slice(-50).map((l) => JSON.parse(l));
     } catch { /* none yet */ }
     res.writeHead(200, { "Content-Type": "application/json" });
-    return res.end(JSON.stringify({ feedback, dayBudget, ratePerHour: RATE_PER_HOUR, ratePerDay: RATE_PER_DAY, rateBucketIps: rateBuckets.size }));
+    const dbStats = histDb ? histDb.stats() : { disabled: "no module" };
+    return res.end(JSON.stringify({ feedback, dayBudget, ratePerHour: RATE_PER_HOUR, ratePerDay: RATE_PER_DAY, rateBucketIps: rateBuckets.size, db: dbStats, authMode: histAuth ? histAuth.mode() : "none" }));
+  }
+  // ── Training-data export for the model-improvement loop (ADMIN_KEY, like /api/admin) ──
+  if (req.method === "GET" && rawUrl === "/api/admin/export") {
+    if (ADMIN_KEY) {
+      if (req.headers["x-admin-key"] !== ADMIN_KEY) {
+        res.writeHead(req.headers["x-admin-key"] ? 401 : 403, { "Content-Type": "application/json" });
+        return res.end(JSON.stringify({ error: "localhost only" }));
+      }
+    } else if (!isLoopback(req)) {
+      res.writeHead(403, { "Content-Type": "application/json" });
+      return res.end(JSON.stringify({ error: "localhost only" }));
+    }
+    if (!histDb || !histDb.ok()) {
+      res.writeHead(503, { "Content-Type": "application/json" });
+      return res.end(JSON.stringify({ error: "history db disabled" }));
+    }
+    const q = new URL(req.url || "/", "http://x").searchParams;
+    const data = histDb.exportTrainingData(q.get("since") || "1970-01-01");
+    if (q.get("format") === "jsonl") {
+      const lines = [];
+      for (const m of data.messages) {
+        lines.push(JSON.stringify({ type: "message", ...m }));
+      }
+      for (const f of data.feedback) lines.push(JSON.stringify({ type: "feedback", ...f }));
+      res.writeHead(200, { "Content-Type": "application/x-ndjson; charset=utf-8" });
+      return res.end(lines.join("\n") + (lines.length ? "\n" : ""));
+    }
+    res.writeHead(200, { "Content-Type": "application/json" });
+    return res.end(JSON.stringify(data));
+  }
+  // ── Register / login (Phase 1 email stub; upgrades to Firebase in Phase 2) ──
+  if (req.method === "POST" && rawUrl === "/api/auth/sync") {
+    if (APP_KEY && req.headers["x-app-key"] !== APP_KEY) {
+      res.writeHead(401, { "Content-Type": "application/json" });
+      return res.end(JSON.stringify({ error: "unauthorized" }));
+    }
+    const p = await readJsonBody(req);
+    if (p.__tooLarge || p.__invalid || !histDb || !histDb.ok()) {
+      res.writeHead(p.__tooLarge ? 413 : 503, { "Content-Type": "application/json" });
+      return res.end(JSON.stringify({ error: p.__tooLarge ? "payload too large" : "history db disabled" }));
+    }
+    const email = histDb.normalizeEmail(p.email);
+    if (!email) {
+      res.writeHead(400, { "Content-Type": "application/json" });
+      return res.end(JSON.stringify({ error: "valid email required" }));
+    }
+    const prev = histDb.getUserByEmail(email);
+    const userId = prev ? prev.id : (histDb.upsertUser({
+      email,
+      displayName: String(p.displayName || "").slice(0, 80),
+      country: String(p.country || req.headers["cf-ipcountry"] || "").slice(0, 4),
+      uiLang: String(p.uiLang || req.headers["x-ui-lang"] || "").slice(0, 8),
+      consentTerms: !!p.consentTerms,
+      consentMarketing: !!p.consentMarketing,
+    }) || {}).id;
+    const token = userId ? histDb.createSession(userId) : null;
+    const user = histDb.getUserByEmail(email);
+    if (!token || !user) {
+      res.writeHead(500, { "Content-Type": "application/json" });
+      return res.end(JSON.stringify({ error: "sync failed" }));
+    }
+    res.writeHead(200, { "Content-Type": "application/json" });
+    return res.end(JSON.stringify({
+      ok: true, token,
+      user: { id: user.id, email: user.email, displayName: user.display_name, country: user.country_code, uiLang: user.ui_lang },
+    }));
+  }
+  // ── Conversation history (login via Bearer token or x-user-email) ──
+  const resolveHistoryUser = async () => {
+    if (!histDb || !histDb.ok()) return { err: "history db disabled" };
+    const auth = histAuth ? await histAuth.getAuth(req).catch(() => null) : null;
+    let user = auth && auth.uid ? histDb.getUserById(auth.uid) : null;
+    const email = histDb.normalizeEmail((auth && auth.email) || req.headers["x-user-email"]);
+    if (!user && email) user = histDb.getUserByEmail(email) || histDb.upsertUser({ email });
+    if (!user) return { err: "login required" };
+    return { user };
+  };
+  if (rawUrl === "/api/history" && (req.method === "GET" || req.method === "POST")) {
+    if (APP_KEY && req.headers["x-app-key"] !== APP_KEY) {
+      res.writeHead(401, { "Content-Type": "application/json" });
+      return res.end(JSON.stringify({ error: "unauthorized" }));
+    }
+    const { user, err } = await resolveHistoryUser();
+    if (err) {
+      res.writeHead(err === "login required" ? 401 : 503, { "Content-Type": "application/json" });
+      return res.end(JSON.stringify({ error: err }));
+    }
+    if (req.method === "GET") {
+      res.writeHead(200, { "Content-Type": "application/json" });
+      return res.end(JSON.stringify({ conversations: histDb.listConversations(user.id) }));
+    }
+    const p = await readJsonBody(req);
+    if (p.__tooLarge || p.__invalid) {
+      res.writeHead(p.__tooLarge ? 413 : 400, { "Content-Type": "application/json" });
+      return res.end(JSON.stringify({ error: "invalid body" }));
+    }
+    const conv = histDb.createConversation({
+      userId: user.id,
+      title: String(p.title || "Neue Beratung").slice(0, 120),
+      country: String(p.country || user.country_code || "").slice(0, 4),
+      uiLang: String(p.uiLang || user.ui_lang || "").slice(0, 8),
+      machine: p.machine,
+    });
+    res.writeHead(200, { "Content-Type": "application/json" });
+    return res.end(JSON.stringify({ conversation: conv }));
+  }
+  if (rawUrl.startsWith("/api/history/") && (req.method === "GET" || req.method === "PUT" || req.method === "DELETE")) {
+    if (APP_KEY && req.headers["x-app-key"] !== APP_KEY) {
+      res.writeHead(401, { "Content-Type": "application/json" });
+      return res.end(JSON.stringify({ error: "unauthorized" }));
+    }
+    const { user, err } = await resolveHistoryUser();
+    if (err) {
+      res.writeHead(err === "login required" ? 401 : 503, { "Content-Type": "application/json" });
+      return res.end(JSON.stringify({ error: err }));
+    }
+    const id = decodeURIComponent(rawUrl.slice("/api/history/".length)).split("/")[0].slice(0, 64);
+    if (req.method === "GET") {
+      const conv = histDb.getConversation(id, user.id);
+      if (!conv) {
+        res.writeHead(404, { "Content-Type": "application/json" });
+        return res.end(JSON.stringify({ error: "not found" }));
+      }
+      res.writeHead(200, { "Content-Type": "application/json" });
+      return res.end(JSON.stringify({ conversation: conv }));
+    }
+    if (req.method === "DELETE") {
+      const okDel = histDb.deleteConversation(id, user.id);
+      res.writeHead(okDel ? 200 : 404, { "Content-Type": "application/json" });
+      return res.end(JSON.stringify(okDel ? { ok: true } : { error: "not found" }));
+    }
+    const p = await readJsonBody(req);
+    if (p.__tooLarge || p.__invalid) {
+      res.writeHead(p.__tooLarge ? 413 : 400, { "Content-Type": "application/json" });
+      return res.end(JSON.stringify({ error: "invalid body" }));
+    }
+    const okRen = histDb.renameConversation(id, user.id, p.title);
+    res.writeHead(okRen ? 200 : 404, { "Content-Type": "application/json" });
+    return res.end(JSON.stringify(okRen ? { ok: true } : { error: "not found" }));
   }
 
   // Statische Auslieferung der gebauten UI (dist/) + SPA-Fallback
