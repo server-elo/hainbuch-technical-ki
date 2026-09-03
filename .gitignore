@@ -19,5 +19,6 @@ data/app.db
 data/app.db-shm
 data/app.db-wal
 data/training/
+data/backups/
 # local tunnel / deploy artifacts
 .firebase/
