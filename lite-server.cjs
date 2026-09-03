@@ -951,9 +951,19 @@ async function handleChat(req, res) {
 
     emit(res, { type: "status", stage: "chat", label: "Qualitätsprüfung der Auslegung…" });
     let finalAnswer = answer;
-    // Skip the 2nd (QA) LLM pass for short answers — halves cost/latency.
-    // QA only pays off for full Auslegungen with tables + photos.
-    const needsQa = answer.length > 2000;
+    // 2-Stufen-System: Der 2. Schritt (QA-Prüfung) wird für jeden Arbeitsplan, jede Auslegung und Zeichnungsanalyse zwingend ausgeführt!
+    const needsQa = answer.length > 400 && (
+      answer.includes("OP 10") ||
+      answer.includes("OP 20") ||
+      answer.includes("Arbeitsplan") ||
+      answer.includes("Spannmittel") ||
+      answer.includes("Abstechen") ||
+      answer.includes("Reiben") ||
+      answer.includes("Bohrstange") ||
+      answer.includes("Lösung") ||
+      hasImages ||
+      answer.length > 1500
+    );
     if (needsQa) {
     try {
       const qa = await fetch(LLM_URL, {
@@ -1011,8 +1021,8 @@ async function handleChat(req, res) {
 
 const server = http.createServer(async (req, res) => {
   res.setHeader("Access-Control-Allow-Origin", "*");
-  res.setHeader("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
-  res.setHeader("Access-Control-Allow-Headers", "Content-Type, x-app-key, x-admin-key, x-request-id");
+  res.setHeader("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS");
+  res.setHeader("Access-Control-Allow-Headers", "Content-Type, x-app-key, x-admin-key, x-request-id, Authorization, x-user-email, x-ui-lang");
 
   if (req.method === "OPTIONS") {
     res.writeHead(204);
@@ -1188,6 +1198,11 @@ const server = http.createServer(async (req, res) => {
       return res.end(JSON.stringify({ error: "valid email required" }));
     }
     const prev = histDb.getUserByEmail(email);
+    // Login tab: unknown e-mail is NOT auto-created — tell the client to register.
+    if (p.loginOnly && !prev) {
+      res.writeHead(404, { "Content-Type": "application/json" });
+      return res.end(JSON.stringify({ error: "not-registered" }));
+    }
     const userId = prev ? prev.id : (histDb.upsertUser({
       email,
       displayName: String(p.displayName || "").slice(0, 80),
