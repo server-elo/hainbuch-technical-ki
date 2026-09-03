@@ -1030,7 +1030,7 @@ async function handleChat(req, res) {
       const rawMode = parsed?.mode === "raw";
       const tools = !rawMode && !hasImages ? [{ google_search: {} }] : undefined;
 
-      emit(res, { type: "status", stage: "chat", label: hasImages ? "Zeichnung / Bild wird analysiert…" : "HAINBUCH-Wissen wird durchsucht…" });
+      emit(res, { type: "status", stage: "chat", label: hasImages ? "Zeichnung / Bild wird analysiert…" : rawMode ? "Modell erstellt die Auslegung…" : "HAINBUCH-Wissen wird durchsucht…" });
       const sysPrompt = rawMode
         ? RAW_PROMPT // Direkt-Modus: NUR Modellwissen — kein RAG, keine Shop-/Katalog-/Gold-/Fit-/Maschinen-/Transkript-Kontexte
         : SYSTEM_PROMPT + machineContext + goldContext + followupContext + fitsContext + catalogContext + shopContext + context + transcriptContext;
@@ -1048,7 +1048,6 @@ async function handleChat(req, res) {
             "Es ist ein Fehler bei der Modellabfrage aufgetreten. Bitte versuche es erneut."
         );
 
-    emit(res, { type: "status", stage: "chat", label: "Qualitätsprüfung der Auslegung…" });
     let finalAnswer = answer;
     // 2-Stufen-System: Der 2. Schritt (QA-Prüfung) wird für jeden Arbeitsplan, jede Auslegung und Zeichnungsanalyse zwingend ausgeführt!
     const needsQa = answer.length > 400 && (
@@ -1064,6 +1063,7 @@ async function handleChat(req, res) {
       answer.length > 1500
     );
     if (needsQa && !rawMode) {
+    emit(res, { type: "status", stage: "chat", label: "Qualitätsprüfung der Auslegung…" });
     try {
       const { res: qj } = await llmFetch({
         model: MODEL_QA,
