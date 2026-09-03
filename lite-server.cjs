@@ -757,8 +757,11 @@ async function handleChat(req, res) {
     const heartbeat = setInterval(() => emit(res, { type: "ping" }), 15000);
     // Client gone (tab closed, tunnel dropped) -> abort in-flight LLM calls
     // instead of burning 2x Gemini on an answer nobody receives.
+    // IMPORTANT: use res 'close', not req 'close'. The request stream closes
+    // as soon as the POST body is fully read, which would abort the pipeline
+    // mid-LLM even while the response socket is still open.
     const aborter = new AbortController();
-    req.on("close", () => {
+    res.on("close", () => {
       if (!res.writableEnded) aborter.abort();
     });
     const llmSignal = () => AbortSignal.any([AbortSignal.timeout(600000), aborter.signal]);

@@ -1,9 +1,9 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useId } from 'react';
 import {
   Send, User, ChevronRight, ChevronDown, Loader2, FileText,
   Image as ImageIcon, Paperclip, X, Clock, TrendingDown, Copy, Check,
   ThumbsUp, ThumbsDown, FileDown, ArrowDown, PenLine, Square, ListPlus, Sparkles,
-  AlertTriangle, RotateCcw, Upload, ShieldCheck, ArrowRight
+  AlertTriangle, RotateCcw, Upload, ShieldCheck, ArrowRight, Layers, Ruler, Cog
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import type { ChatMessage, PipelineStatus } from './types';
@@ -556,20 +556,58 @@ function ErrorBubble({ kind, retryAfterSec, onRetry, t }: {
   );
 }
 
+/** Collapsible answer section with anchor id (long Auslegungen stay navigable). */
+function Section({ id, title, accent, defaultOpen, children }: {
+  id?: string; title: React.ReactNode; accent?: boolean; defaultOpen?: boolean; children: React.ReactNode;
+}) {
+  const [open, setOpen] = useState(!!defaultOpen);
+  return (
+    <div id={id} className="border border-neutral-200 rounded-lg bg-white overflow-hidden scroll-mt-28">
+      <button
+        onClick={() => setOpen(o => !o)}
+        aria-expanded={open}
+        className="w-full flex items-center justify-between gap-2 px-3 sm:px-4 py-2.5 sm:py-3 text-left hover:bg-neutral-50/60 transition-colors"
+      >
+        <h4 className={`text-[11px] font-semibold uppercase tracking-wider ${accent ? 'text-red-600' : 'text-neutral-400'}`}>{title}</h4>
+        <ChevronDown size={14} className={`text-neutral-400 transition-transform shrink-0 ${open ? 'rotate-180' : ''}`} />
+      </button>
+      {open && <div className="px-3 sm:px-4 pb-3 sm:pb-4">{children}</div>}
+    </div>
+  );
+}
+
 /** Structured pipeline result (fits, plan, cutting data, products) shown under the message. */
 function AnalysisBlock({ analysis, t, lang }: { analysis: NonNullable<ChatMessage['analysis']>; t: (typeof T)[keyof typeof T]; lang: UiLang }) {
   const ma = analysis.manufacturingAnalysis;
   const recs = analysis.recommendations;
   const fits = analysis.fitSolutions;
+  const uid = useId().replace(/:/g, '');
+  // Desktop: everything open. Mobile: only material + plan open, rest collapsed.
+  const wide = typeof window !== 'undefined' && window.innerWidth >= 640;
+  const nav: { id: string; label: string }[] = [];
+  if (ma?.material) nav.push({ id: `${uid}-mat`, label: t.material });
+  if (ma && Array.isArray(ma.operations) && ma.operations.length > 0) nav.push({ id: `${uid}-plan`, label: t.plan });
+  if (analysis.clampingCheck) nav.push({ id: `${uid}-clamp`, label: t.clampCheck });
+  if (analysis.costComparison) nav.push({ id: `${uid}-cost`, label: t.costCompare });
+  if (recs && recs.length > 0) nav.push({ id: `${uid}-rec0`, label: `${t.recommendation} 1${recs.length > 1 ? `–${recs.length}` : ''}` });
   return (
     <div className="mt-3 space-y-3">
+      {nav.length >= 3 && (
+        <nav className="no-print flex flex-wrap gap-1.5" aria-label={t.plan}>
+          {nav.map(n => (
+            <a key={n.id} href={`#${n.id}`}
+               className="text-[10px] font-semibold uppercase tracking-wider text-neutral-500 hover:text-red-600 bg-white border border-neutral-200 hover:border-red-300 rounded-full px-2.5 py-1 transition-colors">
+              {n.label}
+            </a>
+          ))}
+        </nav>
+      )}
       {fits && fits.length > 0 && fits.map((fit, i) => <FitDiagram key={i} fit={fit} />)}
 
       {ma && (
         <>
           {ma.material && (
-            <div className="border border-neutral-200 rounded-lg p-4 bg-white">
-              <h4 className="text-[11px] text-red-600 font-semibold uppercase tracking-wider mb-1">{t.material}</h4>
+            <Section id={`${uid}-mat`} title={t.material} accent defaultOpen>
               <p className="text-sm text-neutral-900 font-semibold">{ma.material.name}</p>
               <p className="text-xs text-neutral-500 mt-1 leading-relaxed">{ma.material.reasoning}</p>
               {ma.rawMaterialRecommendation && (
@@ -577,7 +615,7 @@ function AnalysisBlock({ analysis, t, lang }: { analysis: NonNullable<ChatMessag
                   <span className="font-medium">{t.rawMaterial}:</span> {ma.rawMaterialRecommendation}
                 </p>
               )}
-            </div>
+            </Section>
           )}
 
           <div className="grid sm:grid-cols-2 gap-3">
@@ -603,8 +641,7 @@ function AnalysisBlock({ analysis, t, lang }: { analysis: NonNullable<ChatMessag
           )}
 
           {Array.isArray(ma.operations) && ma.operations.length > 0 && (
-          <div className="border border-neutral-200 rounded-lg p-4 bg-white">
-            <h4 className="text-[11px] text-neutral-400 font-semibold uppercase tracking-wider mb-3">{t.plan}</h4>
+          <Section id={`${uid}-plan`} title={t.plan} defaultOpen>
             <div className="space-y-3">
               {ma.operations.map((op, i) => (
                 <div key={i} className="flex flex-col gap-0.5 border-b border-neutral-100 pb-2.5 last:border-0 last:pb-0">
@@ -628,16 +665,18 @@ function AnalysisBlock({ analysis, t, lang }: { analysis: NonNullable<ChatMessag
               <span className="text-[11px] text-neutral-500 font-semibold uppercase tracking-wider shrink-0">{t.total}</span>
               <span className="text-sm font-mono text-red-600 font-semibold text-right">{ma.totalEstimatedMachiningTime}</span>
             </div>
-          </div>
+          </Section>
           )}
         </>
       )}
 
       {analysis.clampingCheck && (
-        <div className="border border-neutral-200 rounded-lg p-4 bg-white">
-          <h4 className="text-[11px] text-red-600 font-semibold uppercase tracking-wider mb-2">
-            {t.clampCheck} · erforderlich ≈ {num(analysis.clampingCheck.requiredClampForceKn, lang, 1)} kN
-          </h4>
+        <Section
+          id={`${uid}-clamp`}
+          title={<>{t.clampCheck} · erforderlich ≈ {num(analysis.clampingCheck.requiredClampForceKn, lang, 1)} kN</>}
+          accent
+          defaultOpen={wide}
+        >
           <div className="space-y-1.5">
             {analysis.clampingCheck.products.map((p, i) => {
               const color =
@@ -661,14 +700,16 @@ function AnalysisBlock({ analysis, t, lang }: { analysis: NonNullable<ChatMessag
             })}
           </div>
           <p className="text-[10px] text-neutral-400 mt-2 leading-relaxed">{analysis.clampingCheck.note}</p>
-        </div>
+        </Section>
       )}
 
       {analysis.costComparison && (
-        <div className="border border-neutral-200 rounded-lg p-4 bg-white">
-          <h4 className="text-[11px] text-red-600 font-semibold uppercase tracking-wider mb-2">
-            {t.costCompare} · {num(analysis.costComparison.batchSize, lang, 0)} Stk · {num(analysis.costComparison.hourlyRateEur, lang, 0)} €/h
-          </h4>
+        <Section
+          id={`${uid}-cost`}
+          title={<>{t.costCompare} · {num(analysis.costComparison.batchSize, lang, 0)} Stk · {num(analysis.costComparison.hourlyRateEur, lang, 0)} €/h</>}
+          accent
+          defaultOpen={wide}
+        >
           <div className="table-scroll -mx-1 px-1">
           <table className="w-full text-[11px] text-neutral-600">
             <thead>
@@ -697,26 +738,32 @@ function AnalysisBlock({ analysis, t, lang }: { analysis: NonNullable<ChatMessag
           </table>
           </div>
           <p className="text-[10px] text-neutral-400 mt-2 leading-relaxed">{analysis.costComparison.note}</p>
-        </div>
+        </Section>
       )}
 
       {recs && recs.length > 0 && recs.map((rec, recIdx) => (
-        <div key={recIdx} className="border border-neutral-200 rounded-lg overflow-hidden relative bg-white">
+        <Section
+          key={recIdx}
+          id={`${uid}-rec${recIdx}`}
+          title={<>{t.recommendation} {recIdx + 1} · {rec.product}</>}
+          accent={recIdx === 0}
+          defaultOpen={wide || recIdx === 0}
+        >
           {rec.imageUrl && (
             <img
-              src={`${API_BASE}${rec.imageUrl}`}
+              src={resolveImgUrl(rec.imageUrl, rec.product)}
               alt={rec.product}
               loading="lazy"
-              className="w-full h-40 sm:h-56 lg:h-64 object-contain bg-white border-b border-neutral-100"
+              className="w-full h-40 sm:h-56 object-contain bg-white border border-neutral-100 rounded-lg mb-3"
               onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
             />
           )}
-          <div className="p-4">
+          <div>
             <div className="text-[10px] font-semibold text-red-600 uppercase tracking-wider mb-1">
               {t.recommendation} {recIdx + 1}
             </div>
             <h2 className="text-base font-semibold text-neutral-900 mb-1.5">{rec.product}</h2>
-            <p className="text-xs text-neutral-500 leading-relaxed">{rec.description}</p>
+            <p className="text-[13px] text-neutral-600 leading-relaxed">{rec.description}</p>
             {((rec.pros && rec.pros.length > 0) || (rec.cons && rec.cons.length > 0)) && (
               <div className="mt-3 grid sm:grid-cols-2 gap-2">
                 {rec.pros && rec.pros.length > 0 && (
@@ -746,15 +793,28 @@ function AnalysisBlock({ analysis, t, lang }: { analysis: NonNullable<ChatMessag
                 {rec.technicalData}
               </div>
             )}
+            <div className="no-print mt-3 flex flex-wrap gap-2">
+              <a
+                href="https://shop.hainbuch.com"
+                target="_blank" rel="noopener noreferrer"
+                className="tap inline-flex items-center gap-1.5 px-3.5 py-2 bg-red-600 hover:bg-red-700 text-white text-xs font-semibold rounded-xl transition-colors shadow-sm"
+              >
+                {t.shopCta}
+                <ArrowRight size={12} />
+              </a>
+              <a
+                href="tel:+4971449070"
+                className="tap inline-flex items-center gap-1.5 px-3.5 py-2 bg-white hover:bg-neutral-50 text-neutral-800 text-xs font-semibold rounded-xl transition-colors border border-neutral-300 hover:border-red-400 shadow-sm"
+              >
+                {t.adviceCta}
+              </a>
+            </div>
           </div>
-        </div>
+        </Section>
       ))}
 
       {analysis.ecosystem && analysis.ecosystem.length > 0 && (
-        <div className="border border-neutral-200 rounded-lg p-4 bg-white">
-          <h4 className="text-[11px] text-red-600 font-semibold uppercase tracking-wider mb-2">
-            Das passende Komplettpaket
-          </h4>
+        <Section id={`${uid}-eco`} title="Das passende Komplettpaket" accent defaultOpen={wide}>
           <div className="space-y-2">
             {analysis.ecosystem.map((e, i) => (
               <div key={i} className="text-[12px]">
@@ -779,7 +839,7 @@ function AnalysisBlock({ analysis, t, lang }: { analysis: NonNullable<ChatMessag
               💡 {analysis.salesNudge}
             </p>
           )}
-        </div>
+        </Section>
       )}
     </div>
   );
@@ -799,9 +859,9 @@ function StatusDot({ onlineLabel, limitedLabel }: { onlineLabel: string; limited
   }, []);
   if (online === null) return null;
   return (
-    <span className="hidden sm:flex items-center gap-1.5 text-xs text-neutral-500">
+    <span className="flex items-center gap-1.5 text-xs text-neutral-500" title={online ? onlineLabel : limitedLabel}>
       <span className={`w-2 h-2 rounded-full ${online ? 'bg-green-500' : 'bg-neutral-300'}`} />
-      {online ? onlineLabel : limitedLabel}
+      <span className="hidden sm:inline">{online ? onlineLabel : limitedLabel}</span>
     </span>
   );
 }
@@ -904,6 +964,14 @@ export default function App() {
     el.addEventListener('scroll', onScroll, { passive: true });
     return () => el.removeEventListener('scroll', onScroll);
   }, []);
+
+  // Tab title reflects how many analyses exist in this chat.
+  const answerCount = messages.filter(m => m.role === 'model' && (m.analysis || m.error)).length;
+  useEffect(() => {
+    document.title = answerCount > 0
+      ? `(${answerCount}) HAINBUCH Technical Advisor`
+      : 'HAINBUCH Technical Advisor';
+  }, [answerCount]);
 
   // Auto-grow the composer up to the CSS max-height.
   useEffect(() => {
@@ -1173,7 +1241,7 @@ export default function App() {
             </div>
           </div>
         )}
-        <header className="app-header header-compact px-3 sm:px-6 py-2.5 sm:py-3.5 flex items-center justify-between z-10 shrink-0 sticky top-0">
+        <header className="app-header header-compact px-3 sm:px-6 py-2.5 sm:py-3 flex items-center justify-between z-10 shrink-0 sticky top-0">
           <div className="flex items-center gap-2 sm:gap-2.5 min-w-0">
             <ColletMark size={22} className="text-red-600 shrink-0" />
             <span className="hainbuch-brand text-lg sm:text-xl font-black tracking-tight text-red-600">HAINBUCH</span>
@@ -1181,15 +1249,6 @@ export default function App() {
             <span className="subtitle text-xs sm:text-sm text-neutral-500 truncate hidden sm:inline">{t.subtitle}</span>
           </div>
           <div className="flex items-center gap-1.5 sm:gap-2.5 shrink-0">
-            <button
-              onClick={() => setShowRoiModal(true)}
-              className="flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-xl bg-white hover:bg-neutral-50 border border-neutral-300/90 hover:border-red-600 shadow-sm hover:shadow text-xs font-semibold text-neutral-800 hover:text-red-700 transition-all group h-9"
-              title="Wirtschaftlichkeits- & Zeitrechner öffnen"
-            >
-              <Clock size={14} className="text-red-600 group-hover:rotate-45 transition-transform shrink-0" />
-              <span className="hidden md:inline">Zeitrechner</span>
-            </button>
-            <MachineSelector selected={selectedMachine} onSelect={setSelectedMachine} />
             <StatusDot onlineLabel={t.online} limitedLabel={t.limited} />
             {!isEmpty && (
               <button
@@ -1205,6 +1264,22 @@ export default function App() {
             )}
           </div>
         </header>
+        {/* Context toolbar: machine profile + ROI calculator (affects the analysis).
+            On phones it only shows on the empty state — once chatting, it hides
+            to give the conversation maximum room. */}
+        <div className={`no-print shrink-0 border-b border-neutral-100 bg-white/80 backdrop-blur ${isEmpty ? '' : 'hidden sm:block'}`}>
+          <div className="measure flex items-center gap-1.5 sm:gap-2 px-3 sm:px-6 py-1.5 overflow-x-auto">
+            <MachineSelector selected={selectedMachine} onSelect={setSelectedMachine} />
+            <button
+              onClick={() => setShowRoiModal(true)}
+              className="flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-xl bg-white hover:bg-neutral-50 border border-neutral-300/90 hover:border-red-600 shadow-sm hover:shadow text-xs font-semibold text-neutral-800 hover:text-red-700 transition-all group h-9 shrink-0"
+              title="Wirtschaftlichkeits- & Zeitrechner öffnen"
+            >
+              <Clock size={14} className="text-red-600 group-hover:rotate-45 transition-transform shrink-0" />
+              <span className="hidden sm:inline">Zeitrechner</span>
+            </button>
+          </div>
+        </div>
 
         {isLoading && pipeline && (
           <div className="relative z-20">
@@ -1234,7 +1309,8 @@ export default function App() {
         )}
         <div ref={scrollRef} className="scroll-thin flex-1 overflow-y-auto px-3 sm:px-6 py-4 sm:py-6 bg-neutral-50" style={{minHeight:0}}>
           <div className="measure space-y-5">
-          {messages.map((msg, index) => (
+          {/* In active chat (!isEmpty), render conversation messages */}
+          {!isEmpty && messages.map((msg, index) => (
             <motion.div
               initial={{ opacity: 0, y: 8 }}
               animate={{ opacity: 1, y: 0 }}
@@ -1242,12 +1318,15 @@ export default function App() {
               className={`msg-group flex gap-3 ${msg.role === 'user' ? 'flex-row-reverse' : ''}`}
             >
               <div className={`hidden sm:flex w-8 h-8 rounded-full items-center justify-center shrink-0 ${
-                msg.role === 'user' ? 'bg-neutral-200 text-neutral-600' : 'bg-red-600 text-white'
+                msg.role === 'user' ? 'bg-neutral-100 text-neutral-700 border border-neutral-200 shadow-sm' : 'bg-red-600 text-white shadow-sm'
               }`}>
                 {msg.role === 'user' ? <User size={15} /> : <ColletMark size={17} />}
               </div>
-              <div className={`message-bubble ${msg.role === 'user' ? 'user' : 'model'} ${msg.analysis ? 'max-w-full sm:max-w-[85%] flex-1' : 'max-w-[88%] sm:max-w-[75%]'} rounded-xl px-3.5 sm:px-4 py-3`}>
-                {msg.parts.map((part, pIdx) => (
+              <div className={`message-bubble ${msg.role === 'user' ? 'user' : 'model'} ${msg.analysis ? 'max-w-full sm:max-w-[85%] flex-1' : 'max-w-[88%] sm:max-w-[75%]'} rounded-2xl px-3.5 sm:px-4 py-3 ${msg.error ? '!border-red-200 !bg-red-50/60' : ''}`}>
+                {msg.error ? (
+                  <ErrorBubble kind={msg.error.kind} retryAfterSec={msg.error.retryAfterSec} onRetry={retryLast} t={t} />
+                ) : (
+                <>{msg.parts.map((part, pIdx) => (
                   <div key={pIdx}>
                     {(index === 0 && msg.role === 'model' ? true : !!part.text) && (
                       <MessageText text={index === 0 && msg.role === 'model' ? t.welcome : (part.text || '')} />
@@ -1259,9 +1338,10 @@ export default function App() {
                       </div>
                     )}
                   </div>
-                ))}
+                ))}</>
+                )}
                 {msg.analysis && <AnalysisBlock analysis={msg.analysis} t={t} lang={uiLang} />}
-                {msg.role === 'model' && index > 0 && (
+                {msg.role === 'model' && index > 0 && !msg.error && (
                   <div className="msg-actions no-print mt-2.5 flex flex-wrap justify-end items-center gap-2">
                     <button
                       onClick={() => {
@@ -1283,31 +1363,62 @@ export default function App() {
               </div>
             </motion.div>
           ))}
+
+          {/* Clean, calm, uncluttered Home/Empty State */}
           {isEmpty && !isLoading && (
             <motion.div
-              initial={{ opacity: 0, y: 8 }}
+              initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.15 }}
-              className="pl-0 sm:pl-11 pr-0 sm:pr-2"
+              transition={{ duration: 0.25 }}
+              className="w-full max-w-2xl mx-auto my-auto py-8 sm:py-14 flex flex-col items-center text-center"
             >
-              <p className="text-[11px] font-bold uppercase tracking-widest text-neutral-400 mb-2.5 flex items-center gap-1.5">
-                <Sparkles size={13} className="text-red-600" />
-                <span>{t.examplesLabel}</span>
-              </p>
-              <div className="grid gap-2.5 sm:grid-cols-2 max-w-3xl">
-                {t.examples.map((ex, i) => (
-                  <button
-                    key={i}
-                    onClick={() => submitText(ex)}
-                    className="p-3 rounded-xl bg-white hover:bg-red-50/30 border border-neutral-200/90 hover:border-red-500 shadow-sm hover:shadow transition-all group text-left flex items-start gap-2.5 cursor-pointer"
-                  >
-                    <div className="w-5 h-5 rounded-md bg-neutral-100 group-hover:bg-red-600 text-neutral-500 group-hover:text-white flex items-center justify-center shrink-0 mt-0.5 transition-colors">
-                      <ChevronRight size={13} />
-                    </div>
-                    <span className="text-xs text-neutral-700 group-hover:text-neutral-950 font-medium leading-snug">{ex}</span>
-                  </button>
-                ))}
+              {/* Brand Icon & Heading */}
+              <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-2xl bg-red-50 border border-red-100 flex items-center justify-center text-red-600 shadow-sm mb-4">
+                <ColletMark size={28} />
               </div>
+              <h1 className="text-2xl sm:text-3xl font-black tracking-tight text-neutral-900 leading-tight">
+                HAINBUCH <span className="text-red-600">Technical Advisor</span>
+              </h1>
+              <p className="text-xs sm:text-sm text-neutral-500 leading-relaxed mt-2 max-w-lg">
+                Präzise Auslegung von Spannmitteln, Passungsberechnung nach ISO 286, Schnittdaten und Rüstzeitoptimierung.
+              </p>
+
+              {/* Quick Drawing Upload Strip */}
+              <button
+                onClick={() => fileInputRef.current?.click()}
+                className="mt-5 inline-flex items-center gap-2 px-4 py-2 rounded-xl border border-dashed border-red-200 hover:border-red-500 bg-red-50/50 hover:bg-red-50 text-xs font-semibold text-neutral-800 hover:text-red-700 transition-all shadow-sm group cursor-pointer"
+              >
+                <Upload size={14} className="text-red-600 group-hover:scale-110 transition-transform shrink-0" />
+                <span>{t.uploadCta}</span>
+              </button>
+
+              {/* 4 Quick Example Prompt Cards */}
+              <div className="w-full mt-8 text-left">
+                <p className="text-[10px] font-bold uppercase tracking-widest text-neutral-400 mb-2.5 flex items-center justify-center gap-1.5">
+                  <Sparkles size={12} className="text-red-600" />
+                  <span>{t.examplesLabel}</span>
+                </p>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                  {t.examples.map((ex, i) => (
+                    <button
+                      key={i}
+                      onClick={() => submitText(ex)}
+                      className="p-3 sm:p-3.5 rounded-xl bg-white hover:bg-red-50/30 border border-neutral-200/90 hover:border-red-500 shadow-sm hover:shadow transition-all group text-left flex items-start gap-2.5 cursor-pointer"
+                    >
+                      <div className="w-5 h-5 rounded-md bg-neutral-100 group-hover:bg-red-600 text-neutral-400 group-hover:text-white flex items-center justify-center shrink-0 mt-0.5 transition-colors">
+                        <ChevronRight size={13} />
+                      </div>
+                      <span className="text-xs text-neutral-700 group-hover:text-neutral-950 font-medium leading-snug">{ex}</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Trust badge */}
+              <p className="flex items-center justify-center gap-1.5 text-[11px] text-neutral-400 mt-6">
+                <ShieldCheck size={12} className="shrink-0 text-neutral-400" />
+                <span>{t.trustLine}</span>
+              </p>
             </motion.div>
           )}
           {isLoading && pipeline && (
@@ -1448,6 +1559,18 @@ export default function App() {
               {isLoading ? <ListPlus size={16} /> : <Send size={16} className="ml-0.5" />}
             </button>
           </form>
+          {/* Trust + legal footer (desktop only — phones need the room) */}
+          <div className="measure no-print mt-1.5 hidden sm:flex flex-wrap items-center justify-center gap-x-3 gap-y-0.5 text-[10px] text-neutral-400">
+            <span className="inline-flex items-center gap-1">
+              <ShieldCheck size={10} className="shrink-0" />
+              {t.trustLine}
+            </span>
+            <span className="flex items-center gap-3">
+              <a href="https://shop.hainbuch.com" target="_blank" rel="noopener noreferrer" className="hover:text-red-600 transition-colors">Shop</a>
+              <a href="https://www.hainbuch.com/en/legal-notice/site-notice/" target="_blank" rel="noopener noreferrer" className="hover:text-red-600 transition-colors">Impressum</a>
+              <a href="https://shop.hainbuch.com/privacy" target="_blank" rel="noopener noreferrer" className="hover:text-red-600 transition-colors">Datenschutz</a>
+            </span>
+          </div>
         </div>
       </div>
 
