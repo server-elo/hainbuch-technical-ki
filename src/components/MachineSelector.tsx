@@ -284,26 +284,40 @@ export default function MachineSelector({ selected, onSelect }: Props) {
         <ChevronDown size={12} className={`text-neutral-400 group-hover:text-red-600 transition-transform shrink-0 ${open ? 'rotate-180' : ''}`} />
       </button>
 
-      {/* Popover Card */}
+      {/* Modal Dialog */}
       {open && (
-        <>
-          <button aria-label="Auswahl schließen" className="fixed inset-0 z-40 cursor-default bg-transparent border-0 p-0" onClick={() => { setOpen(false); setShowAddForm(false); }} />
-          <div role="dialog" aria-label="Maschine wählen" className="absolute right-0 mt-2 w-96 max-w-[calc(100vw-1rem)] bg-white border border-neutral-200 rounded-2xl shadow-2xl z-50 overflow-hidden divide-y divide-neutral-100 text-neutral-800 animate-in fade-in zoom-in-95 duration-150">
+        <div
+          role="dialog"
+          aria-modal="true"
+          aria-label="Maschine wählen"
+          onMouseDown={(e) => { if (e.target === e.currentTarget) { setOpen(false); setShowAddForm(false); } }}
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-3 sm:p-4 overflow-y-auto"
+        >
+          <div className="bg-white text-neutral-900 w-full max-w-lg rounded-2xl shadow-2xl border border-neutral-200 overflow-hidden flex flex-col my-auto max-h-[88dvh] animate-in fade-in zoom-in-95 duration-150">
             
             {/* Header & Category Tabs */}
-            <div className="p-3.5 bg-neutral-50 border-b border-neutral-200">
+            <div className="p-3.5 sm:p-4 bg-neutral-50 border-b border-neutral-200 shrink-0">
               <div className="flex items-center justify-between mb-2.5">
                 <div>
-                  <h3 className="text-xs font-bold text-neutral-950 uppercase tracking-wider">Maschinen- & Spindelauswahl</h3>
-                  <p className="text-[10px] text-neutral-500">Automatische Anpassung von Flanschen & G-Code</p>
+                  <h3 className="text-xs sm:text-sm font-bold text-neutral-950 uppercase tracking-wider">Maschinen- & Spindelauswahl</h3>
+                  <p className="text-[10px] sm:text-xs text-neutral-500">Automatische Anpassung von Flanschen & G-Code</p>
                 </div>
-                <button
-                  onClick={() => setShowAddForm(s => !s)}
-                  className="flex items-center gap-1 px-2.5 py-1 bg-red-600 hover:bg-red-700 text-white rounded-lg text-[10px] font-bold transition-all shadow-sm active:scale-95"
-                >
-                  <Plus size={11} />
-                  Eigene Maschine
-                </button>
+                <div className="flex items-center gap-1.5">
+                  <button
+                    onClick={() => setShowAddForm(s => !s)}
+                    className="flex items-center gap-1 px-2.5 py-1.5 bg-red-600 hover:bg-red-700 text-white rounded-lg text-[10px] sm:text-xs font-bold transition-all shadow-sm active:scale-95 cursor-pointer"
+                  >
+                    <Plus size={12} />
+                    <span>Eigene Maschine</span>
+                  </button>
+                  <button
+                    onClick={() => { setOpen(false); setShowAddForm(false); }}
+                    aria-label="Schließen"
+                    className="p-1.5 text-neutral-400 hover:text-neutral-700 rounded-lg hover:bg-neutral-200 transition-colors cursor-pointer"
+                  >
+                    <X size={18} />
+                  </button>
+                </div>
               </div>
 
               {/* 4 Category Tabs */}
@@ -526,7 +540,7 @@ export default function MachineSelector({ selected, onSelect }: Props) {
             )}
 
           </div>
-        </>
+        </div>
       )}
     </div>
   );

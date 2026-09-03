@@ -1264,19 +1264,17 @@ export default function App() {
             )}
           </div>
         </header>
-        {/* Context toolbar: machine profile + ROI calculator (affects the analysis).
-            On phones it only shows on the empty state — once chatting, it hides
-            to give the conversation maximum room. */}
-        <div className={`no-print shrink-0 border-b border-neutral-100 bg-white/80 backdrop-blur ${isEmpty ? '' : 'hidden sm:block'}`}>
-          <div className="measure flex items-center gap-1.5 sm:gap-2 px-3 sm:px-6 py-1.5 overflow-x-auto">
+        {/* Context toolbar: machine profile + ROI calculator (affects the analysis). Always visible on mobile & desktop. */}
+        <div className="no-print shrink-0 border-b border-neutral-100 bg-white/95 backdrop-blur z-20">
+          <div className="measure flex items-center gap-2 px-3 sm:px-6 py-1.5">
             <MachineSelector selected={selectedMachine} onSelect={setSelectedMachine} />
             <button
               onClick={() => setShowRoiModal(true)}
-              className="flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-xl bg-white hover:bg-neutral-50 border border-neutral-300/90 hover:border-red-600 shadow-sm hover:shadow text-xs font-semibold text-neutral-800 hover:text-red-700 transition-all group h-9 shrink-0"
+              className="flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-xl bg-white hover:bg-neutral-50 border border-neutral-300/90 hover:border-red-600 shadow-sm hover:shadow text-xs font-semibold text-neutral-800 hover:text-red-700 transition-all group h-9 shrink-0 cursor-pointer"
               title="Wirtschaftlichkeits- & Zeitrechner öffnen"
             >
               <Clock size={14} className="text-red-600 group-hover:rotate-45 transition-transform shrink-0" />
-              <span className="hidden sm:inline">Zeitrechner</span>
+              <span className="hidden xs:inline">Zeitrechner</span>
             </button>
           </div>
         </div>
