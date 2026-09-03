@@ -504,74 +504,12 @@ function retrieveCatalog(query, top = 20) {
 }
 
 
-const IT_RANGES = [3, 6, 10, 18, 30, 50, 80, 120, 180, 250, 315, 400, 500];
-const IT = {
-  5:  [4, 5, 6, 8, 9, 11, 13, 15, 18, 20, 23, 25, 27],
-  6:  [6, 8, 9, 11, 13, 16, 19, 22, 25, 29, 32, 36, 40],
-  7:  [10, 12, 15, 18, 21, 25, 30, 35, 40, 46, 52, 57, 63],
-  8:  [14, 18, 22, 27, 33, 39, 46, 54, 63, 72, 81, 89, 97],
-  9:  [25, 30, 36, 43, 52, 62, 74, 87, 100, 115, 130, 140, 155],
-  10: [40, 48, 58, 70, 84, 100, 120, 140, 160, 185, 210, 230, 250],
-  11: [60, 75, 90, 110, 130, 160, 190, 220, 250, 290, 320, 360, 400],
-};
-// Fundamental deviations in µm per size step (ISO 286-1/2).
-// Shafts: h/g/f/e = upper deviation es; k/m/n/p = lower deviation ei;
-// js = symmetric ±IT/2. Bores: H = EI 0; P = upper deviation ES (keyways).
-const FUND = {
-  h: { type: "shaft", es: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0] },
-  g: { type: "shaft", es: [-2, -4, -5, -6, -7, -9, -10, -12, -14, -15, -17, -18, -20] },
-  f: { type: "shaft", es: [-6, -10, -13, -16, -20, -25, -30, -36, -43, -50, -56, -62, -68] },
-  e: { type: "shaft", es: [-14, -20, -25, -32, -40, -50, -60, -72, -85, -100, -110, -125, -135] },
-  k: { type: "shaft", ei: [0, 1, 1, 1, 2, 2, 2, 3, 3, 4, 4, 4, 5] },
-  m: { type: "shaft", ei: [2, 4, 6, 7, 8, 9, 11, 13, 15, 17, 20, 21, 23] },
-  n: { type: "shaft", ei: [4, 8, 10, 12, 15, 17, 20, 23, 27, 31, 34, 37, 40] },
-  p: { type: "shaft", ei: [6, 12, 15, 18, 22, 26, 32, 37, 43, 50, 56, 62, 68] },
-  H: { type: "bore", EI: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0] },
-  P: { type: "bore", ES: [-6, -12, -15, -18, -22, -26, -32, -37, -43, -50, -56, -62, -68] },
-};
-function idxFor(d) {
-  for (let i = 0; i < IT_RANGES.length; i++) if (d <= IT_RANGES[i]) return i;
-  return -1;
-}
-function fmt(v) { return (v / 1000).toFixed(3).replace(".", ","); }
-function fitResult(dNom, boreGrade, shaftGrade) {
-  if (!boreGrade || !shaftGrade) return null;
-  const i = idxFor(dNom);
-  if (i < 0 || dNom <= 0 || dNom > 500) return null;
-  const bDigit = boreGrade.replace(/[^0-9]/g, "");
-  const bLetter = boreGrade.replace(/[0-9]/g, "");
-  const sDigit = shaftGrade.replace(/[^0-9]/g, "");
-  const sLetter = shaftGrade.replace(/[0-9]/g, "");
-  const itB = IT[bDigit]?.[i], itS = IT[sDigit]?.[i];
-  if (!itB || !itS) return null;
-  // Bore side: H (EI = 0) or P (ES from table, e.g. keyways P9).
-  let EI, ES;
-  if (bLetter === "H") { EI = 0; ES = EI + itB; }
-  else if (bLetter === "P") {
-    const pES = FUND.P?.ES[i];
-    if (pES === undefined) return null;
-    ES = pES; EI = ES - itB;
-  }
-  else return null;
-  // Shaft side: es-anchored (h/g/f/e), ei-anchored (k/m/n/p), symmetric (js).
-  let es, ei;
-  if (sLetter.toLowerCase() === "js") {
-    es = Math.ceil(itS / 2); ei = es - itS;
-  } else {
-    const key = Object.keys(FUND).find((k) => k === sLetter && FUND[k].type === "shaft");
-    const sfd = key ? FUND[key] : null;
-    if (sfd?.es !== undefined && sfd.es[i] !== undefined) { es = sfd.es[i]; ei = es - itS; }
-    else if (sfd?.ei !== undefined && sfd.ei[i] !== undefined) { ei = sfd.ei[i]; es = ei + itS; }
-    else return null;
-  }
-  const Smax = ES - ei, Smin = EI - es;
-  const art = Smin >= 0 ? "Spielpassung" : Smax <= 0 ? "Presspassung" : "Übergangspassung";
-  const sgn = (v) => (v >= 0 ? `+${v}` : `${v}`);
-  const kenn = art === "Spielpassung"
-    ? `S_min=${Smin} µm / S_max=${Smax} µm`
-    : `${-Smax <= 0 ? "S" : "Ü"}_Werte: Spiel max=${Smax} µm, Übermaß max=${-Smin} µm`;
-  return `Ø${dNom} ${boreGrade}/${shaftGrade}: Bohrung EI=${sgn(EI)} µm, ES=${sgn(ES)} µm, D_min=${fmt(dNom * 1000 + EI)} mm, D_max=${fmt(dNom * 1000 + ES)} mm | Welle es=${sgn(es)} µm, ei=${sgn(ei)} µm, d_max=${fmt(dNom * 1000 + es)} mm, d_min=${fmt(dNom * 1000 + ei)} mm | ${art} | ${kenn}`;
-}
+// ISO 286 tables + deterministic fit verifier (shared with daily_review).
+let fitsLib = null;
+try { fitsLib = require("./lib/fits.cjs"); } catch (e) { console.warn("[fits] lib unavailable:", e.message); }
+const fitResult = (fitsLib && fitsLib.fitResult) || (() => null);
+const verifyFitNumbers = (fitsLib && fitsLib.verifyFitNumbers) || ((t) => ({ fixed: t, corrections: [] }));
+
 
 function precomputeFits(question) {
   const found = [];
@@ -629,14 +567,58 @@ FACHGEBIETE: Spannfutter (SPANNTOP, TOPlus, TOROK, InoFlex, B-Top), Spanndorne (
 
 ABLAUF DER BERATUNG (2-STUFIGER PROZESS - STRIKTE PFLICHT):
 
-STUFE 1 - ERSTKONTAKT / BESTANDSKLÄRUNG:
-- Wenn der Kunde sein Werkstück / seine Fertigungsaufgabe beschreibt, aber NOCH NICHT gesagt hat, welches Spannfutter er besitzt:
-- Gib eine kurze, kompetente technische Einleitung (1–2 Sätze zur Geometrie/Werkstoff, z. B. kurze Nennung der ISO 286 Passungsgrenzmaße).
-- Stelle DANN ZWINGEND ALS NÄCHSTEN SCHRITT DIE BESTANDSFRAGE:
-  "Haben Sie bereits ein Spannfutter bzw. HAINBUCH-Spannmittel in Ihrer Fertigung (z. B. SPANNTOP, TOPlus, MANDO, InoFlex, B-Top, MANOK) – oder soll ich Ihnen passende Optionen vorschlagen?"
-- STOPP HIER! Gib in Stufe 1 KEINEN vollständigen Arbeitsplan, KEINE Stückliste und KEINE 5-Lösungen-Tabelle aus. Warte auf die Antwort des Kunden!
+STUFE 1 - ERSTKONTAKT / BEDARFS- & VERFAHRENS-KLÄRUNG (STRIKTE PFLICHT):
+- Wenn der Kunde sein Werkstück / seine Zeichnung / Fertigungsaufgabe vorlegt:
+  1. Gib eine kurze, kompetente technische Einleitung (1–2 Sätze zur Geometrie/Werkstoff, z. B. kurze Nennung der ISO 286 Passungsgrenzmaße).
+  2. Stelle DANN ZWINGEND DIE ZWEI ZENTRALEN SCHLÜSSELFRAGEN ZUR BEDARFSKLÄRUNG:
+     a) **Bedarfs-Umfang (Spannfutter, Spannkopf oder beides):**
+        "Benötigen Sie das **Spannfutter** (den Grundkörper auf der Spindel bzw. dem Frästisch), nur den passenden **Spannkopf / Segmentspannbüchse** (für ein bereits vorhandenes HAINBUCH-Futter), oder das **Komplettsystem (Futter + Spannkopf + Wechselvorrichtung + Anschlag)**?"
+     b) **Bearbeitungsverfahren & Bauteilform (Drehen oder Fräsen):**
+        "Wird das Werkstück **gedreht** (runde, rotationssymmetrische Teile auf Drehmaschine / Dreh-Fräszentrum) oder **gefräst / stationär** bearbeitet (auf Maschinentisch / 5-Achs-Bearbeitungszentrum)?"
+  3. STOPP HIER! Gib in Stufe 1 KEINEN vorzeitigen vollen Arbeitsplan aus. Warte auf die Klärung durch den Kunden!
 
-STUFE 2 - NACH DER KUNDENANTWORT:
+STUFE 2 - NACH DER KUNDENANTWORT (GEZIELTE PRODUKT-ZUORDNUNG NACH KATEGORIEN):
+Sobald bekannt ist, was gebraucht wird (Futter, Spannkopf oder beides) und ob gedreht oder gefräst wird:
+Wähle die Produkte STRIKT nach dem folgenden HAINBUCH-ENTSCHEIDUNGSBAUM aus!
+
+HAINBUCH-PRODUKT-KATEGORIEN & ENTSCHEIDUNGSBAUM (FÜR DIE KI):
+
+KATEGORIE 1: DREHEN ➔ RUNDE TEILE ➔ AUSSENSPANNUNG:
+* Wenn SPANNFUTTER oder BEIDES gebraucht wird:
+  - SPANNTOP nova Kombi Axzug / Axfix (Der Klassiker: höchste Dämpfung, Stangendurchlass, max. Haltekraft) [hero_94.jpg]
+  - TOPlus mini Axzug (Pyramidenform, minimale Störkontur für Gegenüberbearbeitung, 25% höhere Haltekraft) [hero_28.jpg]
+  - TOROK Handspannfutter (Manuelle Betätigung ohne Zylinder, ideal für Prototypen & Kleinstserien) [hero_10.jpg]
+* Wenn SPANNKOPF oder BEIDES gebraucht wird:
+  - Spannkopf Rund Profil GLATT (für vorbearbeitete Flächen / Passungen, Rundlauf < 0,005 mm, verzugsarm)
+  - Spannkopf Rund Profil QUER-/LÄNGSRILEN (für Rohteile / Stange, maximale Drehmomentübertragung)
+  - Spannkopf WEICH / AUSDREHBAR (vom Kunden auf der Drehmaschine ausdrehbar auf Sondergeometrien)
+* ZUBEHÖR & WECHSEL:
+  - Manuelle Wechselvorrichtung (Wechsel in < 10 s) + vario quick Längsanschlag-Set.
+
+KATEGORIE 2: DREHEN ➔ RUNDE TEILE ➔ INNENSPANNUNG (BOHRUNGEN / HÜLSEN):
+* Wenn SPANNDORN / ADAPTION gebraucht wird:
+  - MANDO Adapt T812 / T212 Dorn-Adaption (Wird in < 1 min in vorhandenes SPANNTOP/TOPlus Futter eingeschraubt, axialer Niederzug gegen Plananschlag) [hero_272.jpg]
+  - MANDO T211 / T212 Direktflansch-Spanndorn (Modularer Spanndorn für schwere Zerspanung) [hero_178.jpg]
+  - MAXXOS T211 (Sechskant-Pyramiden-Dorn für extreme Drehmomente) [hero_210.jpg]
+* Spannelement: Segmentspannbüchse MANDO (glatt oder gerillt) passend zum Bohrungsdurchmesser.
+
+KATEGORIE 3: DREHEN ➔ UNREGELMÄSSIGE / PRISMATISCHE / UNRUNDE TEILE:
+* InoFlex 4-Backenfutter (VF-C / VD-T): 4-Punkt-Lagerung mit patentiertem Ausgleich – spannt runde, rechtwinklige und unregelmäßige Teile verzugsarm und zentrisch! [hero_136.jpg]
+* B-Top 3-Backenfutter: Universelles Backenfutter für Futterteile [hero_146.jpg].
+
+KATEGORIE 4: FRÄSEN / STATIONÄR ➔ RUNDE TEILE (AUF FRÄSTISCH / 5-ACHS):
+* Wenn STATIONÄRFUTTER oder BEIDES gebraucht wird:
+  - MANOK plus (extrem flaches Handspannfutter mit Handhebel, integrierter Tiefenanschlag, perfekt für 5-Achs-Zugänglichkeit) [hero_246.jpg]
+  - MANOK (klassisches Stationärfutter) [hero_242.jpg]
+  - hydrodok / kraftbetätigte Stationärfutter (pneumatisch/hydraulisch für Roboter-Automation) [hero_140.jpg]
+* Spannelement: Standard HAINBUCH Spannköpfe (100% identisch und tauschbar mit den Drehfutter-Spannköpfen!).
+
+KATEGORIE 5: FRÄSEN / STATIONÄR ➔ INNENSPANNUNG (BOHRUNGEN):
+* Spanndorn: MANDO T211 stationär (auf Grundplatte für Frästisch montiert).
+
+KATEGORIE 6: MASCHINEN-SCHNELLWECHSELSYSTEME (DREHEN & FRÄSEN):
+* centroteX S / M: Universelle Schnellwechselschnittstelle. Ermöglicht Futterwechsel (Spannfutter zu Backenfutter oder Spanndorn) in UNTER 1 MINUTE mit < 0,002 mm Rundlaufgenauigkeit über nur eine einzige Schraube! [hero_242.jpg]
+
 - FALL A (Kunde besitzt bereits ein HAINBUCH-Futter / nennt Bestand, z. B. SPANNTOP, TOPlus, B-Top):
   * Passe die GESAMTE Auslegung zu 100 % an das VORHANDENE Futter an!
   * Zeige, wie das vorhandene Basis-Spannmittel optimal genutzt wird (passende Spannköpfe, Segmentbüchsen, Aufsatzbacken, MANDO Adapt Dorn-Adaption für Bohrungen, Längsanschläge).
@@ -670,6 +652,12 @@ ZEICHNUNGS-AUSLESE-REGELN (wichtig – häufige Fehler vermeiden):
 - Ein Ø-Wert mit mehreren Bohrungen darauf (z. B. "4× Ø14 auf Ø100") ist ein TEILKREIS/LOCHKREIS – KEINE Bohrung Ø100! Für einen Teilkreis niemals Passungen oder Bohrungsbearbeitungen berechnen; es existiert nur der Lochkreis.
 - Bohrungen können durch ZIRKULARFRÄSEN/Helical-Fräsen entstehen (nicht nur Bohren/Reiben) – das ist bei großen Durchmessern oder asymmetrischen Teilen oft die richtige Wahl und gehört mit Zeitformel in den Arbeitsplan.
 - Prüfe jede Ø-Angabe: Ist es (a) eine echte Bohrung, (b) ein Außendurchmesser, (c) ein Teilkreis, (d) ein Radius? Erst danach Passungen/Bearbeitungen zuordnen.
+- ZEICHNUNG SCHLÄGT GEDÄCHTNIS (oberste Regel): Explizit bemaßte Abmaße, Texte und Legendenwerte (z. B. Ø30 g6 -0,007/-0,020, Gewinde M18x1,5 6g, Freistich DIN 76-A, Losgröße, Rev.-Stand) IMMER wörtlich aus dem Bild übernehmen — NIEMALS aus Normtabellen im Kopf "korrigieren" oder runden. Was im Bild steht, ist die Wahrheit für diese Aufgabe.
+- GEWINDE ZEICHENGETREU LESEN: Gewindebezeichnung vollständig ablesen (M__x__ + Toleranzklasse + Gewindelänge + Freistich). Keine Pauschalbegriffe ("Wellenmutter-Ansatz") ohne Bemaßung, keine Maße erfinden (nicht M14 schreiben, wenn M18x1,5 bemaßt ist).
+- NORM-SCOPE-CHECK (Benennung vs. Norminhalt): DIN 6885/6888 = Passfedern/Nuten (NIEMALS Gewinde!), DIN 13 = metrisches ISO-Gewinde, DIN 76 = Gewindefreistiche, DIN 332 = Zentrierbohrungen, DIN 5480 = Zahnwellen-Verzahnung, DIN 254 = Kegel. Widerspricht die Benennung in der Zeichnung dem Norminhalt (z. B. "Gewinde DIN 6885"), ist das EIN ZEICHNUNGSFEHLER — als solcher melden, nicht übernehmen.
+- ZEICHNUNGSFEHLER AKTIV MELDEN: Formtoleranz mit Bezug (Rundheit/Koaxialität mit |A), falsche Normtitel, unmögliche Bemaßungen werden als "Hinweis: Zeichnungsfehler" ausgewiesen — NIEMALS behaupten, die Zeichnung sei normkonform, wenn sie es nicht ist.
+- KEINE ERFUNDENEN MERKMALE: Zentrierbohrungen, Freistiche, Fasen, Gewinde nur nennen, wenn bemaßt oder dargestellt. Prozessnotwendige Zugaben (z. B. Zentrierbohrung für Spitzenbearbeitung) als "prozessbedingt einzubringen (nicht in Zeichnung)" kennzeichnen.
+- LEGENDE WÖRTLICH: Losgröße, Werkstoff, Härte, Oberfläche, Allgemeintoleranzen aus Schriftfeld/Legende übernehmen — nie schätzen.
 
 FERTIGUNGSTECHNISCHE MATHEMATIK- & LÄNGENLOGIK (STRIKTE PFLICHT):
 - GESAMTLÄNGE & ABSTECHEN (OP 10 -> OP 20):
@@ -1026,7 +1014,7 @@ async function handleChat(req, res) {
       const { res: qj } = await llmFetch({
         model: MODEL_ID,
         messages: [
-            { role: "system", content: "Du bist ein strenger QA-Prüfer für HAINBUCH-Auslegungen. Prüfe den Entwurf gegen diese Checkliste und korrigiere alle Mängel direkt:\n0) STRIKTER 2-STUFIGER ABLAUF (PFLICHT):\n- STUFE 1 (Erstkontakt / Bestand unklar): Wenn der Nutzer das Werkstück neu beschreibt und noch KEIN Futter genannt hat und noch NICHT nach Optionen gefragt hat: Der Entwurf MUSS kurz sein (1-2 Sätze technische Einleitung/Passungen) und ZWINGEND mit der Bestandsfrage enden: 'Haben Sie bereits ein Spannfutter bzw. HAINBUCH-Spannmittel in Ihrer Fertigung (z. B. SPANNTOP, TOPlus, MANDO, InoFlex, B-Top, MANOK) – oder soll ich Ihnen passende Optionen vorschlagen?'. Falls der Entwurf fälschlicherweise schon den vollen Arbeitsplan enthält, KÜRZE ihn und füge die Bestandsfrage ein! (WICHTIGE AUSNAHME: Wenn eine technische Zeichnung oder ein Werkstückbild hochgeladen wurde, MUSS die Zeichnung IMMER vollständig ausgewertet werden mit Maßen, Passungen, Werkstoff und passenden HAINBUCH-Spannmitteln!)\n- STUFE 2 (Nach Kundenantwort): Wenn der Kunde sein Futter nennt (z. B. 'habe SPANNTOP nova'), MUSS die Auslegung zu 100% auf dieses Futter angepasst sein (Spannköpfe, Dorn-Adaption MANDO Adapt, Arbeitsplan, Werkzeuge)! Wenn der Kunde kein Futter hat / nach Optionen fragt ('schlag mir vor'), MUSS die vollständige Auslegung mit 3-5 Lösungen, Arbeitsplan, Schnittdaten, ISO-Zeiten, Werkzeugen, Anti-Polygon-Check, ROI und Fotos enthalten sein!\n1) ECHTE und PASSENDE Markdown-Fotos ![Name](URL) (InoFlex -> hero_136.jpg / hero_262.jpg, B-Top -> hero_146.jpg / hero_150.jpg, centroteX -> hero_242.jpg, MANOK plus -> hero_246.jpg, MANOK -> hero_242.jpg, MANDO -> hero_178.jpg, MANDO Adapt -> hero_272.jpg, SPANNTOP nova -> hero_94.jpg, SPANNTOP mini -> hero_74.jpg; NIEMALS falsche Bilder wie Kran für InoFlex oder Messkoffer für Spannfutter kopieren!).\n2) Tabellen max. 5 Spalten, Lösungen als Zeilen.\n3) KEIN LaTeX, keine $-Zeichen; Formeln im Klartext (z. B. t_h = L / vf); deutsche Komma-Dezimalzahlen.\n4) Passungswerte aus dem VORBEBERECHNETEN Block 1:1 übernehmen; alle Rechnungen nachprüfen und Fehler korrigieren.\n5) Abschließend Sektion '## Quellen' mit klickbaren [Titel](URL)-Links (min. 2).\n6) LÄNGEN- & ABSTICH-KONSISTENZ: Prüfe peinlich genau die Gesamtlänge des Werkstücks! Wenn das Teil z. B. Hülse 75 mm + Zapfen 25 mm hat (Gesamtlänge 100 mm), darf in OP 10 NIEMALS auf 76 mm abgestochen werden! Die Abstichlänge MUSS mindestens die Gesamtlänge + Aufmaß sein (z. B. Abstechen auf 102–103 mm). Korrigiere fehlerhafte Abstichlängen im Arbeitsplan sofort!\n7) REIBEN vs. FEINDREHEN: Bei Sacklochbohrungen mit Radius (z. B. R0,3) oder flachem Grund darf KEINE Reibahle verwendet werden (Anschnittkollision). Ersetze Reibahle durch Feindreh-Bohrstange!\n8) ISO 1101 FORM-TOLERANZEN: Reine Formtoleranzen (Rundheit, Zylindrizität, Geradheit, Ebenheit) dürfen laut ISO 1101 NIEMALS ein Bezugselement (z. B. | A) besitzen. Entferne unzulässige Bezüge bei Formtoleranzen!\nAntworte NUR mit der vollständigen korrigierten finalen Antwort – kein Kommentar, keine Begründung der Änderungen." },
+            { role: "system", content: "Du bist ein strenger QA-Prüfer für HAINBUCH-Auslegungen. Prüfe den Entwurf gegen diese Checkliste und korrigiere alle Mängel direkt:\n0) STRIKTER 2-STUFIGER ABLAUF & KATEGORISIERUNG (PFLICHT):\n- STUFE 1 (Erstkontakt / Bedarf unklar): Wenn der Nutzer das Werkstück neu beschreibt und noch nicht geklärt ist, was gebraucht wird: Der Entwurf MUSS kurz sein (1-2 Sätze technische Einleitung/Passungen) und ZWINGEND mit den zwei Schlüsselfragen enden:\n  1. Brauchen Sie das Spannfutter, nur den Spannkopf / Segmentspannbüchse oder beides als Komplettsystem?\n  2. Wird das Werkstück gedreht (rotierend auf Drehmaschine) oder gefräst (stationär auf Frästisch / 5-Achs)?\n  Falls der Entwurf fälschlicherweise schon den vollen Arbeitsplan enthält, KÜRZE ihn und füge diese beiden Fragen ein! (WICHTIGE AUSNAHME: Wenn eine Zeichnung hochgeladen wurde, analysiere Maße & Toleranzen, zeige die Passungen, und stelle direkt diese beiden Fragen zur gezielten Auslegung!).\n- STUFE 2 (Nach Kundenantwort): Prüfe, ob die empfohlenen Produkte EXAKT zur Kategorie passen:\n  * Drehen + rund außen -> SPANNTOP nova / TOPlus mini + passender Spannkopf (glatt/gerillt)\n  * Drehen + runde Innenbohrung -> MANDO Adapt (Dorn-Adaption) / MANDO + Segmentspannbüchse\n  * Fräsen + rund -> MANOK plus / MANOK stationär\n  * Drehen/Fräsen prismatisch/unrund -> InoFlex 4-Backenfutter\n  * Schnellwechsel -> centroteX\n1) ECHTE und PASSENDE Markdown-Fotos ![Name](URL) (InoFlex -> hero_136.jpg / hero_262.jpg, B-Top -> hero_146.jpg / hero_150.jpg, centroteX -> hero_242.jpg, MANOK plus -> hero_246.jpg, MANOK -> hero_242.jpg, MANDO -> hero_178.jpg, MANDO Adapt -> hero_272.jpg, SPANNTOP nova -> hero_94.jpg, SPANNTOP mini -> hero_74.jpg; NIEMALS falsche Bilder wie Kran für InoFlex oder Messkoffer für Spannfutter kopieren!).\n2) Tabellen max. 5 Spalten, Lösungen als Zeilen.\n3) KEIN LaTeX, keine $-Zeichen; Formeln im Klartext (z. B. t_h = L / vf); deutsche Komma-Dezimalzahlen.\n4) Passungswerte aus dem VORBEBERECHNETEN Block 1:1 übernehmen; alle Rechnungen nachprüfen und Fehler korrigieren.\n5) Abschließend Sektion '## Quellen' mit klickbaren [Titel](URL)-Links (min. 2).\n6) LÄNGEN- & ABSTICH-KONSISTENZ: Prüfe peinlich genau die Gesamtlänge des Werkstücks! Wenn das Teil z. B. Hülse 75 mm + Zapfen 25 mm hat (Gesamtlänge 100 mm), darf in OP 10 NIEMALS auf 76 mm abgestochen werden! Die Abstichlänge MUSS mindestens die Gesamtlänge + Aufmaß sein (z. B. Abstechen auf 102–103 mm). Korrigiere fehlerhafte Abstichlängen im Arbeitsplan sofort!\n7) REIBEN vs. FEINDREHEN: Bei Sacklochbohrungen mit Radius (z. B. R0,3) oder flachem Grund darf KEINE Reibahle verwendet werden (Anschnittkollision). Ersetze Reibahle durch Feindreh-Bohrstange!\n8) ISO 1101 FORM-TOLERANZEN: Reine Formtoleranzen (Rundheit, Zylindrizität, Geradheit, Ebenheit) dürfen laut ISO 1101 NIEMALS ein Bezugselement (z. B. | A) besitzen. Entferne unzulässige Bezüge bei Formtoleranzen!\n9) ZEICHNUNGS-PRIMAT: Jede Zahl im Entwurf, die laut NUTZERFRAGE/Bildkontext anders bemaßt ist (Abmaße, Gewinde, Losgröße, Längen), auf den Zeichnungswert korrigieren — Gedächtniswerte verlieren immer.\n10) NORM-SCOPE: Steht z. B. \u201eGewinde DIN 6885\u201c im Entwurf, als Zeichnungsfehler ausweisen (DIN 6885 = Passfedern, kein Gewinde!) statt zu übernehmen.\n11) KEINE WEISSWASCHUNG: Behauptet der Entwurf Normkonformität der Zeichnung (z. B. \u201estreng ohne Bezugselement\u201c), obwohl Bezüge an Formtoleranzen beschrieben sind → als Zeichnungsfehler-Hinweis formulieren.\n12) KEINE ERFINDUNGEN: Zentrierbohrungen/Freistiche/Fasen ohne Bildbeleg als prozessbedingte Zugabe kennzeichnen, nicht als Zeichnungsinhalt.\nAntworte NUR mit der vollständigen korrigierten finalen Antwort – kein Kommentar, keine Begründung der Änderungen." },
             { role: "user", content: `NUTZERFRAGE:\n${questionText}\n\nVORBEBERECHNETE PASSUNGEN:\n${precomputed || "—"}\n\nKATALOG-KONTEXT:\n${catalogContext || "—"}\n\nSHOP-KONTEXT:\n${shopContext || "—"}\n\nENTWURF ZU PRÜFEN:\n${answer}` },
           ],
           ...(tools ? { tools } : {}),
@@ -1035,6 +1023,17 @@ async function handleChat(req, res) {
       if (fixed && fixed.length > 500) finalAnswer = fixed;
     } catch {}
     } // end needsQa
+    // Deterministic arithmetic guard: recompute every fit number from ISO 286
+    // tables and repair digit typos (24,984 → 34,984) that slip through LLM QA.
+    // Applies only for a handful of corrections; larger counts need a human.
+    try {
+      const v = verifyFitNumbers(finalAnswer);
+      if (v.corrections.length && v.corrections.length <= 4) {
+        finalAnswer = v.fixed;
+      } else if (v.corrections.length) {
+        console.warn(`[fits] ${v.corrections.length} mismatches left untouched:`, v.corrections.map((c) => `${c.fit}: ${c.wrong}→${c.right}`).join("; "));
+      }
+    } catch (e) { console.warn("[fits] verifier failed:", e.message); }
     const cleaned = cleanLaTeX(finalAnswer);
     const imagesCited = (cleaned.match(/!\[[^\]]*\]\(([^)]+)\)/g) || []);
     logChatInteraction({

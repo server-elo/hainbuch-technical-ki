@@ -13,6 +13,9 @@ const path = require('path');
 const LOGS_DIR = path.join(__dirname, '..', 'logs', 'daily');
 const DATA_DIR = path.join(__dirname, '..', 'data');
 const GOLD_FILE = path.join(DATA_DIR, 'gold_standards.json');
+// Deterministic ISO-286 arithmetic check (same lib as the live verifier).
+let verifyFitNumbers = null;
+try { verifyFitNumbers = require('../lib/fits.cjs').verifyFitNumbers; } catch {}
 const LLM_URL = process.env.LLM_URL || "http://127.0.0.1:8317/v1/chat/completions";
 const MODEL_ID = process.env.MODEL_ID || "gemini-3.7-flash-high";
 
@@ -59,6 +62,24 @@ const AUDIT_RULES = [
     id: "MISSING_WORKPLAN",
     name: "Fehlender Arbeitsplan trotz Optionenauswahl",
     check: (rec) => /(optionen|auswahl|schlag mir vor|losgröße)/i.test(rec.question || '') && !/OP\s*10/i.test(rec.response),
+  },
+  {
+    id: "FIT_ARITHMETIC",
+    name: "Rechenfehler in Passungstabelle (deterministisch geprüft)",
+    check: (rec) => {
+      if (!verifyFitNumbers || !rec.response) return false;
+      try {
+        const v = verifyFitNumbers(rec.response);
+        rec._fitFix = v.corrections.length && v.corrections.length <= 4 ? v : null;
+        return !!rec._fitFix;
+      } catch { return false; }
+    },
+    fix: (txt) => {
+      try {
+        const v = verifyFitNumbers(txt);
+        return v.corrections.length && v.corrections.length <= 4 ? v.fixed : txt;
+      } catch { return txt; }
+    },
   },
   {
     id: "MISSING_TIMES",
