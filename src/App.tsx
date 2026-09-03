@@ -925,6 +925,28 @@ export default function App() {
   }, [uiLang]);
   // History + auth UI state
   const [showAuth, setShowAuth] = useState(false);
+  // Account menu (avatar button never logs out directly).
+  const [showAccount, setShowAccount] = useState(false);
+  const [confirmLogout, setConfirmLogout] = useState(false);
+  const accountRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (!showAccount) return;
+    const onDown = (e: MouseEvent) => {
+      if (accountRef.current && !accountRef.current.contains(e.target as Node)) {
+        setShowAccount(false);
+        setConfirmLogout(false);
+      }
+    };
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') { setShowAccount(false); setConfirmLogout(false); }
+    };
+    document.addEventListener('mousedown', onDown);
+    window.addEventListener('keydown', onKey);
+    return () => {
+      document.removeEventListener('mousedown', onDown);
+      window.removeEventListener('keydown', onKey);
+    };
+  }, [showAccount]);
   const [showCountry, setShowCountry] = useState(false);
   const [showHistory, setShowHistory] = useState(false);
   const [histItems, setHistItems] = useState<HistoryItem[]>([]);
@@ -1354,6 +1376,8 @@ export default function App() {
     clearProfile();
     setProfile(loadProfile());
     setHistItems([]);
+    setShowAccount(false);
+    setConfirmLogout(false);
     resetChat();
   };
   const handleCountryPick = (country: string, lang: UiLang) => {
@@ -1427,15 +1451,57 @@ export default function App() {
               {profile.country && <span className="font-mono font-semibold">{profile.country}</span>}
             </button>
             {profile.email ? (
-              <button
-                onClick={handleLogout}
-                title={`${profile.email} — ${t.logout}`}
-                aria-label={t.logout}
-                className="flex items-center gap-1 text-xs text-neutral-600 hover:text-red-600 transition-colors rounded-xl px-2.5 py-1.5 bg-white border border-neutral-200/90 hover:border-red-300 shadow-sm h-9"
-              >
-                <LogOut size={14} className="shrink-0" />
-                <span className="hidden sm:inline font-medium max-w-[120px] truncate">{profile.displayName || profile.email}</span>
-              </button>
+              <div ref={accountRef} className="relative">
+                <button
+                  onClick={() => { setShowAccount((v) => !v); setConfirmLogout(false); }}
+                  title={profile.email}
+                  aria-label={profile.email}
+                  aria-haspopup="menu" aria-expanded={showAccount}
+                  className="flex items-center gap-1 text-xs text-neutral-600 hover:text-red-600 transition-colors rounded-xl px-2.5 py-1.5 bg-white border border-neutral-200/90 hover:border-red-300 shadow-sm h-9"
+                >
+                  <User size={14} className="shrink-0" />
+                  <span className="hidden sm:inline font-medium max-w-[120px] truncate">{profile.displayName || profile.email}</span>
+                </button>
+                {showAccount && (
+                  <div role="menu" className="absolute right-0 top-full mt-1.5 w-60 rounded-xl bg-white border border-neutral-200 shadow-xl p-1.5 z-50">
+                    <p className="px-2.5 py-2 text-xs text-neutral-500 truncate border-b border-neutral-100 mb-1">{profile.email}</p>
+                    <button
+                      role="menuitem"
+                      onClick={() => { setShowAccount(false); setConfirmLogout(false); openHistoryPanel(); }}
+                      className="w-full flex items-center gap-2 px-2.5 py-2 text-xs font-semibold text-neutral-700 hover:bg-neutral-100 rounded-lg transition-colors"
+                    >
+                      <History size={14} className="text-neutral-400" /> {t.history}
+                    </button>
+                    {confirmLogout ? (
+                      <div className="px-2.5 py-2">
+                        <p className="text-xs font-semibold text-neutral-800 mb-2">{t.logoutSure}</p>
+                        <div className="flex gap-1.5">
+                          <button
+                            onClick={handleLogout}
+                            className="flex-1 px-2 py-1.5 bg-red-600 hover:bg-red-700 text-white text-xs font-bold rounded-lg transition-colors"
+                          >
+                            {t.logout}
+                          </button>
+                          <button
+                            onClick={() => setConfirmLogout(false)}
+                            className="flex-1 px-2 py-1.5 bg-neutral-100 hover:bg-neutral-200 text-neutral-700 text-xs font-semibold rounded-lg transition-colors"
+                          >
+                            {t.cancel}
+                          </button>
+                        </div>
+                      </div>
+                    ) : (
+                      <button
+                        role="menuitem"
+                        onClick={() => setConfirmLogout(true)}
+                        className="w-full flex items-center gap-2 px-2.5 py-2 text-xs font-semibold text-red-700 hover:bg-red-50 rounded-lg transition-colors"
+                      >
+                        <LogOut size={14} /> {t.logout}
+                      </button>
+                    )}
+                  </div>
+                )}
+              </div>
             ) : (
               <button
                 onClick={() => setShowAuth(true)}
