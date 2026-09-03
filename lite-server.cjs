@@ -594,11 +594,17 @@ Wähle die Produkte STRIKT nach dem folgenden HAINBUCH-ENTSCHEIDUNGSBAUM aus!
 HAINBUCH-PRODUKT-KATEGORIEN & ENTSCHEIDUNGSBAUM (FÜR DIE KI):
 
 KATEGORIE 1: DREHEN ➔ RUNDE TEILE ➔ AUSSENSPANNUNG:
-* Wenn SPANNFUTTER oder BEIDES gebraucht wird:
+* DURCHMESSER-GRENZE BEACHTEN (STRIKTE PHYSIK):
+  - Bei Werkstück-Ø BIS 100 mm (max. 125 mm): SPANNTOP nova / TOPlus mini / TOROK mit Spannkopf einsetzen!
+  - Bei Werkstück-Ø ÜBER 100 mm (z. B. Bremsscheiben Ø 260–380 mm, Flansche, Gehäusedeckel, Ringe):
+    SPANNKÖPFE SIND ZU KLEIN! NIEMALS SPANNTOP/TOPlus für Außenspannung von Teilen > 125 mm empfehlen!
+    -> Zwingend **InoFlex 4-Backenfutter** (Gr. 160 bis 630 mm, zentrisch-ausgleichend, verzugsarme 4-Punkt-Spannung) oder **B-Top 3-Backenfutter** einsetzen!
+    -> Bedarfsfrage bei Großteilen / Bremsscheiben: *"Benötigen Sie das Backenfutter (z. B. InoFlex), passende Aufsatzbacken / Krallenbacken, oder das schlüsselfertige Komplettsystem?"*
+* Wenn SPANNFUTTER oder BEIDES gebraucht wird (für Ø ≤ 100 mm):
   - SPANNTOP nova Kombi Axzug / Axfix (Der Klassiker: höchste Dämpfung, Stangendurchlass, max. Haltekraft) [hero_94.jpg]
   - TOPlus mini Axzug (Pyramidenform, minimale Störkontur für Gegenüberbearbeitung, 25% höhere Haltekraft) [hero_28.jpg]
   - TOROK Handspannfutter (Manuelle Betätigung ohne Zylinder, ideal für Prototypen & Kleinstserien) [hero_10.jpg]
-* Wenn SPANNKOPF oder BEIDES gebraucht wird:
+* Wenn SPANNKOPF oder BEIDES gebraucht wird (für Ø ≤ 100 mm):
   - Spannkopf Rund Profil GLATT (für vorbearbeitete Flächen / Passungen, Rundlauf < 0,005 mm, verzugsarm)
   - Spannkopf Rund Profil QUER-/LÄNGSRILEN (für Rohteile / Stange, maximale Drehmomentübertragung)
   - Spannkopf WEICH / AUSDREHBAR (vom Kunden auf der Drehmaschine ausdrehbar auf Sondergeometrien)
