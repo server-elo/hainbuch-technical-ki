@@ -1362,55 +1362,33 @@ export default function App() {
             </motion.div>
           ))}
 
-          {/* Clean, calm, uncluttered Home/Empty State */}
+          {/* Ultra-Clean Minimalist Home/Empty State */}
           {isEmpty && !isLoading && (
             <motion.div
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.25 }}
-              className="w-full max-w-2xl mx-auto my-auto py-8 sm:py-14 flex flex-col items-center text-center"
+              className="w-full max-w-xl mx-auto my-auto py-12 sm:py-20 flex flex-col items-center text-center px-4"
             >
               {/* Brand Icon & Heading */}
-              <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-2xl bg-red-50 border border-red-100 flex items-center justify-center text-red-600 shadow-sm mb-4">
-                <ColletMark size={28} />
+              <div className="w-14 h-14 sm:w-16 sm:h-16 rounded-2xl bg-red-50 border border-red-100 flex items-center justify-center text-red-600 shadow-sm mb-4">
+                <ColletMark size={32} />
               </div>
               <h1 className="text-2xl sm:text-3xl font-black tracking-tight text-neutral-900 leading-tight">
                 HAINBUCH <span className="text-red-600">Technical Advisor</span>
               </h1>
-              <p className="text-xs sm:text-sm text-neutral-500 leading-relaxed mt-2 max-w-lg">
+              <p className="text-xs sm:text-sm text-neutral-500 leading-relaxed mt-2 max-w-md">
                 Präzise Auslegung von Spannmitteln, Passungsberechnung nach ISO 286, Schnittdaten und Rüstzeitoptimierung.
               </p>
 
-              {/* Quick Drawing Upload Strip */}
+              {/* Drawing Upload Button */}
               <button
                 onClick={() => fileInputRef.current?.click()}
-                className="mt-5 inline-flex items-center gap-2 px-4 py-2 rounded-xl border border-dashed border-red-200 hover:border-red-500 bg-red-50/50 hover:bg-red-50 text-xs font-semibold text-neutral-800 hover:text-red-700 transition-all shadow-sm group cursor-pointer"
+                className="mt-6 inline-flex items-center gap-2.5 px-5 py-2.5 rounded-2xl border-2 border-dashed border-red-200 hover:border-red-500 bg-red-50/50 hover:bg-red-50 text-xs sm:text-sm font-bold text-neutral-800 hover:text-red-700 transition-all shadow-sm group cursor-pointer"
               >
-                <Upload size={14} className="text-red-600 group-hover:scale-110 transition-transform shrink-0" />
+                <Upload size={16} className="text-red-600 group-hover:scale-110 transition-transform shrink-0" />
                 <span>{t.uploadCta}</span>
               </button>
-
-              {/* 4 Quick Example Prompt Cards */}
-              <div className="w-full mt-8 text-left">
-                <p className="text-[10px] font-bold uppercase tracking-widest text-neutral-400 mb-2.5 flex items-center justify-center gap-1.5">
-                  <Sparkles size={12} className="text-red-600" />
-                  <span>{t.examplesLabel}</span>
-                </p>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
-                  {t.examples.map((ex, i) => (
-                    <button
-                      key={i}
-                      onClick={() => submitText(ex)}
-                      className="p-3 sm:p-3.5 rounded-xl bg-white hover:bg-red-50/30 border border-neutral-200/90 hover:border-red-500 shadow-sm hover:shadow transition-all group text-left flex items-start gap-2.5 cursor-pointer"
-                    >
-                      <div className="w-5 h-5 rounded-md bg-neutral-100 group-hover:bg-red-600 text-neutral-400 group-hover:text-white flex items-center justify-center shrink-0 mt-0.5 transition-colors">
-                        <ChevronRight size={13} />
-                      </div>
-                      <span className="text-xs text-neutral-700 group-hover:text-neutral-950 font-medium leading-snug">{ex}</span>
-                    </button>
-                  ))}
-                </div>
-              </div>
 
               {/* Trust badge */}
               <p className="flex items-center justify-center gap-1.5 text-[11px] text-neutral-400 mt-6">
