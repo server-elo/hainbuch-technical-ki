@@ -115,6 +115,8 @@ export const T = {
     loginSub: 'Melden Sie sich mit E-Mail & Passwort an, um Ihre Chat-Historie und Auslegungen zu sichern.',
     applyMachine: 'Übernehmen',
     undoMachine: 'Rückgängig',
+    catalogMode: 'Katalog-Modus',
+    directMode: 'Direkt-Modus',
   },
   en: {
     subtitle: 'Technical Advisor',
@@ -228,6 +230,8 @@ export const T = {
     loginSub: 'Sign in with e-mail & password to keep your chat history and workups.',
     applyMachine: 'Apply',
     undoMachine: 'Undo',
+    catalogMode: 'Catalog mode',
+    directMode: 'Direct mode',
   },
   zh: {
     subtitle: '技术顾问',
@@ -333,6 +337,8 @@ export const T = {
     loginSub: '使用邮箱和密码登录，以保存您的聊天记录和方案。',
     applyMachine: '应用',
     undoMachine: '撤销',
+    catalogMode: '产品目录模式',
+    directMode: '直接模式',
   },
   es: {
     subtitle: 'Asesor Técnico',
@@ -438,6 +444,8 @@ export const T = {
     loginSub: 'Inicie sesión con correo y contraseña para guardar su historial.',
     applyMachine: 'Aplicar',
     undoMachine: 'Deshacer',
+    catalogMode: 'Modo catálogo',
+    directMode: 'Modo directo',
   },
   fr: {
     subtitle: 'Conseiller Technique',
@@ -543,6 +551,8 @@ export const T = {
     loginSub: 'Connectez-vous pour conserver votre historique.',
     applyMachine: 'Appliquer',
     undoMachine: 'Annuler',
+    catalogMode: 'Mode catalogue',
+    directMode: 'Mode direct',
   },
   it: {
     subtitle: 'Consulente Tecnico',
@@ -648,6 +658,8 @@ export const T = {
     loginSub: 'Accedi per salvare la cronologia.',
     applyMachine: 'Applica',
     undoMachine: 'Annulla',
+    catalogMode: 'Modalità catalogo',
+    directMode: 'Modalità diretta',
   },
   tr: {
     subtitle: 'Teknik Danışman',
@@ -753,6 +765,8 @@ export const T = {
     loginSub: 'Geçmişinizi korumak için e-posta ve şifrenizle giriş yapın.',
     applyMachine: 'Uygula',
     undoMachine: 'Geri al',
+    catalogMode: 'Katalog modu',
+    directMode: 'Doğrudan mod',
   },
 } as const;
 

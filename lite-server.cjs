@@ -726,6 +726,11 @@ FORMAT-REGELN (wichtig):
 - Formeln in klarem Klartext: "ES = +0,025 mm" oder "P_max = ES − ei = 0,023 mm" oder "t_h = L / vf = 240 / 388 = 0,62 min".
 - Dezimaltrennzeichen: Komma (45,025 mm). Einheiten mit Leerzeichen (25 µm). Unicode: Ø, µm, ×, −, →, ≈.`;
 
+// Direkt-Modus: maximales Vertrauen ins Modell — kurzer Prompt, ein Call,
+// keine RAG-Kontexte, keine QA-Zweitrutsche. Katalog-Fotos/Mat-Nrn gibt es
+// nur im Katalog-Modus; der deterministische Fit-Check läuft in beiden.
+const RAW_PROMPT = `Du bist der HAINBUCH Technical Advisor, technischer Experte für Spanntechnik, Zerspanung, ISO-286-Passungen und HAINBUCH-Spannmittel. Antworte präzise und praxisnah auf Deutsch (oder in der Sprache des Nutzers). Übernimm bemaßte Werte aus Zeichnungen und Fragen wörtlich — rechne nichts um, erfinde keine Maße, Normen, Merkmale oder Artikelnummern. Melde Zeichnungsfehler als solche. Formeln im Klartext (t_h = L / vf), deutsche Kommazahlen, kein LaTeX.`;
+
 function emit(res, obj) {
   if (res.writableEnded || res.destroyed) return;
   try {
@@ -977,17 +982,22 @@ async function handleChat(req, res) {
         return;
       }
       const hasImages = messages.some((m) => Array.isArray(m.content) && m.content.some((c) => c.type === "image_url"));
-      const tools = hasImages ? undefined : [{ google_search: {} }];
+      // Direkt-Modus (parsed.mode === "raw"): nur Modell + Maschine, ein Call.
+      const rawMode = parsed?.mode === "raw";
+      const tools = !rawMode && !hasImages ? [{ google_search: {} }] : undefined;
 
       emit(res, { type: "status", stage: "chat", label: hasImages ? "Zeichnung / Bild wird analysiert…" : "HAINBUCH-Wissen wird durchsucht…" });
+      const sysPrompt = rawMode
+        ? RAW_PROMPT + machineContext
+        : SYSTEM_PROMPT + machineContext + goldContext + followupContext + fitsContext + catalogContext + shopContext + context;
       const { res: json, model: mainModel } = await llmFetch({
         model: MODEL_ID,
         messages: [
-          { role: "system", content: SYSTEM_PROMPT + machineContext + goldContext + followupContext + fitsContext + catalogContext + shopContext + context },
+          { role: "system", content: sysPrompt },
           ...messages,
         ],
         ...(tools ? { tools } : {}),
-      }, llmSignal(), "main");
+      }, llmSignal(), rawMode ? "raw" : "main");
       const answer =
         cleanLaTeX(
           json.choices?.[0]?.message?.content ??
@@ -1009,7 +1019,7 @@ async function handleChat(req, res) {
       hasImages ||
       answer.length > 1500
     );
-    if (needsQa) {
+    if (needsQa && !rawMode) {
     try {
       const { res: qj } = await llmFetch({
         model: MODEL_ID,

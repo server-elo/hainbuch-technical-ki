@@ -4,7 +4,7 @@ import {
   Image as ImageIcon, Paperclip, X, Clock, TrendingDown, Copy, Check,
   ThumbsUp, ThumbsDown, FileDown, ArrowDown, PenLine, Square, ListPlus, Sparkles,
   AlertTriangle, RotateCcw, Upload, ShieldCheck, ArrowRight, Layers, Ruler, Cog,
-  History, Globe, LogIn, LogOut
+  History, Globe, LogIn, LogOut, BookOpen, Zap
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import type { ChatMessage, PipelineStatus } from './types';
@@ -931,6 +931,16 @@ export default function App() {
   const [histLoading, setHistLoading] = useState(false);
   const [conversationId, setConversationId] = useState<string | null>(null);
   const [selectedMachine, setSelectedMachine] = useState<MachineProfile>(PRESET_MACHINES[0]);
+  // Antwort-Modus: Katalog (RAG + Fotos + QA) oder Direkt (nur Modell, ein Call).
+  const [catalogMode, setCatalogMode] = useState<boolean>(() => {
+    try { return localStorage.getItem('hb-catalog-mode') !== '0'; } catch { return true; }
+  });
+  const toggleCatalogMode = () => {
+    setCatalogMode((v) => {
+      try { localStorage.setItem('hb-catalog-mode', v ? '0' : '1'); } catch {}
+      return !v;
+    });
+  };
   // Machine auto-detect: suggestion chip (+ undo when auto-applied).
   const [machineHint, setMachineHint] = useState<{ preset: MachineProfile; auto: boolean } | null>(null);
   const dismissedMachines = useRef<Set<string>>(new Set());
@@ -1038,6 +1048,7 @@ export default function App() {
         body: JSON.stringify({
           messages: apiMessages,
           machine: machineOverride || selectedMachine,
+          ...(catalogMode ? {} : { mode: "raw" }),
           conversationId: conversationId || undefined,
           email: profile.email || undefined,
           country: profile.country || undefined,
@@ -1475,6 +1486,20 @@ export default function App() {
             >
               <Clock size={14} className="text-red-600 group-hover:rotate-45 transition-transform shrink-0" />
               <span className="hidden xs:inline">Zeitrechner</span>
+            </button>
+            <button
+              onClick={toggleCatalogMode}
+              title={catalogMode ? t.catalogMode : t.directMode}
+              className={`flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-xl border shadow-sm text-xs font-semibold h-9 shrink-0 cursor-pointer transition-all ${
+                catalogMode
+                  ? 'bg-white hover:bg-neutral-50 border-neutral-300/90 text-neutral-800'
+                  : 'bg-neutral-900 hover:bg-neutral-800 border-neutral-900 text-white'
+              }`}
+            >
+              {catalogMode
+                ? <BookOpen size={14} className="text-red-600 shrink-0" />
+                : <Zap size={14} className="shrink-0" />}
+              <span className="hidden xs:inline">{catalogMode ? t.catalogMode : t.directMode}</span>
             </button>
           </div>
         </div>
