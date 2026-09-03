@@ -24,6 +24,7 @@ const AuthModal = React.lazy(() => import('./components/AuthModal'));
 const CountryLangPicker = React.lazy(() => import('./components/CountryLangPicker'));
 const HistorySidebar = React.lazy(() => import('./components/HistorySidebar'));
 import { resolveImgUrl, parseSetupSheetFromMarkdown } from './utils';
+import { detectMachine } from './lib/detectMachine';
 import { loadProfile, saveProfile, clearProfile, suggestedLangFor, type Profile } from './lib/profile';
 import { listHist, getHist, renameHist, deleteHist, type HistoryItem } from './lib/historyApi';
 
@@ -930,6 +931,10 @@ export default function App() {
   const [histLoading, setHistLoading] = useState(false);
   const [conversationId, setConversationId] = useState<string | null>(null);
   const [selectedMachine, setSelectedMachine] = useState<MachineProfile>(PRESET_MACHINES[0]);
+  // Machine auto-detect: suggestion chip (+ undo when auto-applied).
+  const [machineHint, setMachineHint] = useState<{ preset: MachineProfile; auto: boolean } | null>(null);
+  const dismissedMachines = useRef<Set<string>>(new Set());
+  const prevMachineRef = useRef<MachineProfile | null>(null);
 
   const [activeSetupSheet, setActiveSetupSheet] = useState<SetupSheetData | null>(null);
   const [showRoiModal, setShowRoiModal] = useState(false);
@@ -1018,7 +1023,7 @@ export default function App() {
 
   // Consume the NDJSON pipeline stream: status events update the waiting
   // panel; the final "result" line carries the full analysis.
-  const sendChat = async (newMessages: ChatMessage[]) => {
+  const sendChat = async (newMessages: ChatMessage[], machineOverride?: MachineProfile) => {
     setIsLoading(true);
     const controller = new AbortController();
     abortControllerRef.current = controller;
@@ -1032,7 +1037,7 @@ export default function App() {
         headers: apiHeaders(),
         body: JSON.stringify({
           messages: apiMessages,
-          machine: selectedMachine,
+          machine: machineOverride || selectedMachine,
           conversationId: conversationId || undefined,
           email: profile.email || undefined,
           country: profile.country || undefined,
@@ -1190,11 +1195,28 @@ export default function App() {
       parts.push({ text: text.trim() });
     }
     if (parts.length === 0) return;
+    // Machine auto-detect: a stated machine powers this very request when the
+    // selector is still on default; otherwise it becomes a suggestion chip.
+    let machineForRequest: MachineProfile | undefined;
+    const det = detectMachine(text);
+    if (det && det.presetId !== selectedMachine.id && !dismissedMachines.current.has(det.presetId)) {
+      const preset = PRESET_MACHINES.find((p) => p.id === det.presetId);
+      if (preset) {
+        if (selectedMachine.id === 'univ-all' && det.specific) {
+          prevMachineRef.current = selectedMachine;
+          setSelectedMachine(preset);
+          machineForRequest = preset;
+          setMachineHint({ preset, auto: true });
+        } else {
+          setMachineHint({ preset, auto: false });
+        }
+      }
+    }
     const nextMsgs = [...messagesRef.current, { role: 'user' as const, parts }];
     messagesRef.current = nextMsgs;
     setMessages(nextMsgs);
     lastRequestRef.current = nextMsgs;
-    void sendChat(nextMsgs);
+    void sendChat(nextMsgs, machineForRequest);
   };
 
   const retryLast = () => {
@@ -1207,6 +1229,24 @@ export default function App() {
       return next;
     });
     void sendChat(lastRequestRef.current);
+  };
+
+  // Machine-hint chip actions.
+  const applyMachineHint = () => {
+    if (!machineHint) return;
+    prevMachineRef.current = selectedMachine;
+    setSelectedMachine(machineHint.preset);
+    dismissedMachines.current.delete(machineHint.preset.id);
+    setMachineHint(null);
+  };
+  const undoMachineHint = () => {
+    if (machineHint?.auto && prevMachineRef.current) setSelectedMachine(prevMachineRef.current);
+    if (machineHint) dismissedMachines.current.add(machineHint.preset.id);
+    setMachineHint(null);
+  };
+  const dismissMachineHint = () => {
+    if (machineHint) dismissedMachines.current.add(machineHint.preset.id);
+    setMachineHint(null);
   };
 
   // Automatically process queued messages when loading finishes
@@ -1414,6 +1454,20 @@ export default function App() {
         <div className="no-print shrink-0 border-b border-neutral-100 bg-white/95 backdrop-blur relative z-30 overflow-visible">
           <div className="measure flex items-center gap-2 px-3 sm:px-6 py-1.5 relative overflow-visible">
             <MachineSelector selected={selectedMachine} onSelect={setSelectedMachine} />
+            {machineHint && (
+              <div className="flex items-center gap-1.5 px-2.5 h-9 rounded-xl bg-red-50 border border-red-200 text-xs shrink-0 max-w-[70vw] sm:max-w-none">
+                <Sparkles size={13} className="text-red-600 shrink-0" />
+                <span className="font-semibold text-neutral-700 truncate">{t.machineDetected}: {machineHint.preset.name}</span>
+                {machineHint.auto ? (
+                  <button onClick={undoMachineHint} className="font-bold text-red-700 hover:text-red-900 shrink-0">{t.undoMachine}</button>
+                ) : (
+                  <button onClick={applyMachineHint} className="font-bold text-red-700 hover:text-red-900 shrink-0">{t.applyMachine}</button>
+                )}
+                <button onClick={dismissMachineHint} aria-label={t.cancel} className="text-neutral-400 hover:text-neutral-700 shrink-0">
+                  <X size={13} />
+                </button>
+              </div>
+            )}
             <button
               onClick={() => setShowRoiModal(true)}
               className="flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-xl bg-white hover:bg-neutral-50 border border-neutral-300/90 hover:border-red-600 shadow-sm hover:shadow text-xs font-semibold text-neutral-800 hover:text-red-700 transition-all group h-9 shrink-0 cursor-pointer"

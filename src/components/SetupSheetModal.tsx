@@ -122,7 +122,7 @@ export default function SetupSheetModal({ isOpen, onClose, data }: Props) {
         </div>
 
         {/* Printable Sheet Body */}
-        <div className="p-4 sm:p-8 overflow-y-auto print:p-0 space-y-4 sm:space-y-6 text-xs leading-relaxed scroll-thin">
+        <div className="print-keep-color p-4 sm:p-8 overflow-y-auto print:p-0 space-y-4 sm:space-y-6 text-xs leading-relaxed scroll-thin">
           
           {/* Header Grid */}
           <div className="border-b-2 border-neutral-900 pb-4 flex justify-between items-start">

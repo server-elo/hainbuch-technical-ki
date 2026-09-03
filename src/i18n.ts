@@ -106,6 +106,9 @@ export const T = {
     consentMarketing: 'Ja, ich möchte den HAINBUCH Newsletter erhalten (jederzeit abbestellbar).',
     termsRequired: 'Bitte stimmen Sie der Datenverarbeitung zu.',
     or: 'oder',
+    machineDetected: 'Maschine erkannt',
+    applyMachine: 'Übernehmen',
+    undoMachine: 'Rückgängig',
   },
   en: {
     subtitle: 'Technical Advisor',
@@ -210,6 +213,9 @@ export const T = {
     consentMarketing: 'Yes, send me the HAINBUCH newsletter (unsubscribe anytime).',
     termsRequired: 'Please agree to data processing.',
     or: 'or',
+    machineDetected: 'Machine detected',
+    applyMachine: 'Apply',
+    undoMachine: 'Undo',
   },
   zh: {
     subtitle: '技术顾问',
@@ -306,6 +312,9 @@ export const T = {
     consentMarketing: '是的，我希望收到 HAINBUCH 新闻通讯（可随时退订）。',
     termsRequired: '请同意数据处理。',
     or: '或',
+    machineDetected: '已识别机床',
+    applyMachine: '应用',
+    undoMachine: '撤销',
   },
   es: {
     subtitle: 'Asesor Técnico',
@@ -402,6 +411,9 @@ export const T = {
     consentMarketing: 'Sí, quiero recibir el boletín de HAINBUCH (cancelable en cualquier momento).',
     termsRequired: 'Acepte el tratamiento de datos.',
     or: 'o',
+    machineDetected: 'Máquina detectada',
+    applyMachine: 'Aplicar',
+    undoMachine: 'Deshacer',
   },
   fr: {
     subtitle: 'Conseiller Technique',
@@ -498,6 +510,9 @@ export const T = {
     consentMarketing: 'Oui, je souhaite recevoir la newsletter HAINBUCH (désinscription à tout moment).',
     termsRequired: 'Veuillez accepter le traitement des données.',
     or: 'ou',
+    machineDetected: 'Machine détectée',
+    applyMachine: 'Appliquer',
+    undoMachine: 'Annuler',
   },
   it: {
     subtitle: 'Consulente Tecnico',
@@ -594,6 +609,9 @@ export const T = {
     consentMarketing: 'Sì, desidero ricevere la newsletter HAINBUCH (cancellabile in qualsiasi momento).',
     termsRequired: 'Accetta il trattamento dei dati.',
     or: 'o',
+    machineDetected: 'Macchina rilevata',
+    applyMachine: 'Applica',
+    undoMachine: 'Annulla',
   },
   tr: {
     subtitle: 'Teknik Danışman',
@@ -690,6 +708,9 @@ export const T = {
     consentMarketing: 'Evet, HAINBUCH bültenini almak istiyorum (istediğim zaman ayrılabilirim).',
     termsRequired: 'Lütfen veri işlemeyi kabul edin.',
     or: 'veya',
+    machineDetected: 'Makine algılandı',
+    applyMachine: 'Uygula',
+    undoMachine: 'Geri al',
   },
 } as const;
 

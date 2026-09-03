@@ -375,6 +375,18 @@ body {
   .message-bubble { border: none !important; box-shadow: none !important; max-width: 100% !important; }
 }
 
+/* DIN A4 setup sheet: exact page size + keep brand colors in print/PDF */
+@page {
+  size: A4;
+  margin: 12mm 10mm;
+}
+@media print {
+  .print-keep-color, .print-keep-color * {
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+}
+
 /* ============================================
    MISC
    ============================================ */
