@@ -331,6 +331,8 @@ function getHeroForProduct(name) {
 // (calls, errors, tokens when the upstream reports usage, latency).
 const LLM_URLS = (process.env.LLM_URLS || LLM_URL).split(",").map((s) => s.trim()).filter(Boolean);
 const MODEL_FALLBACK = process.env.MODEL_FALLBACK || "gemini-3.1-flash-lite";
+// Gründlichkeit vor Kosten: die QA-Zweitrutsche urteilt mit dem stärkeren Modell.
+const MODEL_QA = process.env.MODEL_QA || "gemini-3.8-flash-high";
 function statLlm(kind, model, ms, usage, error) {
   try {
     if (histDb && histDb.recordLlmStat) histDb.recordLlmStat({ kind, model, ms, usage, error });
@@ -982,14 +984,33 @@ async function handleChat(req, res) {
         return;
       }
       const hasImages = messages.some((m) => Array.isArray(m.content) && m.content.some((c) => c.type === "image_url"));
+      // Zeichen-Transkript (nur mit Bild): separater Ablese-Pass VOR der Analyse,
+      // damit alle Zahlen wörtlich aus dem Bild kommen statt aus dem Gedächtnis.
+      let drawingTranscript = "";
+      if (hasImages) {
+        emit(res, { type: "status", stage: "chat", label: "Zeichnung wird Zeile für Zeile abgelesen…" });
+        try {
+          const tr = await llmFetch({
+            model: MODEL_ID,
+            messages: [
+              { role: "system", content: "Du bist ein präziser Zeichnungs-Transkribierer. Lies das/die angehängte(n) Bild(er) ZEICHENGETREU ab und liste ALLE sichtbaren technischen Angaben auf: Nennmaße mit Toleranzklassen und Abmaßen (z. B. Ø30 g6 -0,007/-0,020), Gewindebezeichnungen vollständig (z. B. M18x1,5 6g + Länge + Freistich), Form-/Lagetoleranzen MIT ihren Bezügen exakt wie dargestellt (z. B. Rundheit 0,003 |A — Bezüge niemals weglassen), Passfedernuten mit Norm, Oberflächen (Ra), Werkstoff, Härte, Losgröße, Zeichnungsnummer, Rev.-Stand. Erfinde NICHTS — Unleserliches als [unleserlich] markieren. Nüchterne Liste, keine Auslegung, keine Empfehlungen." },
+              ...messages,
+            ],
+          }, llmSignal(), "transcribe");
+          drawingTranscript = String(tr.res.choices?.[0]?.message?.content || "").slice(0, 4000);
+        } catch { /* best effort — Hauptanalyse läuft trotzdem */ }
+      }
+      const transcriptContext = drawingTranscript
+        ? `\n\nZEICHNUNGS-TRANSKRIPT (wörtlich abgelesen, VERBINDLICH für alle Zahlen — hat Vorrang vor jeder Normtabelle):\n${drawingTranscript}`
+        : "";
       // Direkt-Modus (parsed.mode === "raw"): nur Modell + Maschine, ein Call.
       const rawMode = parsed?.mode === "raw";
       const tools = !rawMode && !hasImages ? [{ google_search: {} }] : undefined;
 
       emit(res, { type: "status", stage: "chat", label: hasImages ? "Zeichnung / Bild wird analysiert…" : "HAINBUCH-Wissen wird durchsucht…" });
       const sysPrompt = rawMode
-        ? RAW_PROMPT + machineContext
-        : SYSTEM_PROMPT + machineContext + goldContext + followupContext + fitsContext + catalogContext + shopContext + context;
+        ? RAW_PROMPT + machineContext + transcriptContext
+        : SYSTEM_PROMPT + machineContext + goldContext + followupContext + fitsContext + catalogContext + shopContext + context + transcriptContext;
       const { res: json, model: mainModel } = await llmFetch({
         model: MODEL_ID,
         messages: [
@@ -1022,10 +1043,10 @@ async function handleChat(req, res) {
     if (needsQa && !rawMode) {
     try {
       const { res: qj } = await llmFetch({
-        model: MODEL_ID,
+        model: MODEL_QA,
         messages: [
             { role: "system", content: "Du bist ein strenger QA-Prüfer für HAINBUCH-Auslegungen. Prüfe den Entwurf gegen diese Checkliste und korrigiere alle Mängel direkt:\n0) STRIKTER 2-STUFIGER ABLAUF & KATEGORISIERUNG (PFLICHT):\n- STUFE 1 (Erstkontakt / Bedarf unklar): Wenn der Nutzer das Werkstück neu beschreibt und noch nicht geklärt ist, was gebraucht wird: Der Entwurf MUSS kurz sein (1-2 Sätze technische Einleitung/Passungen) und ZWINGEND mit den zwei Schlüsselfragen enden:\n  1. Brauchen Sie das Spannfutter, nur den Spannkopf / Segmentspannbüchse oder beides als Komplettsystem?\n  2. Wird das Werkstück gedreht (rotierend auf Drehmaschine) oder gefräst (stationär auf Frästisch / 5-Achs)?\n  Falls der Entwurf fälschlicherweise schon den vollen Arbeitsplan enthält, KÜRZE ihn und füge diese beiden Fragen ein! (WICHTIGE AUSNAHME: Wenn eine Zeichnung hochgeladen wurde, analysiere Maße & Toleranzen, zeige die Passungen, und stelle direkt diese beiden Fragen zur gezielten Auslegung!).\n- STUFE 2 (Nach Kundenantwort): Prüfe, ob die empfohlenen Produkte EXAKT zur Kategorie passen:\n  * Drehen + rund außen -> SPANNTOP nova / TOPlus mini + passender Spannkopf (glatt/gerillt)\n  * Drehen + runde Innenbohrung -> MANDO Adapt (Dorn-Adaption) / MANDO + Segmentspannbüchse\n  * Fräsen + rund -> MANOK plus / MANOK stationär\n  * Drehen/Fräsen prismatisch/unrund -> InoFlex 4-Backenfutter\n  * Schnellwechsel -> centroteX\n1) ECHTE und PASSENDE Markdown-Fotos ![Name](URL) (InoFlex -> hero_136.jpg / hero_262.jpg, B-Top -> hero_146.jpg / hero_150.jpg, centroteX -> hero_242.jpg, MANOK plus -> hero_246.jpg, MANOK -> hero_242.jpg, MANDO -> hero_178.jpg, MANDO Adapt -> hero_272.jpg, SPANNTOP nova -> hero_94.jpg, SPANNTOP mini -> hero_74.jpg; NIEMALS falsche Bilder wie Kran für InoFlex oder Messkoffer für Spannfutter kopieren!).\n2) Tabellen max. 5 Spalten, Lösungen als Zeilen.\n3) KEIN LaTeX, keine $-Zeichen; Formeln im Klartext (z. B. t_h = L / vf); deutsche Komma-Dezimalzahlen.\n4) Passungswerte aus dem VORBEBERECHNETEN Block 1:1 übernehmen; alle Rechnungen nachprüfen und Fehler korrigieren.\n5) Abschließend Sektion '## Quellen' mit klickbaren [Titel](URL)-Links (min. 2).\n6) LÄNGEN- & ABSTICH-KONSISTENZ: Prüfe peinlich genau die Gesamtlänge des Werkstücks! Wenn das Teil z. B. Hülse 75 mm + Zapfen 25 mm hat (Gesamtlänge 100 mm), darf in OP 10 NIEMALS auf 76 mm abgestochen werden! Die Abstichlänge MUSS mindestens die Gesamtlänge + Aufmaß sein (z. B. Abstechen auf 102–103 mm). Korrigiere fehlerhafte Abstichlängen im Arbeitsplan sofort!\n7) REIBEN vs. FEINDREHEN: Bei Sacklochbohrungen mit Radius (z. B. R0,3) oder flachem Grund darf KEINE Reibahle verwendet werden (Anschnittkollision). Ersetze Reibahle durch Feindreh-Bohrstange!\n8) ISO 1101 FORM-TOLERANZEN: Reine Formtoleranzen (Rundheit, Zylindrizität, Geradheit, Ebenheit) dürfen laut ISO 1101 NIEMALS ein Bezugselement (z. B. | A) besitzen. Entferne unzulässige Bezüge bei Formtoleranzen!\n9) ZEICHNUNGS-PRIMAT: Jede Zahl im Entwurf, die laut NUTZERFRAGE/Bildkontext anders bemaßt ist (Abmaße, Gewinde, Losgröße, Längen), auf den Zeichnungswert korrigieren — Gedächtniswerte verlieren immer.\n10) NORM-SCOPE: Steht z. B. \u201eGewinde DIN 6885\u201c im Entwurf, als Zeichnungsfehler ausweisen (DIN 6885 = Passfedern, kein Gewinde!) statt zu übernehmen.\n11) KEINE WEISSWASCHUNG: Behauptet der Entwurf Normkonformität der Zeichnung (z. B. \u201estreng ohne Bezugselement\u201c), obwohl Bezüge an Formtoleranzen beschrieben sind → als Zeichnungsfehler-Hinweis formulieren.\n12) KEINE ERFINDUNGEN: Zentrierbohrungen/Freistiche/Fasen ohne Bildbeleg als prozessbedingte Zugabe kennzeichnen, nicht als Zeichnungsinhalt.\nAntworte NUR mit der vollständigen korrigierten finalen Antwort – kein Kommentar, keine Begründung der Änderungen." },
-            { role: "user", content: `NUTZERFRAGE:\n${questionText}\n\nVORBEBERECHNETE PASSUNGEN:\n${precomputed || "—"}\n\nKATALOG-KONTEXT:\n${catalogContext || "—"}\n\nSHOP-KONTEXT:\n${shopContext || "—"}\n\nENTWURF ZU PRÜFEN:\n${answer}` },
+            { role: "user", content: `NUTZERFRAGE:\n${questionText}\n\nVORBEBERECHNETE PASSUNGEN:\n${precomputed || "—"}\n\nKATALOG-KONTEXT:\n${catalogContext || "—"}\n\nSHOP-KONTEXT:\n${shopContext || "—"}\n\nZEICHNUNGS-TRANSKRIPT (verbindlich, wörtlich abgelesen):\n${drawingTranscript || "—"}\n\nENTWURF ZU PRÜFEN:\n${answer}` },
           ],
           ...(tools ? { tools } : {}),
         }, llmSignal(), "qa");
