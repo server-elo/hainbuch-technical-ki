@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Cpu, ChevronDown, Check, Plus, Trash2, X, Save, Disc, Layers, ArrowRight, HelpCircle, Sparkles, Code2 } from 'lucide-react';
 
 export interface MachineProfile {
@@ -122,8 +122,9 @@ export default function MachineSelector({ selected, onSelect }: Props) {
   const [open, setOpen] = useState(false);
   const [activeCategory, setActiveCategory] = useState<'all' | 'lathe' | 'mill' | 'millturn'>('all');
   const [showAddForm, setShowAddForm] = useState(false);
-  const [showTutorial, setShowTutorial] = useState(false);
   const [customMachines, setCustomMachines] = useState<MachineProfile[]>([]);
+  const popoverRef = useRef<HTMLDivElement>(null);
+  const buttonRef = useRef<HTMLButtonElement>(null);
 
   // Registration Form State
   const [formName, setFormName] = useState('');
@@ -133,7 +134,7 @@ export default function MachineSelector({ selected, onSelect }: Props) {
   const [formDrawtube, setFormDrawtube] = useState('');
   const [formTable, setFormTable] = useState('');
 
-  // Check tutorial on mount
+  // Load custom machines
   useEffect(() => {
     try {
       const savedCustom = localStorage.getItem(STORAGE_KEY);
@@ -141,30 +142,41 @@ export default function MachineSelector({ selected, onSelect }: Props) {
         const parsed = JSON.parse(savedCustom);
         if (Array.isArray(parsed)) setCustomMachines(parsed.filter((m) => m && typeof m.id === 'string' && typeof m.name === 'string'));
       }
-
-      const dismissed = localStorage.getItem(TUTORIAL_DISMISSED_KEY);
-      if (!dismissed) setShowTutorial(true);
     } catch {
       // ignore
     }
   }, []);
 
-  // Close popover with Escape
+  // Close popup when clicking outside or pressing Escape
   useEffect(() => {
     if (!open) return;
-    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') { setOpen(false); setShowAddForm(false); } };
+    const handlePointerDown = (e: MouseEvent | TouchEvent) => {
+      const target = e.target as Node;
+      if (
+        popoverRef.current &&
+        !popoverRef.current.contains(target) &&
+        buttonRef.current &&
+        !buttonRef.current.contains(target)
+      ) {
+        setOpen(false);
+        setShowAddForm(false);
+      }
+    };
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        setOpen(false);
+        setShowAddForm(false);
+      }
+    };
+    document.addEventListener('mousedown', handlePointerDown);
+    document.addEventListener('touchstart', handlePointerDown);
     window.addEventListener('keydown', onKey);
-    return () => window.removeEventListener('keydown', onKey);
+    return () => {
+      document.removeEventListener('mousedown', handlePointerDown);
+      document.removeEventListener('touchstart', handlePointerDown);
+      window.removeEventListener('keydown', onKey);
+    };
   }, [open]);
-
-  const dismissTutorial = () => {
-    setShowTutorial(false);
-    try {
-      localStorage.setItem(TUTORIAL_DISMISSED_KEY, 'true');
-    } catch {
-      // ignore
-    }
-  };
 
   const handleSaveCustom = (e: React.FormEvent) => {
     e.preventDefault();
@@ -193,7 +205,6 @@ export default function MachineSelector({ selected, onSelect }: Props) {
     onSelect(newMachine);
     setShowAddForm(false);
     setOpen(false);
-    dismissTutorial();
     setFormName('');
     setFormDrawtube('');
     setFormTable('');
@@ -222,50 +233,14 @@ export default function MachineSelector({ selected, onSelect }: Props) {
 
   return (
     <div className="relative">
-      
-      {/* Premium Floating Tutorial Tooltip Hint */}
-      {showTutorial && !open && (
-        <div className="absolute top-full mt-2.5 right-0 z-40 w-80 max-w-[calc(100vw-1.5rem)] bg-white text-neutral-900 text-xs p-4 rounded-2xl shadow-[0_12px_36px_-6px_rgba(0,0,0,0.18)] border-2 border-red-600 animate-in fade-in zoom-in-95 duration-200">
-          {/* Arrow pointing up */}
-          <div className="absolute -top-2.5 right-7 w-4 h-4 bg-white border-t-2 border-l-2 border-red-600 rotate-45"></div>
-          
-          <div className="flex items-start justify-between gap-2 relative z-10">
-            <div className="flex items-center gap-1.5 font-black text-xs text-red-600 tracking-tight">
-              <Sparkles size={14} className="text-red-600 shrink-0" />
-              <span>MASCHINE & G-CODE WÄHLEN</span>
-            </div>
-            <button onClick={dismissTutorial} className="text-neutral-400 hover:text-neutral-700 p-0.5 rounded">
-              <X size={14} />
-            </button>
-          </div>
-          
-          <p className="text-xs text-neutral-600 mt-2 leading-relaxed relative z-10">
-            Wählen Sie hier Ihre Maschine (oder <strong>Universal</strong>), damit die KI automatisch die passenden <strong>Adapterflansche, Zugrohranbindungen</strong> und <strong>G-Code-Zyklen</strong> berechnet.
-          </p>
-          
-          <div className="mt-3 flex items-center justify-end gap-2 relative z-10">
-            <button
-              onClick={dismissTutorial}
-              className="px-2.5 py-1 text-xs text-neutral-500 hover:text-neutral-900 font-medium transition-colors"
-            >
-              Später
-            </button>
-            <button
-              onClick={() => { dismissTutorial(); setOpen(true); }}
-              className="px-3.5 py-1.5 bg-red-600 hover:bg-red-700 text-white font-bold rounded-lg text-xs shadow-sm active:scale-95 transition-all"
-            >
-              Jetzt wählen
-            </button>
-          </div>
-        </div>
-      )}
-
       {/* Main Machine Badge Button */}
       <button
-        onClick={() => { setOpen(o => !o); dismissTutorial(); }}
+        ref={buttonRef}
+        type="button"
+        onClick={() => setOpen(o => !o)}
         aria-expanded={open}
         aria-haspopup="dialog"
-        className="flex items-center gap-1.5 sm:gap-2 px-2 sm:px-3 py-1.5 rounded-xl bg-white hover:bg-neutral-50 border border-neutral-300/90 hover:border-red-600 shadow-sm hover:shadow transition-all group text-left h-9"
+        className="flex items-center gap-1.5 sm:gap-2 px-2 sm:px-3 py-1.5 rounded-xl bg-white hover:bg-neutral-50 border border-neutral-300 hover:border-red-600 shadow-sm hover:shadow transition-all group text-left h-9 cursor-pointer select-none"
         title="CNC-Maschine & Spindelprofil konfigurieren"
       >
         <div className="w-5 h-5 rounded-md bg-red-50 text-red-600 flex items-center justify-center font-bold text-xs shrink-0 group-hover:scale-110 transition-transform">
@@ -284,43 +259,42 @@ export default function MachineSelector({ selected, onSelect }: Props) {
         <ChevronDown size={12} className={`text-neutral-400 group-hover:text-red-600 transition-transform shrink-0 ${open ? 'rotate-180' : ''}`} />
       </button>
 
-      {/* Modal Dialog */}
+      {/* Pop-Up Dropdown Card */}
       {open && (
         <div
+          ref={popoverRef}
           role="dialog"
-          aria-modal="true"
           aria-label="Maschine wählen"
-          onMouseDown={(e) => { if (e.target === e.currentTarget) { setOpen(false); setShowAddForm(false); } }}
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-3 sm:p-4 overflow-y-auto"
+          className="absolute left-0 top-full mt-2 w-96 max-w-[calc(100vw-1.5rem)] bg-white border border-neutral-200 rounded-2xl shadow-2xl z-50 overflow-hidden divide-y divide-neutral-100 text-neutral-800 animate-in fade-in zoom-in-95 duration-150 max-h-[75vh] flex flex-col"
         >
-          <div className="bg-white text-neutral-900 w-full max-w-lg rounded-2xl shadow-2xl border border-neutral-200 overflow-hidden flex flex-col my-auto max-h-[88dvh] animate-in fade-in zoom-in-95 duration-150">
-            
-            {/* Header & Category Tabs */}
-            <div className="p-3.5 sm:p-4 bg-neutral-50 border-b border-neutral-200 shrink-0">
-              <div className="flex items-center justify-between mb-2.5">
-                <div>
-                  <h3 className="text-xs sm:text-sm font-bold text-neutral-950 uppercase tracking-wider">Maschinen- & Spindelauswahl</h3>
-                  <p className="text-[10px] sm:text-xs text-neutral-500">Automatische Anpassung von Flanschen & G-Code</p>
-                </div>
-                <div className="flex items-center gap-1.5">
-                  <button
-                    onClick={() => setShowAddForm(s => !s)}
-                    className="flex items-center gap-1 px-2.5 py-1.5 bg-red-600 hover:bg-red-700 text-white rounded-lg text-[10px] sm:text-xs font-bold transition-all shadow-sm active:scale-95 cursor-pointer"
-                  >
-                    <Plus size={12} />
-                    <span>Eigene Maschine</span>
-                  </button>
-                  <button
-                    onClick={() => { setOpen(false); setShowAddForm(false); }}
-                    aria-label="Schließen"
-                    className="p-1.5 text-neutral-400 hover:text-neutral-700 rounded-lg hover:bg-neutral-200 transition-colors cursor-pointer"
-                  >
-                    <X size={18} />
-                  </button>
-                </div>
+          {/* Header & Category Tabs */}
+          <div className="p-3.5 bg-neutral-50 border-b border-neutral-200 shrink-0">
+            <div className="flex items-center justify-between mb-2.5">
+              <div>
+                <h3 className="text-xs font-bold text-neutral-950 uppercase tracking-wider">Maschinen- & Spindelauswahl</h3>
+                <p className="text-[10px] text-neutral-500">Automatische Anpassung von Flanschen & G-Code</p>
               </div>
+              <div className="flex items-center gap-1.5">
+                <button
+                  type="button"
+                  onClick={() => setShowAddForm(s => !s)}
+                  className="flex items-center gap-1 px-2.5 py-1 bg-red-600 hover:bg-red-700 text-white rounded-lg text-[10px] font-bold transition-all shadow-sm active:scale-95 cursor-pointer"
+                >
+                  <Plus size={11} />
+                  <span>Eigene Maschine</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => { setOpen(false); setShowAddForm(false); }}
+                  aria-label="Schließen"
+                  className="p-1 text-neutral-400 hover:text-neutral-700 rounded-md hover:bg-neutral-200 transition-colors cursor-pointer"
+                >
+                  <X size={15} />
+                </button>
+              </div>
+            </div>
 
-              {/* 4 Category Tabs */}
+            {/* 4 Category Tabs */}
               <div className="grid grid-cols-4 gap-1 bg-neutral-200/70 p-1 rounded-lg text-[10px] font-bold text-center">
                 <button
                   onClick={() => { setActiveCategory('all'); setShowAddForm(false); }}
@@ -540,7 +514,6 @@ export default function MachineSelector({ selected, onSelect }: Props) {
             )}
 
           </div>
-        </div>
       )}
     </div>
   );

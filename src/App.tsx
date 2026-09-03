@@ -1265,8 +1265,8 @@ export default function App() {
           </div>
         </header>
         {/* Context toolbar: machine profile + ROI calculator (affects the analysis). Always visible on mobile & desktop. */}
-        <div className="no-print shrink-0 border-b border-neutral-100 bg-white/95 backdrop-blur z-20">
-          <div className="measure flex items-center gap-2 px-3 sm:px-6 py-1.5">
+        <div className="no-print shrink-0 border-b border-neutral-100 bg-white/95 backdrop-blur relative z-30 overflow-visible">
+          <div className="measure flex items-center gap-2 px-3 sm:px-6 py-1.5 relative overflow-visible">
             <MachineSelector selected={selectedMachine} onSelect={setSelectedMachine} />
             <button
               onClick={() => setShowRoiModal(true)}
