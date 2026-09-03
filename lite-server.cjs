@@ -7,6 +7,16 @@ const path = require("path");
 // dotenv is already a dependency). Never crashes if missing.
 try { require("dotenv").config(); } catch {}
 
+// Crash visibility: log the stack into the (persistent) log instead of dying
+// silently — the supervisor only sees a dead port and restarts blindly.
+process.on("uncaughtException", (err) => {
+  console.error(`[fatal] uncaughtException: ${err && err.stack || err}`);
+});
+process.on("unhandledRejection", (reason) => {
+  const msg = reason instanceof Error ? reason.stack : String(reason);
+  console.error(`[fatal] unhandledRejection: ${msg}`);
+});
+
 // History + auth (Phase 1: email stub, Phase 2: Firebase). Guarded so the
 // chat pipeline keeps working even if the DB can't open.
 let histDb = null;
