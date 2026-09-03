@@ -26,8 +26,13 @@ async function req(path: string, init?: RequestInit) {
     headers: { ...apiHeaders(), ...((init && init.headers) || {}) },
   });
   if (!r.ok) {
-    const err: Error & { status?: number } = new Error(`HTTP ${r.status}`);
+    // Surface the server's machine-readable error code (e.g.
+    // terms-required vs password-too-short, both HTTP 400).
+    let code: string | undefined;
+    try { code = (await r.json())?.error; } catch { /* non-JSON */ }
+    const err: Error & { status?: number; code?: string } = new Error(`HTTP ${r.status}`);
     err.status = r.status;
+    if (code) err.code = code;
     throw err;
   }
   return r.json();

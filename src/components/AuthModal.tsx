@@ -103,12 +103,15 @@ export default function AuthModal({ t, initialCountry, onClose, onSaved }: {
       });
     } catch (err: unknown) {
       const status = (err as { status?: number }).status;
+      const code = (err as { code?: string }).code;
       if (status === 401) {
         setError('!WRONGPWD!');
       } else if (status === 404) {
         setError('!NOTREG!');
       } else if (status === 409) {
         setError('!ALREADYREG!');
+      } else if (code === 'terms-required') {
+        setError('!TERMS!');
       } else if (status === 400) {
         setError('!PWDLEN!');
       } else {
@@ -143,10 +146,10 @@ export default function AuthModal({ t, initialCountry, onClose, onSaved }: {
         <div className="flex items-start justify-between gap-2">
           <div>
             <h2 className="text-base font-bold tracking-tight">
-              {mode === 'login' ? 'HAINBUCH Anmeldung' : t.authTitle}
+              {mode === 'login' ? t.loginTitle : t.authTitle}
             </h2>
             <p className="text-xs text-neutral-500 mt-1 leading-relaxed">
-              {mode === 'login' ? 'Melden Sie sich mit E-Mail & Passwort an, um Ihre Chat-Historie und Auslegungen zu sichern.' : t.authSub}
+              {mode === 'login' ? t.loginSub : t.authSub}
             </p>
           </div>
           <button type="button" onClick={onClose} aria-label={t.cancel}
@@ -262,19 +265,19 @@ export default function AuthModal({ t, initialCountry, onClose, onSaved }: {
         {error && (
           <div className="mt-3 p-2.5 bg-red-50 border border-red-200 rounded-xl text-xs text-red-700 font-medium">
             {error === '!WRONGPWD!'
-              ? 'Falsches Passwort. Bitte überprüfen Sie Ihre Eingabe.'
+              ? t.wrongPwd
               : error === '!PWDLEN!'
-                ? 'Das Passwort muss mindestens 6 Zeichen lang sein.'
+                ? t.pwdShort
                 : error === '!NOTREG!'
-                  ? 'Kein Konto mit dieser E-Mail gefunden. Bitte wechseln Sie auf "Registrieren".'
+                  ? t.notRegistered
                   : error === '!ALREADYREG!'
-                    ? 'Diese E-Mail ist bereits registriert. Bitte wechseln Sie auf "Anmelden".'
+                    ? t.alreadyReg
                     : error === '!TERMS!'
-                      ? 'Bitte stimmen Sie den Nutzungsbedingungen zu.'
+                      ? t.termsRequired
                       : error === '!EMAIL!'
-                        ? 'Bitte geben Sie eine gültige E-Mail-Adresse ein.'
+                        ? t.emailInvalid
                         : error === '!OFFLINE!'
-                          ? 'Server nicht erreichbar. Bitte versuchen Sie es gleich erneut.'
+                          ? t.errorOffline
                           : error}
           </div>
         )}
