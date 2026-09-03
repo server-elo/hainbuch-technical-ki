@@ -82,6 +82,17 @@ const AUDIT_RULES = [
     },
   },
   {
+    id: "GRIND_STOCK",
+    name: "Fehlendes Schleifaufmaß trotz Härten + Feinstpassung",
+    check: (rec) => {
+      const r = rec.response || "";
+      const hard = /(5[5-9]|6[0-9])\s*±?\s*\d?\s*HRC/i.test(r);
+      const fine = /(h5|h6|k5|k6|Ra\s*0,[12])/i.test(r);
+      const hasStock = /schleifaufma(ss|ß)|hart.*(schleifen|drehen)|zwischen Spitzen|Stirnseitenmitnehmer/i.test(r);
+      return hard && fine && !hasStock;
+    },
+  },
+  {
     id: "MISSING_TIMES",
     name: "Fehlende ISO-Hauptzeitberechnung (t_h)",
     check: (rec) => /OP\s*10/i.test(rec.response) && !/(t_h|Hauptzeit|min|s)/i.test(rec.response),
