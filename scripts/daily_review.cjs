@@ -115,7 +115,7 @@ try {
       const existing = gold.findIndex(g => g.question === item.question);
       const entry = {
         question: item.question,
-        answer: item.correctedResponse,
+        answer: item.correctedResponse.slice(0, 6000), // prompt uses 1500; cap storage/export bloat
         verifiedAt: new Date().toISOString(),
         qualityScore: item.issues.length === 0 ? 100 : 95
       };

@@ -416,7 +416,12 @@ function retrieveGoldStandards(query) {
     const terms = query.toLowerCase().split(/\s+/).filter(t => t.length > 3);
     const hit = list.find(item => terms.some(t => item.question.toLowerCase().includes(t)));
     if (!hit) return "";
-    return `\n\nOFFIZIELL VERIFIZIERTE REFERENZ-AUSLEGUNG (als Vorbild für Struktur, Bild-URLs und Arbeitsplan nutzen):\nFrage: ${hit.question}\nAntwort-Muster:\n${hit.answer.slice(0, 1500)}...\n`;
+    // Never teach the model dead hosts: historical entries baked localhost
+    // or rotated quick-tunnel URLs. Serve them with the live BASE_URL.
+    const snippet = hit.answer.slice(0, 1500)
+      .replace(/http:\/\/localhost:\d+/g, BASE_URL)
+      .replace(/https:\/\/[a-z0-9-]+\.trycloudflare\.com/g, BASE_URL);
+    return `\n\nOFFIZIELL VERIFIZIERTE REFERENZ-AUSLEGUNG (als Vorbild für Struktur, Bild-URLs und Arbeitsplan nutzen):\nFrage: ${hit.question}\nAntwort-Muster:\n${snippet}...\n`;
   } catch (e) {
     return "";
   }
