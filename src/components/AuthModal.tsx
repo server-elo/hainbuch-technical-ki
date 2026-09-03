@@ -23,6 +23,8 @@ export default function AuthModal({ t, initialCountry, onClose, onSaved }: {
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [country, setCountry] = useState(initialCountry || '');
+  const [terms, setTerms] = useState(false);
+  const [marketing, setMarketing] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
 
@@ -41,12 +43,16 @@ export default function AuthModal({ t, initialCountry, onClose, onSaved }: {
     }
     setBusy(true);
     try {
+      if (mode === 'register' && !terms) {
+        setError('!TERMS!');
+        setBusy(false);
+        return;
+      }
       const j = await syncProfile(mode === 'login'
         ? { email: email.trim(), loginOnly: true }
         : {
-            // Newsletter is automatic: every registration opts into HAINBUCH News.
             email: email.trim(), displayName: name.trim(), country,
-            consentTerms: true, consentMarketing: true,
+            consentTerms: true, consentMarketing: marketing,
           });
       onSaved({
         email: j.user.email || email.trim(),
@@ -56,7 +62,7 @@ export default function AuthModal({ t, initialCountry, onClose, onSaved }: {
       });
     } catch (err: unknown) {
       const status = (err as { status?: number }).status;
-      setError(status === 404 ? '!NOTREG!' : '!OFFLINE!');
+      setError(status === 404 ? '!NOTREG!' : status === 400 ? '!TERMS!' : '!OFFLINE!');
     } finally {
       setBusy(false);
     }
@@ -132,6 +138,22 @@ export default function AuthModal({ t, initialCountry, onClose, onSaved }: {
               </select>
             </label>
 
+            <label className="mt-3 flex items-start gap-2 text-xs text-neutral-600 cursor-pointer">
+              <input
+                type="checkbox" checked={terms} onChange={(e) => setTerms(e.target.checked)}
+                className="mt-0.5 h-4 w-4 shrink-0 accent-red-600"
+              />
+              <span>{t.consentTerms}</span>
+            </label>
+
+            <label className="mt-2 flex items-start gap-2 text-xs text-neutral-600 cursor-pointer">
+              <input
+                type="checkbox" checked={marketing} onChange={(e) => setMarketing(e.target.checked)}
+                className="mt-0.5 h-4 w-4 shrink-0 accent-red-600"
+              />
+              <span>{t.consentMarketing}</span>
+            </label>
+
           </>
         ) : (
           <>
@@ -149,7 +171,7 @@ export default function AuthModal({ t, initialCountry, onClose, onSaved }: {
 
         {error && (
           <p className="mt-3 text-xs font-medium text-red-600">
-            {error === '!OFFLINE!' ? t.errorOffline : error === '!NOTREG!' ? t.notRegistered : `${t.email}: ${email || '—'}`}
+            {error === '!OFFLINE!' ? t.errorOffline : error === '!NOTREG!' ? t.notRegistered : error === '!TERMS!' ? t.termsRequired : `${t.email}: ${email || '—'}`}
           </p>
         )}
 

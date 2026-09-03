@@ -44,6 +44,6 @@ Every chat turn (user question + assistant answer + thumbs feedback) is stored:
 - Data stays on your Mac (`data/app.db`) + EU Firebase project.
 - User deletion: `DELETE /api/history/:id` soft-deletes; full account wipe =
   delete the `users` row + its conversations (add script on request).
-- Only `consent_marketing = 1` rows may receive newsletters — since registration
-  auto-opts in, every registered user qualifies; login-only users keep their
-  stored flag.
+- Only `consent_marketing = 1` rows may receive newsletters — the checkbox is
+  off by default, so only users who explicitly opted in qualify. The server
+  rejects new registrations without `consentTerms` (HTTP 400 terms-required).

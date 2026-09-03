@@ -1222,6 +1222,12 @@ const server = http.createServer(async (req, res) => {
       res.writeHead(404, { "Content-Type": "application/json" });
       return res.end(JSON.stringify({ error: "not-registered" }));
     }
+    // GDPR: new accounts require explicit terms consent (checkbox in UI).
+    // Logins and re-syncs of existing users are unaffected.
+    if (!prev && !p.consentTerms) {
+      res.writeHead(400, { "Content-Type": "application/json" });
+      return res.end(JSON.stringify({ error: "terms-required" }));
+    }
     const userId = prev ? prev.id : (histDb.upsertUser({
       email,
       displayName: String(p.displayName || "").slice(0, 80),
