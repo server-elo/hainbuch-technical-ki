@@ -105,6 +105,7 @@ export const T = {
     consentTerms: 'Ich habe die Datenschutzerklärung gelesen und bin mit der Speicherung meiner Beratungen einverstanden. *',
     consentMarketing: 'Ja, ich möchte den HAINBUCH Newsletter erhalten (jederzeit abbestellbar).',
     termsRequired: 'Bitte stimmen Sie der Datenverarbeitung zu.',
+    or: 'oder',
   },
   en: {
     subtitle: 'Technical Advisor',
@@ -208,6 +209,7 @@ export const T = {
     consentTerms: 'I have read the privacy policy and agree to storage of my consultations. *',
     consentMarketing: 'Yes, send me the HAINBUCH newsletter (unsubscribe anytime).',
     termsRequired: 'Please agree to data processing.',
+    or: 'or',
   },
   zh: {
     subtitle: '技术顾问',
@@ -303,6 +305,7 @@ export const T = {
     consentTerms: '我已阅读隐私政策并同意保存我的咨询记录。*',
     consentMarketing: '是的，我希望收到 HAINBUCH 新闻通讯（可随时退订）。',
     termsRequired: '请同意数据处理。',
+    or: '或',
   },
   es: {
     subtitle: 'Asesor Técnico',
@@ -398,6 +401,7 @@ export const T = {
     consentTerms: 'He leído la política de privacidad y acepto el almacenamiento de mis asesorías. *',
     consentMarketing: 'Sí, quiero recibir el boletín de HAINBUCH (cancelable en cualquier momento).',
     termsRequired: 'Acepte el tratamiento de datos.',
+    or: 'o',
   },
   fr: {
     subtitle: 'Conseiller Technique',
@@ -493,6 +497,7 @@ export const T = {
     consentTerms: 'J’ai lu la politique de confidentialité et j’accepte l’enregistrement de mes consultations. *',
     consentMarketing: 'Oui, je souhaite recevoir la newsletter HAINBUCH (désinscription à tout moment).',
     termsRequired: 'Veuillez accepter le traitement des données.',
+    or: 'ou',
   },
   it: {
     subtitle: 'Consulente Tecnico',
@@ -588,6 +593,7 @@ export const T = {
     consentTerms: 'Ho letto l’informativa sulla privacy e accetto la memorizzazione delle mie consulenze. *',
     consentMarketing: 'Sì, desidero ricevere la newsletter HAINBUCH (cancellabile in qualsiasi momento).',
     termsRequired: 'Accetta il trattamento dei dati.',
+    or: 'o',
   },
   tr: {
     subtitle: 'Teknik Danışman',
@@ -683,6 +689,7 @@ export const T = {
     consentTerms: 'Gizlilik politikasını okudum ve danışmalarımın saklanmasını kabul ediyorum. *',
     consentMarketing: 'Evet, HAINBUCH bültenini almak istiyorum (istediğim zaman ayrılabilirim).',
     termsRequired: 'Lütfen veri işlemeyi kabul edin.',
+    or: 'veya',
   },
 } as const;
 

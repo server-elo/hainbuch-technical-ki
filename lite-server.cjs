@@ -369,13 +369,21 @@ function readJsonBody(req, limit = 256 * 1024) {
   });
 }
 
+// Firebase mode (FIREBASE_PROJECT_ID set): only cryptographically verified
+// identities count. Unverified email strings from body/headers are spoofable
+// over the tunnel and must be ignored — anonymous clients get jsonl only.
+function firebaseMode() {
+  return !!(histAuth && histAuth.mode && histAuth.mode() === "firebase");
+}
+
 // Persist one chat turn to SQLite (users → conversations → messages).
 // Never throws, never blocks chat on failure. Returns conversationId or null.
 async function persistChatTurn(req, parsed, questionText, cleaned, durationMs) {
   try {
     if (!histDb || !histDb.ok()) return null;
     const auth = histAuth ? await histAuth.getAuth(req).catch(() => null) : null;
-    const email = histDb.normalizeEmail((parsed && parsed.email) || (auth && auth.email) || req.headers["x-user-email"]);
+    const claimed = (parsed && parsed.email) || req.headers["x-user-email"];
+    const email = histDb.normalizeEmail((auth && auth.email) || (!firebaseMode() ? claimed : ""));
     let userId = (auth && auth.uid) || "";
     let user = userId ? histDb.getUserById(userId) : null;
     if (!user && email) user = histDb.getUserByEmail(email) || histDb.upsertUser({ email });
@@ -1211,7 +1219,18 @@ const server = http.createServer(async (req, res) => {
       res.writeHead(p.__tooLarge ? 413 : 503, { "Content-Type": "application/json" });
       return res.end(JSON.stringify({ error: p.__tooLarge ? "payload too large" : "history db disabled" }));
     }
-    const email = histDb.normalizeEmail(p.email);
+    // Firebase mode: identity must be cryptographically verified (valid stub
+    // session or Firebase ID token in Authorization). Client-claimed body
+    // emails are ignored — they prove nothing over the tunnel.
+    let email = histDb.normalizeEmail(p.email);
+    if (firebaseMode()) {
+      const verified = histAuth ? await histAuth.getAuth(req).catch(() => null) : null;
+      if (!verified || !verified.email) {
+        res.writeHead(401, { "Content-Type": "application/json" });
+        return res.end(JSON.stringify({ error: "login required" }));
+      }
+      email = histDb.normalizeEmail(verified.email);
+    }
     if (!email) {
       res.writeHead(400, { "Content-Type": "application/json" });
       return res.end(JSON.stringify({ error: "valid email required" }));
@@ -1222,9 +1241,10 @@ const server = http.createServer(async (req, res) => {
       res.writeHead(404, { "Content-Type": "application/json" });
       return res.end(JSON.stringify({ error: "not-registered" }));
     }
-    // GDPR: new accounts require explicit terms consent (checkbox in UI).
-    // Logins and re-syncs of existing users are unaffected.
-    if (!prev && !p.consentTerms) {
+    // GDPR: accounts without recorded terms consent require it now — covers
+    // brand-new registrations AND legacy rows created implicitly by chat
+    // (consent_terms_at empty). Logins of consenting users are unaffected.
+    if (!p.loginOnly && (!prev || !prev.consent_terms_at) && !p.consentTerms) {
       res.writeHead(400, { "Content-Type": "application/json" });
       return res.end(JSON.stringify({ error: "terms-required" }));
     }
@@ -1253,8 +1273,8 @@ const server = http.createServer(async (req, res) => {
     if (!histDb || !histDb.ok()) return { err: "history db disabled" };
     const auth = histAuth ? await histAuth.getAuth(req).catch(() => null) : null;
     let user = auth && auth.uid ? histDb.getUserById(auth.uid) : null;
-    const email = histDb.normalizeEmail((auth && auth.email) || req.headers["x-user-email"]);
-    if (!user && email) user = histDb.getUserByEmail(email) || histDb.upsertUser({ email });
+    const email = histDb.normalizeEmail((auth && auth.email) || (!firebaseMode() ? req.headers["x-user-email"] : ""));
+    if (!user && email) user = histDb.getUserByEmail(email) || (!firebaseMode() ? histDb.upsertUser({ email }) : null);
     if (!user) return { err: "login required" };
     return { user };
   };

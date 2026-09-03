@@ -3,6 +3,7 @@ import { X, Mail, User as UserIcon, Globe, Loader2, LogIn, UserPlus } from 'luci
 import { T } from '../i18n';
 import { COUNTRIES } from '../lib/profile';
 import { syncProfile } from '../lib/historyApi';
+import { firebaseConfigured, signInWithGoogle, syncWithFirebase } from '../lib/firebase';
 
 type Strings = (typeof T)[keyof typeof T];
 
@@ -31,6 +32,44 @@ export default function AuthModal({ t, initialCountry, onClose, onSaved }: {
   const switchMode = (m: 'login' | 'register') => {
     setMode(m);
     setError('');
+  };
+
+  /** Google sign-in (only rendered when Firebase is configured). The ID
+   *  token is used once to verify identity; the stored credential stays
+   *  our own session token, exactly like the stub flow. */
+  const google = async () => {
+    if (busy) return;
+    if (mode === 'register' && !terms) {
+      setError('!TERMS!');
+      return;
+    }
+    setBusy(true);
+    setError('');
+    try {
+      const g = await signInWithGoogle();
+      // Login tab never grants terms: genuinely new Google users are told
+      // to register (server enforces 400 terms-required for them).
+      const j = await syncWithFirebase({
+        idToken: g.idToken,
+        displayName: name.trim() || g.displayName,
+        country,
+        consentTerms: mode === 'register',
+        consentMarketing: marketing,
+      });
+      onSaved({
+        email: j.user.email || g.email,
+        displayName: j.user.displayName || g.displayName,
+        country: j.user.country || country,
+        token: j.token,
+      });
+    } catch (err: unknown) {
+      const code = (err as { code?: string; status?: number }).code;
+      if (code === 'auth/popup-closed-by-user' || code === 'auth/cancelled-popup-request') return;
+      const status = (err as { status?: number }).status;
+      setError(status === 404 ? '!NOTREG!' : status === 400 ? '!TERMS!' : '!OFFLINE!');
+    } finally {
+      setBusy(false);
+    }
   };
 
   const submit = async (e: React.FormEvent) => {
@@ -182,6 +221,27 @@ export default function AuthModal({ t, initialCountry, onClose, onSaved }: {
           {busy && <Loader2 size={14} className="animate-spin" />}
           {mode === 'login' ? t.login : t.continueBtn}
         </button>
+        {firebaseConfigured && (
+          <>
+            <div className="mt-3 flex items-center gap-2 text-[11px] text-neutral-400">
+              <span className="flex-1 border-t border-neutral-200" />
+              <span>{t.or}</span>
+              <span className="flex-1 border-t border-neutral-200" />
+            </div>
+            <button
+              type="button" onClick={google} disabled={busy}
+              className="mt-3 w-full inline-flex items-center justify-center gap-2 px-4 py-2.5 bg-white hover:bg-neutral-50 disabled:opacity-50 text-neutral-800 text-sm font-semibold rounded-xl transition-colors border border-neutral-300 shadow-sm"
+            >
+              <svg width="16" height="16" viewBox="0 0 24 24" aria-hidden="true">
+                <path fill="#4285F4" d="M23.5 12.3c0-.9-.1-1.5-.3-2.3H12v4.5h6.5c-.1 1.1-.8 2.7-2.4 3.8l-.1.7 3.5 2.7.2.1c2.2-2 3.8-5 3.8-9.5z" />
+                <path fill="#34A853" d="M12 24c3.2 0 6-1.1 7.9-2.9l-3.8-2.9c-1 .7-2.9 1.7-4.1 1.7-3.2 0-5.9-2.1-6.8-5l-.7.1-2.8 2.2-.1.6C3.5 21.5 7.5 24 12 24z" />
+                <path fill="#FBBC05" d="M5.2 14.9c-.2-.7-.4-1.6-.4-2.9s.1-2.1.4-2.9l-.1-.6-2.8-2.2-.5.3C.6 8.2 0 10 0 12s.6 3.8 1.7 5.4l3.5-2.5z" />
+                <path fill="#EA4335" d="M12 4.7c1.8 0 3 .8 3.7 1.4l3.3-3.2C17.9 1.1 15.2 0 12 0 7.5 0 3.5 2.5 1.7 6.6l3.5 2.8c1-2.9 3.7-4.7 6.8-4.7z" />
+              </svg>
+              Google
+            </button>
+          </>
+        )}
         <button
           type="button" onClick={() => switchMode(mode === 'login' ? 'register' : 'login')}
           className="mt-2 w-full text-center text-xs text-neutral-500 hover:text-red-600 transition-colors"
