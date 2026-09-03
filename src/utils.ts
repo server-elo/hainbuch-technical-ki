@@ -2,11 +2,13 @@ import { API_BASE } from './config';
 import type { SetupSheetData } from './components/SetupSheetModal';
 
 export function resolveImgUrl(url: string, alt?: string): string {
-  if (!url) return url;
-  // If url is not a real image (e.g. was generic domain), recover the exact hero image from alt text
+  if (!url) return '/favicon.svg';
+  // If url is not a real image (e.g. was generic domain), recover the exact hero image from alt text.
+  // No silent SPANNTOP default: unknown products show the placeholder so missing
+  // images are visible instead of showing the wrong product photo.
   if (url.startsWith('https://www.hainbuch.com') || url.startsWith('http://www.hainbuch.com') || !/\.(jpg|jpeg|png|webp|svg)$/i.test(url)) {
     const a = (alt || '').toLowerCase();
-    let hero = 'hero_94.jpg'; // default SPANNTOP nova
+    let hero: string | null = null;
     if (a.includes('inoflex')) hero = 'hero_136.jpg';
     else if (a.includes('manok')) hero = 'hero_246.jpg';
     else if (a.includes('mando adapt')) hero = 'hero_272.jpg';
@@ -16,6 +18,8 @@ export function resolveImgUrl(url: string, alt?: string): string {
     else if (a.includes('centrotex')) hero = 'hero_242.jpg';
     else if (a.includes('b-top')) hero = 'hero_146.jpg';
     else if (a.includes('spanntop mini')) hero = 'hero_74.jpg';
+    else if (a.includes('spanntop')) hero = 'hero_94.jpg';
+    if (!hero) return '/favicon.svg';
     return API_BASE ? `${API_BASE}/hero-img/${hero}` : `/hero-img/${hero}`;
   }
   if (url.startsWith('http://localhost') || url.startsWith('http://127.0.0.1')) {
@@ -38,17 +42,17 @@ export function parseSetupSheetFromMarkdown(text: string): SetupSheetData | null
   const titleMatch = text.match(/^#\s+(.+)$/m) || text.match(/Auslegung.*?:?\s*([^\n]+)/i);
   const title = titleMatch ? titleMatch[1].replace(/^[#\s*]+/, '').trim() : 'HAINBUCH Werkstatt-Einrichteblatt';
 
-  // Extract Drawing No
+  // Extract Drawing No — never invent one. Leave undefined so the modal shows its neutral fallback.
   const dwgMatch = text.match(/(?:Zeichnungs-?Nr\.?:?\s*|HT-)([A-Za-z0-9_-]+)/i);
-  const drawingNo = dwgMatch ? (dwgMatch[0].startsWith('HT-') ? dwgMatch[0] : dwgMatch[1]) : 'HT-GW003 Rev. B';
+  const drawingNo = dwgMatch ? (dwgMatch[0].startsWith('HT-') ? dwgMatch[0] : dwgMatch[1]) : undefined;
 
-  // Extract Material
+  // Extract Material — never invent a mixed-material default.
   const matMatch = text.match(/(?:Werkstoff|Material):\s*([^\n,;]+)/i);
-  const material = matMatch ? matMatch[1].trim() : 'Titan Grade 5 / 1.4301 / 16MnCr5';
+  const material = matMatch ? matMatch[1].trim() : undefined;
 
-  // Extract Quantity
+  // Extract Quantity — undefined when not found (modal falls back to neutral display).
   const qtyMatch = text.match(/(?:Losgröße|Menge|Stückzahl):\s*([0-9]+)/i);
-  const quantity = qtyMatch ? parseInt(qtyMatch[1], 10) : 100;
+  const quantity = qtyMatch ? parseInt(qtyMatch[1], 10) : undefined;
 
   // Extract Zero Points
   const zeroPoints: { id: string; desc: string; val: string }[] = [];
@@ -65,14 +69,14 @@ export function parseSetupSheetFromMarkdown(text: string): SetupSheetData | null
     zeroPoints.push({ id: 'G55 (OP 20)', desc: 'Anlagefläche / MANDO Dorn', val: 'Z0 = Fertigkante' });
   }
 
-  // Extract Clamping Info
-  let mainSystem = 'HAINBUCH SPANNTOP / MANOK';
+  // Extract Clamping Info — neutral fallbacks, never invented specifics.
+  let mainSystem = 'HAINBUCH Spannmittel (siehe Auslegung)';
   if (/SPANNTOP/i.test(text)) mainSystem = 'SPANNTOP nova Kombi Axzug';
   else if (/TOPlus/i.test(text)) mainSystem = 'TOPlus mini Axzug';
   else if (/InoFlex/i.test(text)) mainSystem = 'InoFlex 4-Backenfutter';
   else if (/MANOK/i.test(text)) mainSystem = 'MANOK plus Stationärspanner';
 
-  let colletOrJaw = 'Spannkopf glatt';
+  let colletOrJaw = 'siehe Auslegung';
   const colletMatch = text.match(/Spannkopf[^\n,]*/i) || text.match(/Segmentspannbüchse[^\n,]*/i);
   if (colletMatch) colletOrJaw = colletMatch[0].trim();
 
@@ -94,12 +98,8 @@ export function parseSetupSheetFromMarkdown(text: string): SetupSheetData | null
   }
 
   if (tools.length === 0) {
-    tools.push(
-      { slot: 'T01', type: 'Schruppdrehmeißel / Plan', insert: 'WNMG 080408-SM', vc: '220', n: '1550', vf: '388' },
-      { slot: 'T02', type: 'Schlichtdrehmeißel Kontur', insert: 'CCMT 09T304-PF', vc: '260', n: '1800', vf: '220' },
-      { slot: 'T03', type: 'VHM-Bohrer mit IKZ', insert: 'VHM AlTiN (IKZ)', vc: '90', n: '1450', vf: '260' },
-      { slot: 'T04', type: 'VHM-Maschinenreibahle', insert: 'VHM Feinstkorn', vc: '32', n: '450', vf: '105' }
-    );
+    // No invented tools: leave empty so the workshop sees "no tools parsed"
+    // instead of plausible-looking but wrong inserts/feeds.
   }
 
   // Extract BOM Items
@@ -120,8 +120,9 @@ export function parseSetupSheetFromMarkdown(text: string): SetupSheetData | null
       else if (isStop) category = 'Werkstückanschlag';
       else if (isChanger) category = 'Schnellwechselsystem';
 
+      // Never invent material numbers: empty string renders as "Auf Anfrage" in the modal.
       const matMatch = clean.match(/\b(8[0-9]{4})\b/);
-      const matNr = matMatch ? matMatch[1] : `HB-${posCounter * 100 + 42}`;
+      const matNr = matMatch ? matMatch[1] : '';
 
       bom.push({
         pos: posCounter++,
@@ -135,12 +136,7 @@ export function parseSetupSheetFromMarkdown(text: string): SetupSheetData | null
   }
 
   if (bom.length === 0) {
-    bom.push(
-      { pos: 1, matNr: 'HB-10042', name: mainSystem, category: 'Hauptspannmittel', qty: 1 },
-      { pos: 2, matNr: '80047', name: colletOrJaw, category: 'Spannelement', qty: 1 },
-      { pos: 3, matNr: '80052', name: 'vario flex Werkstückanschlag', category: 'Werkstückanschlag', qty: 1 },
-      { pos: 4, matNr: '83923', name: 'Manuelle Wechselvorrichtung', category: 'Zubehör', qty: 1 }
-    );
+    // No invented BOM rows: an empty BOM is honest. The modal handles [] gracefully.
   }
 
   return {
@@ -152,9 +148,9 @@ export function parseSetupSheetFromMarkdown(text: string): SetupSheetData | null
     clamping: {
       system: mainSystem,
       colletOrJaw,
-      pressureBar: '18 bar',
-      forceKn: '35 kN',
-      maxRpm: '4.500 1/min',
+      pressureBar: 'siehe Auslegung',
+      forceKn: 'siehe Auslegung',
+      maxRpm: 'siehe Auslegung',
     },
     tools,
     bom,

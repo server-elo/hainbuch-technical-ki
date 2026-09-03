@@ -14,3 +14,10 @@ feedback.jsonl
 logs/
 !logs/.gitkeep
 *-report.md
+# SQLite runtime state — never commit the live DB (backup via script instead)
+data/app.db
+data/app.db-shm
+data/app.db-wal
+data/training/
+# local tunnel / deploy artifacts
+.firebase/
