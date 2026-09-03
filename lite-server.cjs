@@ -766,7 +766,10 @@ async function handleChat(req, res) {
     });
     const llmSignal = () => AbortSignal.any([AbortSignal.timeout(600000), aborter.signal]);
     try {
-      emit(res, { type: "status", stage: "chat", label: "HAINBUCH-Wissen wird durchsucht…" });
+      const hasImages = messages.some((m) => Array.isArray(m.content) && m.content.some((c) => c.type === "image_url"));
+      const tools = hasImages ? undefined : [{ google_search: {} }];
+
+      emit(res, { type: "status", stage: "chat", label: hasImages ? "Zeichnung / Bild wird analysiert…" : "HAINBUCH-Wissen wird durchsucht…" });
       const upstream = await fetch(LLM_URL, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -776,7 +779,7 @@ async function handleChat(req, res) {
             { role: "system", content: SYSTEM_PROMPT + machineContext + goldContext + fitsContext + catalogContext + shopContext + context },
             ...messages,
           ],
-          tools: [{ google_search: {} }],
+          ...(tools ? { tools } : {}),
         }),
         signal: llmSignal(),
       });
@@ -795,10 +798,10 @@ async function handleChat(req, res) {
         body: JSON.stringify({
           model: MODEL_ID,
           messages: [
-            { role: "system", content: "Du bist ein strenger QA-Prüfer für HAINBUCH-Auslegungen. Prüfe den Entwurf gegen diese Checkliste und korrigiere alle Mängel direkt:\n0) STRIKTER 2-STUFIGER ABLAUF (PFLICHT):\n- STUFE 1 (Erstkontakt / Bestand unklar): Wenn der Nutzer das Werkstück neu beschreibt und noch KEIN Futter genannt hat und noch NICHT nach Optionen gefragt hat: Der Entwurf MUSS kurz sein (1-2 Sätze technische Einleitung/Passungen) und ZWINGEND mit der Bestandsfrage enden: 'Haben Sie bereits ein Spannfutter bzw. HAINBUCH-Spannmittel in Ihrer Fertigung (z. B. SPANNTOP, TOPlus, MANDO, InoFlex, B-Top, MANOK) – oder soll ich Ihnen passende Optionen vorschlagen?'. Falls der Entwurf fälschlicherweise schon den vollen Arbeitsplan enthält, KÜRZE ihn und füge die Bestandsfrage ein!\n- STUFE 2 (Nach Kundenantwort): Wenn der Kunde sein Futter nennt (z. B. 'habe SPANNTOP nova'), MUSS die Auslegung zu 100% auf dieses Futter angepasst sein (Spannköpfe, Dorn-Adaption MANDO Adapt, Arbeitsplan, Werkzeuge)! Wenn der Kunde kein Futter hat / nach Optionen fragt ('schlag mir vor'), MUSS die vollständige Auslegung mit 3-5 Lösungen, Arbeitsplan, Schnittdaten, ISO-Zeiten, Werkzeugen, Anti-Polygon-Check, ROI und Fotos enthalten sein!\n1) ECHTE und PASSENDE Markdown-Fotos ![Name](URL) (InoFlex -> hero_136.jpg / hero_262.jpg, B-Top -> hero_146.jpg / hero_150.jpg, centroteX -> hero_242.jpg, MANOK plus -> hero_246.jpg, MANOK -> hero_242.jpg, MANDO -> hero_178.jpg, MANDO Adapt -> hero_272.jpg, SPANNTOP nova -> hero_94.jpg, SPANNTOP mini -> hero_74.jpg; NIEMALS falsche Bilder wie Kran für InoFlex oder Messkoffer für Spannfutter kopieren!).\n2) Tabellen max. 5 Spalten, Lösungen als Zeilen.\n3) KEIN LaTeX, keine $-Zeichen; Formeln im Klartext (z. B. t_h = L / vf); deutsche Komma-Dezimalzahlen.\n4) Passungswerte aus dem VORBEBERECHNETEN Block 1:1 übernehmen; alle Rechnungen nachprüfen und Fehler korrigieren.\n5) Abschließend Sektion '## Quellen' mit klickbaren [Titel](URL)-Links (min. 2).\nAntworte NUR mit der vollständigen korrigierten finalen Antwort – kein Kommentar, keine Begründung der Änderungen." },
+            { role: "system", content: "Du bist ein strenger QA-Prüfer für HAINBUCH-Auslegungen. Prüfe den Entwurf gegen diese Checkliste und korrigiere alle Mängel direkt:\n0) STRIKTER 2-STUFIGER ABLAUF (PFLICHT):\n- STUFE 1 (Erstkontakt / Bestand unklar): Wenn der Nutzer das Werkstück neu beschreibt und noch KEIN Futter genannt hat und noch NICHT nach Optionen gefragt hat: Der Entwurf MUSS kurz sein (1-2 Sätze technische Einleitung/Passungen) und ZWINGEND mit der Bestandsfrage enden: 'Haben Sie bereits ein Spannfutter bzw. HAINBUCH-Spannmittel in Ihrer Fertigung (z. B. SPANNTOP, TOPlus, MANDO, InoFlex, B-Top, MANOK) – oder soll ich Ihnen passende Optionen vorschlagen?'. Falls der Entwurf fälschlicherweise schon den vollen Arbeitsplan enthält, KÜRZE ihn und füge die Bestandsfrage ein! (WICHTIGE AUSNAHME: Wenn eine technische Zeichnung oder ein Werkstückbild hochgeladen wurde, MUSS die Zeichnung IMMER vollständig ausgewertet werden mit Maßen, Passungen, Werkstoff und passenden HAINBUCH-Spannmitteln!)\n- STUFE 2 (Nach Kundenantwort): Wenn der Kunde sein Futter nennt (z. B. 'habe SPANNTOP nova'), MUSS die Auslegung zu 100% auf dieses Futter angepasst sein (Spannköpfe, Dorn-Adaption MANDO Adapt, Arbeitsplan, Werkzeuge)! Wenn der Kunde kein Futter hat / nach Optionen fragt ('schlag mir vor'), MUSS die vollständige Auslegung mit 3-5 Lösungen, Arbeitsplan, Schnittdaten, ISO-Zeiten, Werkzeugen, Anti-Polygon-Check, ROI und Fotos enthalten sein!\n1) ECHTE und PASSENDE Markdown-Fotos ![Name](URL) (InoFlex -> hero_136.jpg / hero_262.jpg, B-Top -> hero_146.jpg / hero_150.jpg, centroteX -> hero_242.jpg, MANOK plus -> hero_246.jpg, MANOK -> hero_242.jpg, MANDO -> hero_178.jpg, MANDO Adapt -> hero_272.jpg, SPANNTOP nova -> hero_94.jpg, SPANNTOP mini -> hero_74.jpg; NIEMALS falsche Bilder wie Kran für InoFlex oder Messkoffer für Spannfutter kopieren!).\n2) Tabellen max. 5 Spalten, Lösungen als Zeilen.\n3) KEIN LaTeX, keine $-Zeichen; Formeln im Klartext (z. B. t_h = L / vf); deutsche Komma-Dezimalzahlen.\n4) Passungswerte aus dem VORBEBERECHNETEN Block 1:1 übernehmen; alle Rechnungen nachprüfen und Fehler korrigieren.\n5) Abschließend Sektion '## Quellen' mit klickbaren [Titel](URL)-Links (min. 2).\nAntworte NUR mit der vollständigen korrigierten finalen Antwort – kein Kommentar, keine Begründung der Änderungen." },
             { role: "user", content: `NUTZERFRAGE:\n${questionText}\n\nVORBEBERECHNETE PASSUNGEN:\n${precomputed || "—"}\n\nKATALOG-KONTEXT:\n${catalogContext || "—"}\n\nSHOP-KONTEXT:\n${shopContext || "—"}\n\nENTWURF ZU PRÜFEN:\n${answer}` },
           ],
-          tools: [{ google_search: {} }],
+          ...(tools ? { tools } : {}),
         }),
         signal: llmSignal(),
       });

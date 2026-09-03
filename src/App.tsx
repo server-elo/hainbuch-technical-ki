@@ -1137,15 +1137,19 @@ export default function App() {
   const executeSubmit = async (text: string, file: File | null) => {
     if (!text.trim() && !file) return;
     const parts: ChatMessage['parts'] = [];
-    if (text.trim()) parts.push({ text });
     if (file) {
       try {
         const { base64, mimeType } = await convertFileToBase64(file);
         parts.push({ inlineData: { data: base64, mimeType } });
-        if (!text.trim()) parts.push({ text: `[${t.drawingAttached}]` });
+        const defaultPrompt = uiLang === 'de'
+          ? 'Bitte analysiere diese technische Zeichnung vollständig: Geometrie, Maße, Toleranzen, Passungen nach ISO 286, Werkstoffempfehlung und passende HAINBUCH-Spannmittel.'
+          : 'Please analyze this technical drawing completely: geometry, dimensions, tolerances, ISO 286 fits, material recommendation, and suitable HAINBUCH workholding solutions.';
+        parts.push({ text: text.trim() || defaultPrompt });
       } catch (err) {
         console.error('File attach failed:', err);
       }
+    } else if (text.trim()) {
+      parts.push({ text: text.trim() });
     }
     if (parts.length === 0) return;
     const nextMsgs = [...messagesRef.current, { role: 'user' as const, parts }];
@@ -1213,7 +1217,11 @@ export default function App() {
     const ext = '.' + (f.name.split('.').pop() || '').toLowerCase();
     if (f.type.startsWith('image/') || ['image/*'].includes(f.type) ||
         ['.png','.jpg','.jpeg','.webp','.gif','.bmp','.avif','.heic','.heif','.jfif','.svg','.dxf','.pdf'].includes(ext)) {
-      setAttachedFile(f);
+      if (isEmpty && !isLoading) {
+        void executeSubmit('', f);
+      } else {
+        setAttachedFile(f);
+      }
     }
   };
 
@@ -1480,7 +1488,14 @@ export default function App() {
               accept="image/*,.dxf,.pdf"
               className="hidden"
               onChange={(e) => {
-                setAttachedFile(e.target.files?.[0] ?? null);
+                const file = e.target.files?.[0] ?? null;
+                if (file) {
+                  if (isEmpty && !isLoading) {
+                    void executeSubmit('', file);
+                  } else {
+                    setAttachedFile(file);
+                  }
+                }
                 e.target.value = '';
               }}
             />
