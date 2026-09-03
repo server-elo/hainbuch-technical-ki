@@ -1032,7 +1032,7 @@ async function handleChat(req, res) {
 
       emit(res, { type: "status", stage: "chat", label: hasImages ? "Zeichnung / Bild wird analysiert…" : "HAINBUCH-Wissen wird durchsucht…" });
       const sysPrompt = rawMode
-        ? RAW_PROMPT + machineContext + transcriptContext
+        ? RAW_PROMPT // Direkt-Modus: NUR Modellwissen — kein RAG, keine Shop-/Katalog-/Gold-/Fit-/Maschinen-/Transkript-Kontexte
         : SYSTEM_PROMPT + machineContext + goldContext + followupContext + fitsContext + catalogContext + shopContext + context + transcriptContext;
       const { res: json, model: mainModel } = await llmFetch({
         model: MODEL_ID,
