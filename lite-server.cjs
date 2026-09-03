@@ -3,6 +3,10 @@ const crypto = require("crypto");
 const fs = require("fs");
 const path = require("path");
 
+// Load .env for manual runs (supervisor exports real env in production;
+// dotenv is already a dependency). Never crashes if missing.
+try { require("dotenv").config(); } catch {}
+
 // History + auth (Phase 1: email stub, Phase 2: Firebase). Guarded so the
 // chat pipeline keeps working even if the DB can't open.
 let histDb = null;
