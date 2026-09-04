@@ -955,7 +955,7 @@ export default function App() {
   const [selectedMachine, setSelectedMachine] = useState<MachineProfile>(PRESET_MACHINES[0]);
   // Antwort-Modus: Katalog (RAG + Fotos + QA) oder Direkt (nur Modell, ein Call).
   const [catalogMode, setCatalogMode] = useState<boolean>(() => {
-    try { return localStorage.getItem('hb-catalog-mode') === '1'; } catch { return false; }
+    try { return localStorage.getItem('hb-catalog-mode') !== '0'; } catch { return true; }
   });
   const toggleCatalogMode = () => {
     setCatalogMode((v) => {
