@@ -4,7 +4,7 @@ import {
   Image as ImageIcon, Paperclip, X, Clock, TrendingDown, Copy, Check,
   ThumbsUp, ThumbsDown, FileDown, ArrowDown, PenLine, Square, ListPlus, Sparkles,
   AlertTriangle, RotateCcw, Upload, ShieldCheck, ArrowRight, Layers, Ruler, Cog,
-  History, Globe, LogIn, LogOut, BookOpen, Zap
+  History, Globe, LogIn, LogOut, BookOpen, Zap, Lock
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import type { ChatMessage, PipelineStatus } from './types';
@@ -925,6 +925,11 @@ export default function App() {
   }, [uiLang]);
   // History + auth UI state
   const [showAuth, setShowAuth] = useState(false);
+  const [pendingSubmit, setPendingSubmit] = useState<{ text: string; file: File | null } | null>(null);
+  const profileRef = useRef(profile);
+  useEffect(() => { profileRef.current = profile; }, [profile]);
+  const isAuth = () => Boolean(profileRef.current.email || profileRef.current.token);
+  const isAuthenticated = Boolean(profile.email || profile.token);
   // Account menu (avatar button never logs out directly).
   const [showAccount, setShowAccount] = useState(false);
   const [confirmLogout, setConfirmLogout] = useState(false);
@@ -1212,6 +1217,11 @@ export default function App() {
 
   const executeSubmit = async (text: string, file: File | null) => {
     if (!text.trim() && !file) return;
+    if (!isAuth()) {
+      setPendingSubmit({ text, file });
+      setShowAuth(true);
+      return;
+    }
     const parts: ChatMessage['parts'] = [];
     if (file) {
       try {
@@ -1292,6 +1302,11 @@ export default function App() {
   }, [isLoading, queuedMessages]);
 
   const submitText = async (text: string) => {
+    if (!isAuth()) {
+      setPendingSubmit({ text, file: null });
+      setShowAuth(true);
+      return;
+    }
     if (isLoading) {
       setQueuedMessages(prev => [...prev, { text, file: null }]);
       return;
@@ -1301,7 +1316,17 @@ export default function App() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!inputValue.trim() && !attachedFile) return;
+    if (!inputValue.trim() && !attachedFile) {
+      if (!isAuth()) {
+        setShowAuth(true);
+      }
+      return;
+    }
+    if (!isAuth()) {
+      setPendingSubmit({ text: inputValue, file: attachedFile });
+      setShowAuth(true);
+      return;
+    }
     if (isLoading) {
       setQueuedMessages(prev => [...prev, { text: inputValue, file: attachedFile }]);
       setInputValue('');
@@ -1361,6 +1386,7 @@ export default function App() {
       country: r.country || profile.country || geoCountry,
       token: r.token,
     };
+    profileRef.current = next;
     // Fresh login without a manual language choice follows the IP country.
     if (!next.uiLangOverride) {
       const s = (next.country && suggestedLangFor(next.country))
@@ -1371,6 +1397,15 @@ export default function App() {
     saveProfile(next);
     setShowAuth(false);
     void refreshHistList();
+    if (pendingSubmit) {
+      const ps = pendingSubmit;
+      setPendingSubmit(null);
+      setInputValue('');
+      setAttachedFile(null);
+      setTimeout(() => {
+        void executeSubmit(ps.text, ps.file);
+      }, 50);
+    }
   };
   const handleLogout = () => {
     clearProfile();
@@ -1392,6 +1427,11 @@ export default function App() {
     const ext = '.' + (f.name.split('.').pop() || '').toLowerCase();
     if (f.type.startsWith('image/') || ['image/*'].includes(f.type) ||
         ['.png','.jpg','.jpeg','.webp','.gif','.bmp','.avif','.heic','.heif','.jfif','.svg','.dxf','.pdf'].includes(ext)) {
+      if (!isAuth()) {
+        setPendingSubmit({ text: '', file: f });
+        setShowAuth(true);
+        return;
+      }
       if (isEmpty && !isLoading) {
         void executeSubmit('', f);
       } else {
@@ -1697,7 +1737,13 @@ export default function App() {
 
               {/* Drawing Upload Button */}
               <button
-                onClick={() => fileInputRef.current?.click()}
+                onClick={() => {
+                  if (!isAuth()) {
+                    setShowAuth(true);
+                    return;
+                  }
+                  fileInputRef.current?.click();
+                }}
                 className="mt-6 inline-flex items-center gap-2.5 px-5 py-2.5 rounded-2xl border-2 border-dashed border-red-200 hover:border-red-500 bg-red-50/50 hover:bg-red-50 text-xs sm:text-sm font-bold text-neutral-800 hover:text-red-700 transition-all shadow-sm group cursor-pointer"
               >
                 <Upload size={16} className="text-red-600 group-hover:scale-110 transition-transform shrink-0" />
@@ -1777,6 +1823,34 @@ export default function App() {
               </button>
             </div></div>
           )}
+          {!isAuth() && (
+            <div
+              onClick={() => setShowAuth(true)}
+              className="measure no-print mb-2 px-3.5 py-2 bg-gradient-to-r from-red-50/80 via-white to-neutral-50 border border-red-200/80 hover:border-red-300 rounded-xl flex items-center justify-between gap-3 shadow-xs cursor-pointer transition-all hover:shadow-sm group"
+            >
+              <div className="flex items-center gap-2.5 text-xs text-neutral-700 min-w-0">
+                <div className="w-6 h-6 rounded-full bg-red-100 text-red-600 flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform">
+                  <Lock size={12} />
+                </div>
+                <span className="font-medium truncate">
+                  {uiLang === 'de'
+                    ? 'Anmelden oder registrieren, um dem Technical Advisor zu schreiben'
+                    : 'Log in or register to message the Technical Advisor'}
+                </span>
+              </div>
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setShowAuth(true);
+                }}
+                className="inline-flex items-center gap-1.5 px-3 py-1 bg-red-600 hover:bg-red-700 text-white text-xs font-bold rounded-lg shadow-xs transition-colors shrink-0 cursor-pointer"
+              >
+                <LogIn size={12} />
+                <span>{t.login} / {t.register}</span>
+              </button>
+            </div>
+          )}
           <form
             onSubmit={handleSubmit}
             onDragOver={(e) => { e.preventDefault(); setDragging(true); }}
@@ -1796,7 +1870,10 @@ export default function App() {
               onChange={(e) => {
                 const file = e.target.files?.[0] ?? null;
                 if (file) {
-                  if (isEmpty && !isLoading) {
+                  if (!isAuth()) {
+                    setPendingSubmit({ text: '', file });
+                    setShowAuth(true);
+                  } else if (isEmpty && !isLoading) {
                     void executeSubmit('', file);
                   } else {
                     setAttachedFile(file);
@@ -1807,9 +1884,15 @@ export default function App() {
             />
             <button
               type="button"
-              onClick={() => fileInputRef.current?.click()}
+              onClick={() => {
+                if (!isAuth()) {
+                  setShowAuth(true);
+                  return;
+                }
+                fileInputRef.current?.click();
+              }}
               title={t.drawingAttached}
-              className={`flex items-center justify-center w-9 h-9 rounded-full transition-colors shrink-0 mb-0.5 ${
+              className={`flex items-center justify-center w-9 h-9 rounded-full transition-colors shrink-0 mb-0.5 cursor-pointer ${
                 attachedFile ? 'text-red-600 bg-red-50' : 'text-neutral-400 hover:text-red-600 hover:bg-neutral-100'
               }`}
             >
@@ -1829,9 +1912,11 @@ export default function App() {
               placeholder={
                 dragging
                   ? t.dropHint
-                  : isLoading
-                    ? 'Nachricht eingeben (wird in die Warteschlange gestellt)...'
-                    : t.inputPlaceholder
+                  : !isAuth()
+                    ? (uiLang === 'de' ? 'Nachricht an den Technical Advisor schreiben (Anmeldung erforderlich)...' : 'Message the Technical Advisor (Sign in required)...')
+                    : isLoading
+                      ? 'Nachricht eingeben (wird in die Warteschlange gestellt)...'
+                      : t.inputPlaceholder
               }
               className="composer-input flex-1 bg-transparent text-sm placeholder:text-neutral-400 focus:outline-none px-2 py-2 mobile-input overflow-y-auto scroll-thin"
             />
@@ -1848,12 +1933,12 @@ export default function App() {
             )}
             <button
               type="submit"
-              disabled={!inputValue.trim() && !attachedFile}
-              aria-label={isLoading ? "In Warteschlange einreihen" : "Senden"}
-              title={isLoading ? "In Warteschlange einreihen" : "Senden"}
-              className="send-btn flex items-center justify-center w-9 h-9 rounded-full bg-red-600 text-white hover:bg-red-700 disabled:opacity-30 transition-colors shrink-0 mb-0.5"
+              disabled={isAuth() && !inputValue.trim() && !attachedFile}
+              aria-label={!isAuth() ? `${t.login} / ${t.register}` : (isLoading ? "In Warteschlange einreihen" : "Senden")}
+              title={!isAuth() ? `${t.login} / ${t.register}` : (isLoading ? "In Warteschlange einreihen" : "Senden")}
+              className="send-btn flex items-center justify-center w-9 h-9 rounded-full bg-red-600 text-white hover:bg-red-700 disabled:opacity-30 transition-colors shrink-0 mb-0.5 cursor-pointer"
             >
-              {isLoading ? <ListPlus size={16} /> : <Send size={16} className="ml-0.5" />}
+              {!isAuth() ? <Lock size={15} /> : (isLoading ? <ListPlus size={16} /> : <Send size={16} className="ml-0.5" />)}
             </button>
           </form>
           {/* Trust + legal footer (desktop only — phones need the room) */}
