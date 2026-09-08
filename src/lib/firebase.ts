@@ -2,7 +2,7 @@
  *  Config comes from build-time VITE_FIREBASE_* vars (public browser keys).
  *  Until the console enables a provider AND the backend sets
  *  FIREBASE_PROJECT_ID, this module is inert and the stub flow is used. */
-import { API_BASE } from '../config';
+import { API_BASE, apiHeaders } from '../config';
 
 const apiKey = import.meta.env.VITE_FIREBASE_API_KEY || '';
 const authDomain = import.meta.env.VITE_FIREBASE_AUTH_DOMAIN || '';
@@ -50,7 +50,7 @@ export async function syncWithFirebase(body: {
 }): Promise<{ token: string; user: { id: string; email: string; displayName: string; country: string; uiLang: string } }> {
   const r = await fetch(`${API_BASE}/api/auth/sync`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${body.idToken}` },
+    headers: { ...apiHeaders(), 'Content-Type': 'application/json', Authorization: `Bearer ${body.idToken}` },
     body: JSON.stringify({
       displayName: body.displayName, country: body.country, uiLang: body.uiLang,
       consentTerms: body.consentTerms, consentMarketing: body.consentMarketing,

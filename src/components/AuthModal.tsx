@@ -277,7 +277,18 @@ export default function AuthModal({ t, initialCountry, onClose, onSaved }: {
                       : error === '!EMAIL!'
                         ? t.emailInvalid
                         : error === '!OFFLINE!'
-                          ? t.errorOffline
+                          ? (
+                              <div className="flex items-center justify-between gap-2">
+                                <span>{t.errorOffline}</span>
+                                <button
+                                  type="button"
+                                  onClick={() => window.location.reload()}
+                                  className="px-2.5 py-1 bg-red-600 hover:bg-red-700 text-white text-xs font-bold rounded-lg shrink-0 cursor-pointer shadow-xs transition-colors"
+                                >
+                                  {uiLang === 'de' ? 'Neu laden' : 'Reload'}
+                                </button>
+                              </div>
+                            )
                           : error}
           </div>
         )}

@@ -564,16 +564,29 @@ STRENGE REGELN:
    - Zahlen aus dem Web mit Quelle nennen; unsichere Quellen kennzeichnen.
    - Schließe die Antwort mit "## Quellen" ab: die wichtigsten Links als [Titel](URL), max. 5.
 4. Nutze die dir mitgegebenen HAINBUCH-Informationen als Grundlage und nenne die passende HAINBUCH-Produktseite als Quelle.
-5. PROAKTIVES APPLICATION-ENGINEERING (PRAXIS-ORIENTIERT & NUTZEN-FOKUSSIERT):
-   - Wenn der Kunde konkrete Maße oder eine Zeichnung vorgibt: Nutze diese Maße 100% zeichengetreu ohne jede Abweichung.
-   - Wenn der Kunde eine allgemeine Fertigungsaufgabe nennt (z. B. "100 Bremsscheiben produzieren", "Flansch aus C45", "Getriebewelle"):
-     BLOCKIERE DIE BERATUNG NICHT mit lästigen Gegenfragen! Zeige sofort deine volle technische Kompetenz anhand einer praxisgerechten Referenzgeometrie (z. B. "am Praxis-Beispiel einer typischen belüfteten PKW-Bremsscheibe Ø 300 mm × 24 mm aus EN-GJL-250") und liefere direkt die vollständige Auslegung inklusive Fotos, OP 10/OP 20 Arbeitsplan, Schnittdaten, ISO-Hauptzeiten und ROI! Am Ende lädst du den Kunden ein: "Falls Ihre Bremsscheibe abweichende Maße besitzt, passe ich den Plan gerne sofort für Sie an."
+5. APPLICATION-ENGINEERING (PRAXIS-ORIENTIERT, MASSGENAU & INGENIEURMÄSSIG):
+   - FALL 1: KUNDE GIBT KONKRETE MASSE ODER EINE ZEICHNUNG VOR:
+     Nutze diese Maße 100% zeichengetreu ohne jede Abweichung! Erstelle direkt die vollständige Auslegung (Verfahren, HAINBUCH-Spannmittel mit Fotos, vollständiger Arbeitsplan OP 10 & OP 20 mit Schnittdaten und ISO-Zeiten, Bedarfs-Optionen A & B).
+   - FALL 2: KUNDE NENNT NUR EIN BAUTEIL / EINE STÜCKZAHL OHNE MASSE, ZEICHNUNG ODER WERKSTOFF (z. B. "ich brauche 400 Zylinderköpfe", "ich muss Flansche fertigen", "Kurbelwelle spannen"):
+     ERFINDE KEINE MASSE! HALLUZINIERE KEINE DURCHMESSER ODER ARBEITSPLÄNE OHNE DATENBASIS!
+     Ein erfahrener Zerspanungs- und Spanntechnik-Ingenieur erfragt in diesem Fall zuerst die entscheidenden Randbedingungen:
+     a) Begrüße die Aufgabe kurz und kompetent.
+     b) Skizziere kurz das typische HAINBUCH-Spannkonzept für diese Bauteilart (z. B. welche Systeme bei Außenspannung vs. Innenspannung oder bei kleinen vs. großen Durchmessern infrage kommen).
+     c) Frage gezielt und übersichtlich (in 3-4 prägnanten Stichpunkten) nach den fehlenden Schlüsseldaten:
+        1. Hauptabmessungen: Außen-/Innendurchmesser (Ø), Gesamtlänge (L), Wandstärken oder Bitte um Upload einer technischen Zeichnung / Skizze.
+        2. Werkstoff: z. B. C45, 16MnCr5, 42CrMo4, Aluminium oder Grauguss.
+        3. Toleranzen & Passungen: Relevante ISO-Passungen (z. B. H7, h6), Rundlauf- oder Planlauftoleranzen.
+        4. Maschinenschnittstelle: Spindelaufnahme (z. B. Kurzkegel A2-6 / A2-8) bzw. vorhandenes Spannfutter.
+     d) Biete abschließend an: "Falls Sie noch keine Zeichnung zur Hand haben und eine unverbindliche Richtkalkulation an einem typischen Referenzbauteil wünschen, geben Sie mir einfach kurz Bescheid!"
+   - FALL 3: KUNDE BITTET EXPLIZIT UM EIN BEISPIEL ODER EINE MUSTERKALKULATION (z. B. "rechne mir mal ein Beispiel", "mach ein typisches Musterteil"):
+     NUR DANN: Wähle eine praxisgerechte Referenzgeometrie (ausdrücklich als unverbindliches Referenzbeispiel gekennzeichnet) und erstelle die vollständige Auslegung inklusive Arbeitsplan OP 10 & OP 20.
 
 FACHGEBIETE: Spannfutter (SPANNTOP, TOPlus, TOROK, InoFlex, B-Top), Spanndorne (MANDO, MAXXOS), Spanntechnik für Drehen/Fräsen/Schleifen, Automation, Auslegung von Spannsituationen (Spannkraft, 6-Punkte-Regel, Bezugssystem), Arbeitsplanung mit ISO-Zeiten, Passungen nach ISO 286, Werkstoffe für die Zerspanung, Fachkunde.
 
-ABLAUF DER BERATUNG (VOLLSTÄNDIGER PRAXIS-ARBEITSPLAN MIT FOTOS - PFLICHT):
+ABLAUF DER BERATUNG:
 
-JEDE AUSLEGUNG MUSS IMMER FOLGENDE ABSCHNITTE VOLLSTÄNDIG ENTHALTEN (NIEMALS KÜRZEN!):
+WENN KONKRETE MASSE / ZEICHNUNG ODER EINE EXPLIZITE BEISPIEL-BERECHNUNG VORLIEGEN:
+JEDE AUSLEGUNG MUSS DANN IMMER FOLGENDE ABSCHNITTE VOLLSTÄNDIG ENTHALTEN (NIEMALS KÜRZEN!):
 
 1. **AUTOMATISCHE TEILE- & VERFAHRENS-ERKENNUNG:**
    Analysiere die Bauteilgeometrie sofort selbstständig und benenne das am besten geeignete Fertigungsverfahren:
@@ -757,7 +770,7 @@ FORMAT-REGELN (wichtig):
 // Direkt-Modus: maximales Vertrauen ins Modell — kurzer Prompt, ein Call,
 // keine RAG-Kontexte, keine QA-Zweitrutsche. Katalog-Fotos/Mat-Nrn gibt es
 // nur im Katalog-Modus; der deterministische Fit-Check läuft in beiden.
-const RAW_PROMPT = `Du bist der HAINBUCH Technical Advisor, technischer Experte für Spanntechnik, Zerspanung, ISO-286-Passungen und HAINBUCH-Spannmittel. Antworte präzise, hilfsbereit und praxisnah auf Deutsch (oder in der Sprache des Nutzers). Übernimm bemaßte Werte aus Zeichnungen und Fragen wörtlich — rechne nichts um, erfinde keine Maße, Normen oder Artikelnummern. Liefere stets eine fundierte technische Auslegung mit passendem HAINBUCH-Spannmittel und praxiserprobtem Arbeitsplan. Melde Zeichnungsfehler als solche. Formeln im Klartext (t_h = L / vf), deutsche Kommazahlen, kein LaTeX.`;
+const RAW_PROMPT = `Du bist der HAINBUCH Technical Advisor, technischer Experte für Spanntechnik, Zerspanung, ISO-286-Passungen und HAINBUCH-Spannmittel. Antworte präzise, hilfsbereit und praxisnah auf Deutsch (oder in der Sprache des Nutzers). Übernimm bemaßte Werte aus Zeichnungen und Fragen wörtlich — rechne nichts um, erfinde keine Maße, Normen oder Artikelnummern. Wenn keine Maße oder Zeichnungen vorliegen, erfrage die Maße gezielt, statt sie zu erfinden. Liefere stets eine fundierte technische Auslegung mit passendem HAINBUCH-Spannmittel und praxiserprobtem Arbeitsplan, sobald die Maße bekannt sind. Melde Zeichnungsfehler als solche. Formeln im Klartext (t_h = L / vf), deutsche Kommazahlen, kein LaTeX.`;
 
 function emit(res, obj) {
   if (res.writableEnded || res.destroyed) return;
@@ -850,6 +863,30 @@ function cleanLaTeX(t) {
   return s;
 }
 
+const UI_LANG_MAP = {
+  de: { name: "Deutsch", code: "de" },
+  en: { name: "English", code: "en" },
+  zh: { name: "中文 (Chinese)", code: "zh" },
+  es: { name: "Español (Spanish)", code: "es" },
+  fr: { name: "Français (French)", code: "fr" },
+  it: { name: "Italiano (Italian)", code: "it" },
+  tr: { name: "Türkçe (Turkish)", code: "tr" },
+};
+
+const STATUS_LABELS = {
+  moment: { de: "Einen Moment…", en: "Just a moment…", zh: "稍等片刻…", es: "Un momento…", fr: "Un instant…", it: "Un momento…", tr: "Bir saniye…" },
+  searching: { de: "HAINBUCH-Wissen wird durchsucht…", en: "Searching HAINBUCH knowledge base…", zh: "正在检索 HAINBUCH 知识库…", es: "Buscando en la base de conocimientos de HAINBUCH…", fr: "Recherche dans la base de connaissances HAINBUCH…", it: "Ricerca nella banca dati HAINBUCH…", tr: "HAINBUCH bilgi tabanında aranıyor…" },
+  drawing: { de: "Zeichnung / Bild wird analysiert…", en: "Analyzing drawing / image…", zh: "正在分析图纸/图像…", es: "Analizando plano / imagen…", fr: "Analyse du plan / de l'image…", it: "Analisi disegno / immagine…", tr: "Teknik resim / görsel analiz ediliyor…" },
+  transcribing: { de: "Zeichnung wird Zeile für Zeile abgelesen…", en: "Reading drawing specifications line by line…", zh: "正在逐行读取图纸参数…", es: "Leyendo especificaciones del plano línea por línea…", fr: "Lecture des spécifications du plan ligne par ligne…", it: "Lettura quote e specifiche dal disegno…", tr: "Teknik resim ölçüleri okunuyor…" },
+  raw: { de: "Modell erstellt die Auslegung…", en: "Generating engineering solution…", zh: "正在生成工艺方案…", es: "Generando configuración técnica…", fr: "Génération de la solution technique…", it: "Generazione soluzione tecnica…", tr: "Mühendislik çözümü oluşturuluyor…" },
+  qa: { de: "Qualitätsprüfung der Auslegung…", en: "Quality check of the engineering solution…", zh: "方案质量核验中…", es: "Control de calidad de la solución…", fr: "Contrôle qualité de la solution…", it: "Controllo qualità della configurazione…", tr: "Çözüm kalite kontrolü yapılıyor…" },
+};
+
+function getStatusLabel(key, lang) {
+  const l = STATUS_LABELS[key] || {};
+  return l[lang] || l.de || "Einen Moment…";
+}
+
 async function handleChat(req, res) {
   let body = "";
   let tooLarge = false;
@@ -899,6 +936,10 @@ async function handleChat(req, res) {
       res.write(JSON.stringify({ error: "messages missing" }) + "\n");
       return res.end();
     }
+
+    const rawLang = String((parsed && parsed.uiLang) || req.headers["x-ui-lang"] || "de").toLowerCase().slice(0, 8);
+    const uiLang = UI_LANG_MAP[rawLang] ? rawLang : (rawLang.startsWith("en") ? "en" : rawLang.startsWith("zh") ? "zh" : rawLang.startsWith("es") ? "es" : rawLang.startsWith("fr") ? "fr" : rawLang.startsWith("it") ? "it" : rawLang.startsWith("tr") ? "tr" : "de");
+    const langInfo = UI_LANG_MAP[uiLang] || UI_LANG_MAP.de;
 
     const lastQuestion = [...messages]
       .reverse()
@@ -985,15 +1026,31 @@ async function handleChat(req, res) {
     })();
     try {
       if (isSmalltalk) {
-        emit(res, { type: "status", stage: "chat", label: "Einen Moment…" });
+        emit(res, { type: "status", stage: "chat", label: getStatusLabel("moment", uiLang) });
+        const smalltalkSys = uiLang === "de"
+          ? "Du bist der HAINBUCH Technical Advisor. Antworte kurz und freundlich auf Deutsch (1-2 Sätze): begrüße, stelle dich als Spanntechnik-Berater vor und bitte um Werkstückdaten / Zeichnung / Toleranzen. Keine Arbeitspläne, keine Tabellen, keine Quellen."
+          : `You are the HAINBUCH Technical Advisor. Respond briefly and kindly in ${langInfo.name} (1-2 sentences): greet the user, introduce yourself as the HAINBUCH clamping technology advisor, and invite them to describe their workpiece or upload a technical drawing/tolerances. You MUST write strictly and exclusively in ${langInfo.name}. No operation plans, no tables, no sources.`;
         const { res: sj, model: fastModel } = await llmFetch({
           model: MODEL_ID,
           messages: [
-            { role: "system", content: "Du bist der HAINBUCH Technical Advisor. Antworte kurz und freundlich auf Deutsch (1-2 Sätze): begrüße, stelle dich als Spanntechnik-Berater vor und bitte um Werkstückdaten / Zeichnung / Toleranzen. Keine Arbeitspläne, keine Tabellen, keine Quellen." },
+            { role: "system", content: smalltalkSys },
             ...messages.slice(-4),
           ],
         }, llmSignal(), "fast");
-        const sText = cleanLaTeX(sj.choices?.[0]?.message?.content ?? "Hallo! Ich bin der HAINBUCH Technical Advisor für Spanntechnik. Beschreiben Sie gern Ihr Werkstück oder laden Sie eine Zeichnung hoch!");
+        const defaultWelcome = uiLang === "de"
+          ? "Hallo! Ich bin der HAINBUCH Technical Advisor für Spanntechnik. Beschreiben Sie gern Ihr Werkstück oder laden Sie eine Zeichnung hoch!"
+          : uiLang === "en"
+            ? "Hello! I am the HAINBUCH Technical Advisor for clamping technology. Feel free to describe your workpiece or upload a technical drawing!"
+            : uiLang === "es"
+              ? "¡Hola! Soy el HAINBUCH Technical Advisor para técnica de sujeción. ¡Describa su pieza o suba un plano técnico!"
+              : uiLang === "fr"
+                ? "Bonjour ! Je suis le HAINBUCH Technical Advisor pour la technique de serrage. N'hésitez pas à décrire votre pièce ou à importer un plan technique !"
+                : uiLang === "it"
+                  ? "Buongiorno! Sono l'HAINBUCH Technical Advisor per la tecnologia di bloccaggio. Descriva pure il Suo pezzo o carichi un disegno tecnico!"
+                  : uiLang === "tr"
+                    ? "Merhaba! Bağlama teknolojisi için HAINBUCH Technical Advisor'ım. Lütfen parçanızı tarif edin veya teknik resim yükleyin!"
+                    : "您好！我是 HAINBUCH 夹紧技术顾问。请描述您的工件或上传技术图纸！";
+        const sText = cleanLaTeX(sj.choices?.[0]?.message?.content ?? defaultWelcome);
         logChatInteraction({
           ipHash: hashIp(clientIp(req)),
           country: req.headers["cf-ipcountry"] || null,
@@ -1014,7 +1071,7 @@ async function handleChat(req, res) {
       // damit alle Zahlen wörtlich aus dem Bild kommen statt aus dem Gedächtnis.
       let drawingTranscript = "";
       if (hasImages) {
-        emit(res, { type: "status", stage: "chat", label: "Zeichnung wird Zeile für Zeile abgelesen…" });
+        emit(res, { type: "status", stage: "chat", label: getStatusLabel("transcribing", uiLang) });
         try {
           const tr = await llmFetch({
             model: MODEL_ID,
@@ -1033,10 +1090,29 @@ async function handleChat(req, res) {
       const rawMode = parsed?.mode === "raw";
       const tools = !rawMode && !hasImages ? [{ google_search: {} }] : undefined;
 
-      emit(res, { type: "status", stage: "chat", label: hasImages ? "Zeichnung / Bild wird analysiert…" : rawMode ? "Modell erstellt die Auslegung…" : "HAINBUCH-Wissen wird durchsucht…" });
-      const sysPrompt = rawMode
+      emit(res, {
+        type: "status",
+        stage: "chat",
+        label: hasImages
+          ? getStatusLabel("drawing", uiLang)
+          : rawMode
+            ? getStatusLabel("raw", uiLang)
+            : getStatusLabel("searching", uiLang),
+      });
+
+      const langInstruction = uiLang === "de"
+        ? "\n\nSPRACHE: Antworte auf Deutsch.\n"
+        : `\n\n═══════════════════════════════════════════════════════════════
+STRICT LANGUAGE REQUIREMENT:
+The user has chosen ${langInfo.name} (code: '${uiLang}').
+You MUST formulate your ENTIRE response, engineering analysis, explanations, operation plan, table contents, and recommendations in ${langInfo.name}.
+Keep product names and trademarks (e.g. SPANNTOP nova, TOPlus, InoFlex, centroteX, MANOK plus, MANDO) as they are, but all surrounding technical descriptions, steps, and explanations MUST be completely in ${langInfo.name}!
+═══════════════════════════════════════════════════════════════\n`;
+
+      const sysPrompt = (rawMode
         ? RAW_PROMPT // Direkt-Modus: NUR Modellwissen — kein RAG, keine Shop-/Katalog-/Gold-/Fit-/Maschinen-/Transkript-Kontexte
-        : SYSTEM_PROMPT + machineContext + goldContext + followupContext + fitsContext + catalogContext + shopContext + context + transcriptContext;
+        : SYSTEM_PROMPT + machineContext + goldContext + followupContext + fitsContext + catalogContext + shopContext + context + transcriptContext)
+        + langInstruction;
       const { res: json, model: mainModel } = await llmFetch({
         model: MODEL_ID,
         messages: [
@@ -1066,12 +1142,15 @@ async function handleChat(req, res) {
       answer.length > 1500
     );
     if (needsQa && !rawMode) {
-    emit(res, { type: "status", stage: "chat", label: "Qualitätsprüfung der Auslegung…" });
-    try {
-      const { res: qj } = await llmFetch({
-        model: MODEL_QA,
-        messages: [
-            { role: "system", content: "Du bist ein strenger QA-Prüfer für HAINBUCH-Auslegungen. Prüfe den Entwurf gegen diese Checkliste und korrigiere alle Mängel direkt:\n0) VOLLSTÄNDIGER ARBEITSPLAN & FOTOS (PFLICHT - NIEMALS KÜRZEN!):\n- Jede Auslegung MUSS (1) die Bauteilgeometrie & das beste Verfahren (Drehen vs. Fräsen) benennen, (2) ECHTE Fotos der empfohlenen HAINBUCH-Spannmittel enthalten, (3) einen VOLLSTÄNDIGEN Arbeitsplan mit OP 10 & OP 20 (Schnittdaten, ISO-Hauptzeiten, Werkzeuge) liefern, und (4) mit den Bedarfs-Optionen (Option A: Komplettsystem vs. Option B: Nur Spannelement) abschließen! KÜRZE NIEMALS DEN ARBEITSPLAN ODER DIE FOTOS WEG!\n- Produkt-Zuordnung:\n  * Drehen + rund außen (Ø ≤ 100 mm) -> SPANNTOP nova / TOPlus mini + passender Spannkopf (glatt/gerillt)\n  * Drehen + Großteile (Ø > 100 mm, z. B. Bremsscheiben) -> InoFlex 4-Backenfutter (Außen) / MANDO Spanndorn (Topf-Innen); NIEMALS Spannkopffutter auf Außen-Ø > 100 mm!\n  * Drehen + runde Innenbohrung -> MANDO Adapt (Dorn-Adaption) / MANDO + Segmentspannbüchse\n  * Fräsen + rund -> MANOK plus / MANOK stationär\n  * Drehen/Fräsen prismatisch/unrund -> InoFlex 4-Backenfutter\n  * Schnellwechsel -> centroteX\n1) ECHTE und PASSENDE Markdown-Fotos ![Name](URL) (InoFlex -> hero_136.jpg / hero_262.jpg, B-Top -> hero_146.jpg / hero_150.jpg, centroteX -> hero_242.jpg, MANOK plus -> hero_246.jpg, MANOK -> hero_242.jpg, MANDO -> hero_178.jpg, MANDO Adapt -> hero_272.jpg, SPANNTOP nova -> hero_94.jpg, SPANNTOP mini -> hero_74.jpg; NIEMALS falsche Bilder wie Kran für InoFlex oder Messkoffer für Spannfutter kopieren!).\n2) Tabellen max. 5 Spalten, Lösungen als Zeilen.\n3) KEIN LaTeX, keine $-Zeichen; Formeln im Klartext (z. B. t_h = L / vf); deutsche Komma-Dezimalzahlen.\n4) Passungswerte aus dem VORBEBERECHNETEN Block 1:1 übernehmen; alle Rechnungen nachprüfen und Fehler korrigieren.\n5) Abschließend Sektion '## Quellen' mit klickbaren [Titel](URL)-Links (min. 2).\n6) LÄNGEN- & ABSTICH-KONSISTENZ: Prüfe peinlich genau die Gesamtlänge des Werkstücks! Wenn das Teil z. B. Hülse 75 mm + Zapfen 25 mm hat (Gesamtlänge 100 mm), darf in OP 10 NIEMALS auf 76 mm abgestochen werden! Die Abstichlänge MUSS mindestens die Gesamtlänge + Aufmaß sein (z. B. Abstechen auf 102–103 mm). Korrigiere fehlerhafte Abstichlängen im Arbeitsplan sofort!\n7) REIBEN vs. FEINDREHEN: Bei Sacklochbohrungen mit Radius (z. B. R0,3) oder flachem Grund darf KEINE Reibahle verwendet werden (Anschnittkollision). Ersetze Reibahle durch Feindreh-Bohrstange!\n8) ISO 1101 FORM-TOLERANZEN: Reine Formtoleranzen (Rundheit, Zylindrizität, Geradheit, Ebenheit) dürfen laut ISO 1101 NIEMALS ein Bezugselement (z. B. | A) besitzen. Entferne unzulässige Bezüge bei Formtoleranzen!\n9) ZEICHNUNGS-PRIMAT: Jede Zahl im Entwurf, die laut NUTZERFRAGE/Bildkontext anders bemaßt ist (Abmaße, Gewinde, Losgröße, Längen), auf den Zeichnungswert korrigieren — Gedächtniswerte verlieren immer.\n10) NORM-SCOPE: Steht z. B. „Gewinde DIN 6885“ im Entwurf, als Zeichnungsfehler ausweisen (DIN 6885 = Passfedern, kein Gewinde!) statt zu übernehmen.\n11) KEINE WEISSWASCHUNG: Behauptet der Entwurf Normkonformität der Zeichnung (z. B. „streng ohne Bezugselement“), obwohl Bezüge an Formtoleranzen beschrieben sind → als Zeichnungsfehler-Hinweis formulieren.\n12) KEINE ERFINDUNGEN: Zentrierbohrungen/Freistiche/Fasen ohne Bildbeleg als prozessbedingte Zugabe kennzeichnen, nicht als Zeichnungsinhalt.\n13) ROHMASS-CHECK: Größter Bund/Flansch + Aufmaß ≤ Roh-Ø? Futterdurchgang ≥ Roh-Ø? Sonst Rohmaß und Futtergröße korrigieren (Bund >Ø42 → Rohling Ø50–55, Futter Gr. 65/80 statt 52).\n14) AUFSPANNFOLGE: Nach dem Abstich am kurzen Ende gespannt mit >100 mm freier Auskragung für Schrupp-/Schlichtschnitte? Dann Reihenfolge umkehren (massive Seite zuerst aus Stange/Sägezuschnitt) oder Reitstockspitze vorsehen; Ratterrisiko bei Ra 0,2 explizit ausschließen.\n15) HÄRTEVERZUG: Bei ≥55 HRC + Passungen IT5/IT6 oder Ra ≤0,4: Schleifaufmaß 0,15–0,20 mm vor dem Härten + Hartbearbeitung zwischen Spitzen zwingend — niemals weich auf Fertigmaß schlichten.\nAntworte NUR mit der vollständigen korrigierten finalen Antwort – kein Kommentar, keine Begründung der Änderungen." },
+      emit(res, { type: "status", stage: "chat", label: getStatusLabel("qa", uiLang) });
+      const qaLangRule = uiLang === "de"
+        ? "\n16) SPRACHE: Die finale korrigierte Antwort muss auf Deutsch sein.\n"
+        : `\n16) ZIELSPRACHE (${langInfo.name}): Der Entwurf und deine finale korrigierte Antwort MÜSSEN zwingend vollständig in ${langInfo.name} (Sprachcode: '${uiLang}') verfasst sein! Übersetze die Antwort keinesfalls zurück ins Deutsche! Alle Erklärungen, Überschriften, Tabellen und Fragen müssen in ${langInfo.name} bleiben!\n`;
+      try {
+        const { res: qj } = await llmFetch({
+          model: MODEL_QA,
+          messages: [
+            { role: "system", content: "Du bist ein strenger QA-Prüfer für HAINBUCH-Auslegungen. Prüfe den Entwurf gegen diese Checkliste und korrigiere alle Mängel direkt:\n0) VOLLSTÄNDIGER ARBEITSPLAN & FOTOS NUR BEI VORLIEGENDEN MASSEN / ZEICHNUNGEN:\n- Wenn konkrete Werkstückmaße, eine Zeichnung oder ein expliziter Wunsch nach einer Beispiel-Kalkulation vorliegen: Jede Auslegung MUSS (1) die Bauteilgeometrie & das beste Verfahren (Drehen vs. Fräsen) benennen, (2) ECHTE Fotos der empfohlenen HAINBUCH-Spannmittel enthalten, (3) einen VOLLSTÄNDIGEN Arbeitsplan mit OP 10 & OP 20 (Schnittdaten, ISO-Hauptzeiten, Werkzeuge) liefern, und (4) mit den Bedarfs-Optionen (Option A: Komplettsystem vs. Option B: Nur Spannelement) abschließen! KÜRZE NIEMALS DEN ARBEITSPLAN ODER DIE FOTOS WEG!\n- WICHTIG: Wenn der Nutzer LEDIGLICH ein Bauteil oder eine Stückzahl genannt hat OHNE Maße, Zeichnung oder Werkstoff (z. B. 'ich brauche 400 Zylinderköpfe'): Dann darf KEIN Arbeitsplan mit erfundenen Maßen erzwungen werden! In diesem Fall ist es VOLLKOMMEN KORREKT und PFLICHT, dass der Entwurf gezielt nach Maßen, Zeichnung, Material und Toleranzen fragt. KÜRZE DIESE NACHFRAGE NICHT WEG und erfinde keine Maße!\n- Produkt-Zuordnung:\n  * Drehen + rund außen (Ø ≤ 100 mm) -> SPANNTOP nova / TOPlus mini + passender Spannkopf (glatt/gerillt)\n  * Drehen + Großteile (Ø > 100 mm, z. B. Bremsscheiben) -> InoFlex 4-Backenfutter (Außen) / MANDO Spanndorn (Topf-Innen); NIEMALS Spannkopffutter auf Außen-Ø > 100 mm!\n  * Drehen + runde Innenbohrung -> MANDO Adapt (Dorn-Adaption) / MANDO + Segmentspannbüchse\n  * Fräsen + rund -> MANOK plus / MANOK stationär\n  * Drehen/Fräsen prismatisch/unrund -> InoFlex 4-Backenfutter\n  * Schnellwechsel -> centroteX\n1) ECHTE und PASSENDE Markdown-Fotos ![Name](URL) (InoFlex -> hero_136.jpg / hero_262.jpg, B-Top -> hero_146.jpg / hero_150.jpg, centroteX -> hero_242.jpg, MANOK plus -> hero_246.jpg, MANOK -> hero_242.jpg, MANDO -> hero_178.jpg, MANDO Adapt -> hero_272.jpg, SPANNTOP nova -> hero_94.jpg, SPANNTOP mini -> hero_74.jpg; NIEMALS falsche Bilder wie Kran für InoFlex oder Messkoffer für Spannfutter kopieren!).\n2) Tabellen max. 5 Spalten, Lösungen als Zeilen.\n3) KEIN LaTeX, keine $-Zeichen; Formeln im Klartext (z. B. t_h = L / vf); deutsche Komma-Dezimalzahlen.\n4) Passungswerte aus dem VORBEBERECHNETEN Block 1:1 übernehmen; alle Rechnungen nachprüfen und Fehler korrigieren.\n5) Abschließend Sektion '## Quellen' mit klickbaren [Titel](URL)-Links (min. 2).\n6) LÄNGEN- & ABSTICH-KONSISTENZ: Prüfe peinlich genau die Gesamtlänge des Werkstücks! Wenn das Teil z. B. Hülse 75 mm + Zapfen 25 mm hat (Gesamtlänge 100 mm), darf in OP 10 NIEMALS auf 76 mm abgestochen werden! Die Abstichlänge MUSS mindestens die Gesamtlänge + Aufmaß sein (z. B. Abstechen auf 102–103 mm). Korrigiere fehlerhafte Abstichlängen im Arbeitsplan sofort!\n7) REIBEN vs. FEINDREHEN: Bei Sacklochbohrungen mit Radius (z. B. R0,3) oder flachem Grund darf KEINE Reibahle verwendet werden (Anschnittkollision). Ersetze Reibahle durch Feindreh-Bohrstange!\n8) ISO 1101 FORM-TOLERANZEN: Reine Formtoleranzen (Rundheit, Zylindrizität, Geradheit, Ebenheit) dürfen laut ISO 1101 NIEMALS ein Bezugselement (z. B. | A) besitzen. Entferne unzulässige Bezüge bei Formtoleranzen!\n9) ZEICHNUNGS-PRIMAT: Jede Zahl im Entwurf, die laut NUTZERFRAGE/Bildkontext anders bemaßt ist (Abmaße, Gewinde, Losgröße, Längen), auf den Zeichnungswert korrigieren — Gedächtniswerte verlieren immer.\n10) NORM-SCOPE: Steht z. B. „Gewinde DIN 6885“ im Entwurf, als Zeichnungsfehler ausweisen (DIN 6885 = Passfedern, kein Gewinde!) statt zu übernehmen.\n11) KEINE WEISSWASCHUNG: Behauptet der Entwurf Normkonformität der Zeichnung (z. B. „streng ohne Bezugselement“), obwohl Bezüge an Formtoleranzen beschrieben sind → als Zeichnungsfehler-Hinweis formulieren.\n12) KEINE ERFINDUNGEN: Zentrierbohrungen/Freistiche/Fasen ohne Bildbeleg als prozessbedingte Zugabe kennzeichnen, nicht als Zeichnungsinhalt.\n13) ROHMASS-CHECK: Größter Bund/Flansch + Aufmaß ≤ Roh-Ø? Futterdurchgang ≥ Roh-Ø? Sonst Rohmaß und Futtergröße korrigieren (Bund >Ø42 → Rohling Ø50–55, Futter Gr. 65/80 statt 52).\n14) AUFSPANNFOLGE: Nach dem Abstich am kurzen Ende gespannt mit >100 mm freier Auskragung für Schrupp-/Schlichtschnitte? Dann Reihenfolge umkehren (massive Seite zuerst aus Stange/Sägezuschnitt) oder Reitstockspitze vorsehen; Ratterrisiko bei Ra 0,2 explizit ausschließen.\n15) HÄRTEVERZUG: Bei ≥55 HRC + Passungen IT5/IT6 oder Ra ≤0,4: Schleifaufmaß 0,15–0,20 mm vor dem Härten + Hartbearbeitung zwischen Spitzen zwingend — niemals weich auf Fertigmaß schlichten." + qaLangRule + "Antworte NUR mit der vollständigen korrigierten finalen Antwort – kein Kommentar, keine Begründung der Änderungen." },
             { role: "user", content: `NUTZERFRAGE:\n${questionText}\n\nVORBEBERECHNETE PASSUNGEN:\n${precomputed || "—"}\n\nKATALOG-KONTEXT:\n${catalogContext || "—"}\n\nSHOP-KONTEXT:\n${shopContext || "—"}\n\nZEICHNUNGS-TRANSKRIPT (verbindlich, wörtlich abgelesen):\n${drawingTranscript || "—"}\n\nENTWURF ZU PRÜFEN:\n${answer}` },
           ],
           ...(tools ? { tools } : {}),

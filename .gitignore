@@ -9,6 +9,7 @@ coverage/
 .app_key
 .admin_key
 .tunnel_url
+.deployed_tunnel_url
 .firebase/
 feedback.jsonl
 logs/

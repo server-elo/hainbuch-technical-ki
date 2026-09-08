@@ -20,14 +20,14 @@
   {
     "question": "Welle 16MnCr5, Sitz 30h6, Länge 120mm",
     "answer": "Für die Fertigung Ihrer Welle aus Einsatzstahl **16MnCr5 (1.7131)** mit einer Länge von **120 mm** erfordert der Lagersitz **Ø 30 h6** (Grenzmaße: **29,987 mm bis 30,000 mm**, Toleranzfeld 13 µm) höchste Rundlaufgenauigkeit und vibrationsfreie Steifigkeit, um Form- und Maßhaltigkeit prozesssicher einzuhalten.\n\nHaben Sie bereits ein Spannfutter bzw. HAINBUCH-Spannmittel in Ihrer Fertigung (z. B. SPANNTOP, TOPlus, MANDO, InoFlex, B-Top, MANOK) – oder soll ich Ihnen passende Optionen vorschlagen?\n\n## Quellen\n- [HAINBUCH Spannfutter & Spannmittel Übersicht](https://www.hainbuch.com)\n- [HAINBUCH Produktkatalog](https://www.bisspecials.com/Folder_HAINBUCH/files/assets/html/skin/images/fbThumb.jpg)",
-    "verifiedAt": "2026-09-03T12:32:16.018Z",
-    "qualityScore": 100
+    "verifiedAt": "2026-09-03T23:12:33.374Z",
+    "qualityScore": 95
   },
   {
     "question": "Flansch C45, Ø100, Bohrung 30H7",
     "answer": "Für die Bearbeitung Ihres Flansches aus **C45 (1.0503)** mit Außen-**Ø 100 mm** und Funktionsbohrung **Ø 30 H7** (Toleranz nach DIN EN ISO 286: **+0 / +21 µm**, Grenzmaße: **30,000 mm bis 30,021 mm**) lässt sich ein hochpräziser und verzugsfreier Fertigungsablauf mit 360°-Umschlingung realisieren.\n\n**Haben Sie bereits ein Spannfutter bzw. HAINBUCH-Spannmittel in Ihrer Fertigung (z. B. SPANNTOP, TOPlus, MANDO, InoFlex, B-Top, MANOK) – oder soll ich Ihnen passende Optionen vorschlagen?**\n\n## Quellen\n- [HAINBUCH Produkte und modulare Spannlösungen](https://www.hainbuch.com/produkte/)\n- [DIN EN ISO 286-1 – Geometrische Produktspezifikation (GPS) – ISO-Toleranzsystem für Längenmaße](https://www.iso.org/standard/44888.html)",
-    "verifiedAt": "2026-09-03T12:32:16.019Z",
-    "qualityScore": 100
+    "verifiedAt": "2026-09-03T23:12:33.383Z",
+    "qualityScore": 95
   },
   {
     "question": "Dünnwandige Titan-Lagerhülse (3.7165): Außen-Ø 48 h6, Bohrung Ø 46 H7, Wandstärke 1,0 mm, Gewinde M14x1, Losgröße 250 Stk.",
@@ -56,13 +56,13 @@
   {
     "question": "Was ist auf diesem Bild zu sehen?",
     "answer": "Auf dem hochgeladenen Bild ist eine **vollständig schwarze bzw. leere Fläche** zu sehen. Es sind keine Bauteilkonturen, Maße, Passungen oder technischen Zeichnungen erkennbar.\n\nMöglicherweise gab es einen Übertragungsfehler beim Upload.\n\nBitte laden Sie Ihre technische Zeichnung, Skizze oder das Foto des Werkstücks bzw. der Einbausituation noch einmal hoch, damit die Geometrien, Toleranzen und Randbedingungen analysiert werden können.\n\nHaben Sie bereits ein Spannfutter bzw. HAINBUCH-Spannmittel in Ihrer Fertigung (z. B. SPANNTOP, TOPlus, MANDO, InoFlex, B-Top, MANOK) – oder soll ich Ihnen passende Optionen vorschlagen?\n\n## Quellen\n- [HAINBUCH Spannfutter & Produkte](https://shop.hainbuch.com)\n- [HAINBUCH TOROK Handspannfutter Übersicht](https://shop.hainbuch.com)",
-    "verifiedAt": "2026-09-03T22:31:52.813Z",
-    "qualityScore": 95
+    "verifiedAt": "2026-09-04T04:30:06.375Z",
+    "qualityScore": 100
   },
   {
     "question": "Bitte analysiere diese technische Zeichnung vollständig: Geometrie, Maße, Toleranzen, Passungen nach ISO 286, Werkstoffempfehlung und passende HAINBUCH-Spannmittel.",
     "answer": "# Vollständige Zeichnungsanalyse & Spannmittelkonzept\n\n## 1. Geometrie-, Maß- und Toleranzanalyse\n\n| Merkmal | Nennmaß | Toleranzklasse / Vorgabe | Grenzabmaße [mm] | Grenzmaße [mm] |\n| :--- | :--- | :--- | :--- | :--- |\n| Hülsen-Außendurchmesser | Ø 48 mm | ISO h6 | +0,000 / -0,016 | 47,984 bis 48,000 |\n| Hülsen-Innendurchmesser | Ø 46 mm | ISO H7 | +0,025 / +0,000 | 46,000 bis 46,025 |\n| Wandstärke | s = 1,0 mm | berechnet | - | 0,984 bis 1,021 |\n| Zapfendurchmesser | Ø 14 mm | ISO js4 | +0,004 / -0,004 | 13,996 bis 14,004 |\n| Zapfengewinde | M14x1 | 6g | Metrisch Feingewinde | DIN 13 |\n| Gesamtlänge | 100,0 mm | ISO 2768-m | ±0,300 | 99,700 bis 100,300 |\n| Hülsenlänge | 75,0 mm | ISO 2768-m | ±0,300 | 74,700 bis 75,300 |\n| Zapfenlänge | 25,0 mm | ISO 2768-m | ±0,200 | 24,800 bis 25,200 |\n\n### Form- und Lagetoleranzen (nach ISO 1101)\n* **Rundheit:** 0,005 mm (ohne Bezugselement gemäß ISO 1101)\n* **Zylindrizität:** 0,006 mm (ohne Bezugselement gemäß ISO 1101)\n* **Koaxialität:** 0,008 mm bezogen auf Bezugsachse A\n* **Oberflächengüte:** Ra 0,4 µm (Innenbohrung Ø 46 H7 und Außensitz Ø 48 h6)\n\n---\n\n## 2. Werkstoffanalyse & Zerspanungsverhalten\n\n* **Werkstoff:** Titan Grade 5 (Ti-6Al-4V / Wst.-Nr. 3.7165)\n* **Eigenschaften:** Niedriger E-Modul (ca. 110 GPa), geringe Wärmeleitfähigkeit (ca. 7 W/mK), hohe Festigkeit (ca. 900–1000 N/mm²).\n* **Herausforderung:** Extreme Verzugsneigung bei punktueller Spannkraft (Polygoneffekt bei 3-Backenfutter) und Schwingneigung bei 1,0 mm Wandstärke.\n* **Empfehlung:** Vollflächige 360°-Umschlingung über vulkanisierte Segmentspannköpfe bzw. zylindrische Segmentspanndorne zur Vermeidung von Unrundheiten.\n\n---\n\n## 3. HAINBUCH-Spannmittelkonzept\n\n![HAINBUCH SPANNTOP nova](https://www.hainbuch.com/fileadmin/user_upload/produkte/hero_94.jpg)\n\n### Lösung 1: SPANNTOP nova Kombi (OP 10 Außen / OP 20 Dorn-Adaption) – *Empfohlene Hauptlösung*\n* **OP 10 (Außenspannung Rohteil):** SPANNTOP nova Spannfutter Größe 65 mit Spannkopf SK 65 BZ glatt/längsrilliert. 360°-Spannung verhindert Polygonbildung bereits bei der Schruppbearbeitung.\n* **OP 20 (Innenspannung Fertigteil):** Schnellumrüstung mittels **MANDO Adapt T211 / T212** Segmentspanndorn direkt im SPANNTOP-Futter (Wechselzeit < 2 min ohne Futterdemontage). Vollflächige Innenabstützung der Ø 46 mm Bohrung dämpft Vibrationen bei der Hart-/Schlichtbearbeitung auf Ra 0,4 µm.\n\n### Lösung 2: TOPlus mini mit zentrischer Backenadaption\n* Maximale Steifigkeit und schlanke Störkontur für beste Werkzeugzugänglichkeit bei kleinem Arbeitsraum.\n\n### Lösung 3: Stationäre Ausführung (MANOK plus / MANDO)\n* Für 5-Achs-Fräs- oder Schleifoperationen zur hochpräzisen Endbearbeitung.\n\n---\n\n## 4. Fertigungsablauf & Arbeitsplan\n\n| OP-Nr. | Arbeitsgang | Werkzeug | Schnittdaten | Maße / Bemerkung |\n| :--- | :--- | :--- | :--- | :--- |\n| **OP 10.1** | Plandrehen Stirnseite | WSP Hartmetall VCGT 110302-PF | vc = 65 m/min, f = 0,08 mm/U | Aufmaß L=0,1 mm planen |\n| **OP 10.2** | Vorbohren & Ausdrehen Ø 46 | VHM-Bohrer Ø 20 + Feindrehwerkzeug | vc = 55 m/min, f = 0,06 mm/U | Feindrehen auf Ø 46 H7 (Ra 0,4 µm) |\n| **OP 10.3** | Außen-Vordrehen & Zapfen | WSP CNMG 120404-SM | vc = 70 m/min, f = 0,12 mm/U | Zapfen Ø 14 js4 vordrehen |\n| **OP 10.4** | Gewindestrehlen M14x1 | Gewindedrehplatte 60° Teilprofil | vc = 45 m/min, Steigung 1,0 mm | Gewinde M14x1 6g schneiden |\n| **OP 10.5** | Abstechen auf Überlänge | Stechschwert 3 mm | vc = 50 m/min, f = 0,04 mm/U | **Abstechen auf L = 102,0 mm** |\n| **OP 20.1** | MANDO Adapt Innenspannung | Dornsegment Ø 46,0 mm glatt | Spanndruck p = 12 bar | Innenspannung Ø 46 H7 |\n| **OP 20.2** | Planen auf Fertigmaß | WSP VCGT 110302-PF | vc = 65 m/min, f = 0,06 mm/U | Gesamtlänge L = 100,0 ±0,1 mm |\n| **OP 20.3** | Außen-Schlichten Ø 48 h6 | WSP VBMT 110302 (PCD / Feinkorn) | vc = 85 m/min, f = 0,05 mm/U | Ø 48 h6 (47,984–48,000 mm), Ra 0,4 µm |\n\n---\n\n## 5. Berechnungs- & Prüfnachweise\n\n### ISO-Grundzeitberechnung für Außen-Schlichten (OP 20.3)\n* Werkstückdurchmesser d = 48 mm\n* Schnittgeschwindigkeit vc = 85 m/min\n* Drehzahl: n = (vc * 1000) / (pi * d) = (85 * 1000) / (3,1416 * 48) = 563,7 U/min\n* Vorschubgeschwindigkeit: vf = n * f = 563,7 * 0,05 = 28,19 mm/min\n* Schnittweg L = 75 mm + 2 mm (Anlauf) = 77 mm\n* Hauptzeit: th = L / vf = 77 / 28,19 = 2,73 min (ca. 164 s)\n\n### Anti-Polygon-Prüfung\n* Bei s = 1,0 mm und einem Spanndruck von p = 15 bar in einem 3-Backenfutter beträgt der theoretische Verzug ca. 0,018 mm (Ausschuss bei Rundheitstoleranz 0,005 mm).\n* Durch den 360°-Spannschluss der HAINBUCH-Segmentspanntechnik reduziert sich die Verformung auf unter 0,002 mm, womit Rundheit (0,005 mm) und Zylindrizität (0,006 mm) prozesssicher eingehalten werden.\n\n---\n\n## Quellen\n* [HAINBUCH SPANNTOP nova Produktübersicht](https://www.hainbuch.com/produkte/spannfutter/spanntop-nova/)\n* [HAINBUCH MANDO Adapt Dorn-in-Futter Adaption](https://www.hainbuch.com/produkte/spanndorne/mando-adapt/)",
-    "verifiedAt": "2026-09-03T22:26:56.453Z",
+    "verifiedAt": "2026-09-03T22:59:07.329Z",
     "qualityScore": 90
   },
   {
@@ -86,31 +86,55 @@
   {
     "question": "Kurze Frage: Welche Grenzmaße hat ein Sitz Ø35 h6 nach ISO 286?",
     "answer": "Für einen Passsitz **Ø35 h6** gelten nach **DIN EN ISO 286** folgende Maße und Abmaße:\n\n---\n\n### Grenzmaße und Toleranzen für Welle Ø35 h6\n\n- **Nennmaß:** 35,000 mm\n- **Oberes Abmaß (es):** 0 µm (0,000 mm)\n- **Unteres Abmaß (ei):** −16 µm (−0,016 mm)\n- **Höchstmaß ($d_max$ / Go):** **35,000 mm**\n- **Mindestmaß ($d_min$ / No-Go):** **34,984 mm**\n- **Toleranz ($T$):** 16 µm (0,016 mm)\n\n---\n\n### Typische Passungspaarung (Einheitsbohrung H7 / Welle h6)\n\nWird dieser Sitz mit einer **Bohrung Ø35 H7** kombiniert:\n- **Bohrung Ø35 H7:** $EI = 0 µm$, $ES = +25 µm$ ($D_min = 35,000 mm$, $D_max = 35,025 mm$)\n- **Passungsart:** **Spielpassung**\n- **Mindestspiel ($S_min$):** 0 µm (0,000 mm)\n- **Höchstspiel ($S_max$):** 41 µm (0,041 mm)\n\n---\n\n### Praxishinweis zur HAINBUCH-Spanntechnik\nBeim Spannen auf einem fertigen Passungssitz Ø35 h6 empfehlen wir den Einsatz eines **HAINBUCH Spannkopfs mit Profil GLATT** (z. B. im *SPANNTOP nova* oder *TOPlus mini*). Dadurch erzielen Sie:\n- Eine verzugsarme 360°-Umschlingung ohne Polygoneffekt\n- Rundlaufgenauigkeiten von **< 0,005 mm**\n- Eine absolut beschädigungs- und abdruckfreie Werkstückoberfläche\n\n## Quellen\n- [HAINBUCH Spannfutter Übersicht](https://www.hainbuch.com/produkte/kraftspannfutter/)\n- [DIN EN ISO 286-2 – Geometrische Produktspezifikation (GPS) – ISO-Toleranzsystem](https://www.beuth.de)",
-    "verifiedAt": "2026-09-03T22:31:52.817Z",
+    "verifiedAt": "2026-09-04T04:30:06.379Z",
     "qualityScore": 100
   },
   {
     "question": "Welche Grenzmase hat ein Sitz D30 g6 nach ISO 286? Antworte kurz in 3 Saetzen.",
     "answer": "Für den Wellensitz Ø 30 g6 nach ISO 286 liegen die Abmaße bei einem oberen Abmaß von es = −0,007 mm (−7 µm) und einem unteren Abmaß von ei = −0,020 mm (−20 µm). Daraus ergeben sich ein Höchstmaß von 29,993 mm sowie ein Mindestmaß von 29,980 mm bei einer Toleranzzone von 13 µm. Für die hochgenaue und verzugsarme Fertigung bzw. das anschließende Spannen dieser Passung empfiehlt sich ein HAINBUCH Spannkopf mit Rundprofil glatt (z. B. im SPANNTOP nova oder TOPlus System).\n\n## Quellen\n- [HAINBUCH SPANNTOP nova Spannfutter](https://www.hainbuch.com/produkte/kraftspannfutter/spanntop-nova/)\n- [DIN EN ISO 286-1 / ISO 286-2 Toleranztabellen](https://www.iso.org/standard/46219.html)",
-    "verifiedAt": "2026-09-03T22:31:52.817Z",
+    "verifiedAt": "2026-09-04T04:30:06.379Z",
     "qualityScore": 100
   },
   {
     "question": "Ich habe ein Werkstück aus 16MnCr5 mit Außendurchmesser 48 mm und einer Bohrung 30 mm.",
     "answer": "Für Ihr Werkstück aus dem Einsatzstahl 16MnCr5 (1.7131) mit Außen-Ø 48 mm und Innenbohrung Ø 30 mm (Wandstärke 9 mm) bietet HAINBUCH hochgenaue und verzugsarme Spannlösungen – sowohl für die Außenspannung mit 360°-Umschlingung als auch für die Innenspannung über Spanndorne.\n\nUm die Auslegung, die passenden Spannmittel und das Einrichteblatt exakt für Ihre Anwendung zu definieren, klären Sie bitte kurz zwei Kernfragen:\n\n1. Brauchen Sie das Spannfutter, nur den Spannkopf / Segmentspannbüchse oder beides als Komplettsystem?\n2. Wird das Werkstück gedreht (rotierend auf Drehmaschine) oder gefräst (stationär auf Frästisch / 5-Achs)?\n\n## Quellen\n- [HAINBUCH Produkte und Lösungen im Überblick](https://www.hainbuch.com)\n- [HAINBUCH Online-Shop Produktprogramm](https://shop.hainbuch.com)",
-    "verifiedAt": "2026-09-03T22:31:52.817Z",
-    "qualityScore": 100
+    "verifiedAt": "2026-09-04T04:30:06.379Z",
+    "qualityScore": 95
   },
   {
     "question": "Ich habe ein rundes Teil aus 16MnCr5 mit D=48 mm und einer Innenbohrung 30 mm.",
     "answer": "Für Ihr rotationssymmetrisches Bauteil aus 16MnCr5 mit einem Außendurchmesser von 48 mm und einer Innenbohrung von 30 mm bietet HAINBUCH sowohl für die Außen- als auch für die Innenspannung hochpräzise, verzugsarme Spannlösungen. Zur optimalen technischen Auslegung und Zusammenstellung der passenden Komponenten sind noch folgende zwei Angaben erforderlich:\n\n1. Brauchen Sie das Spannfutter, nur den Spannkopf / Segmentspannbüchse oder beides als Komplettsystem?\n2. Wird das Werkstück gedreht (rotierend auf Drehmaschine) oder gefräst (stationär auf Frästisch / 5-Achs)?\n\n## Quellen\n- [HAINBUCH Spannköpfe und Spannmittel](https://www.hainbuch.com/produkte/spannkoepfe/)\n- [HAINBUCH Produktübersicht und Spannlösungen](https://www.hainbuch.com/produkte/)",
-    "verifiedAt": "2026-09-03T22:31:52.817Z",
+    "verifiedAt": "2026-09-04T04:30:06.379Z",
     "qualityScore": 100
   },
   {
     "question": "Ich habe ein Teil aus 16MnCr5 mit Außendurchmesser 48 mm und Innenbohrung 30 mm.",
     "answer": "Aufgrund der rotationssymmetrischen Geometrie (Außen-Ø 48 mm, Innenbohrung Ø 30 mm, Werkstoff 16MnCr5) ist das fertigungstechnisch und wirtschaftlich beste Verfahren das **Drehen auf einer CNC-Drehmaschine bzw. einem Dreh-Fräszentrum**.\n\nFür die Komplettbearbeitung rotationssymmetrischer Hohlkörper eignet sich die 360°-Rundumspannung mit HAINBUCH-Spannköpfen (Außenspannung auf Ø 48 mm) bzw. ein MANDO-Segmentspanndorn (Innenspannung in der Bohrung Ø 30 mm), um Dreiecksverzug und Schwingungen vollständig zu vermeiden.\n\nFür dieses Bauteil empfehle ich Ihnen das **HAINBUCH SPANNTOP nova / TOPlus**-System.\n\n👉 **Benötigen Sie das Spannfutter (den Grundkörper für die Maschinenspindel), nur den passenden Spannkopf / die Segmentspannbüchse (falls ein HAINBUCH-Futter bereits vorhanden ist), oder das schlüsselfertige Komplettsystem (Futter + Spannkopf + Wechselvorrichtung + Tiefenanschlag)?**",
-    "verifiedAt": "2026-09-03T22:31:52.817Z",
-    "qualityScore": 80
+    "verifiedAt": "2026-09-04T04:30:06.379Z",
+    "qualityScore": 75
+  },
+  {
+    "question": "ich muss eine spindel mit 10mm lang und m10 gewinde ..die spindel ist 25 mm durchmesser..davon 100 stk",
+    "answer": "Vielen Dank für die Details zu Ihrer Fertigungsaufgabe.\n\nBei einem Werkstückdurchmesser von **Ø 25 mm** und der Fertigung eines Außengewindes **M10** (Regelgewinde mit Steigung P = 1,5 mm; Vorarbeitsdurchmesser für das Außengewinde 6g: d = 9,82–9,97 mm) bei einer kurzen Bauteillänge ist für die 100 Stück eine axiale Werkstückanschlagslösung sowie eine schwingungsdämpfende Rundumspannung entscheidend für Maßhaltigkeit und Oberflächengüte.\n\nHaben Sie bereits ein Spannfutter bzw. HAINBUCH-Spannmittel in Ihrer Fertigung (z. B. SPANNTOP, TOPlus, MANDO, InoFlex, B-Top, MANOK) – oder soll ich Ihnen passende Optionen vorschlagen?\n\n## Quellen\n- [HAINBUCH Kraftspannfutter Übersicht](https://www.hainbuch.com/produkte/kraftspannfutter/)\n- [HAINBUCH SPANNTOP nova](https://www.hainbuch.com/produkte/kraftspannfutter/spanntop-nova/)",
+    "verifiedAt": "2026-09-03T23:12:44.256Z",
+    "qualityScore": 95
+  },
+  {
+    "question": "„Guten Tag, wir müssen 250 Stück dünnwandige Lagerbuchsen aus Titan Grade 5 (Ti-6Al-4V / 3.7165) fertigen.Maße: Außendurchmesser $\\varnothing\\ 48\\text{ h6}$, Innendurchmesser $\\varnothing\\ 46\\text{ H7}$ (Wandstärke nur $1,0\\text{ mm}$!), Gesamtlänge $L = 75\\text{ mm}$.Toleranzen: Rundheit $< 0,005\\text{ mm}$, Zylinderform $< 0,006\\text{ mm}$, Oberfläche innen $Ra\\ 0,4\\ \\mu\\text{m}$.Problem: Beim Drehen im 3-Backenfutter drücken wir das Teil oval (Polygoneffekt) und innen fängt das Werkzeug sofort an zu rattern. Wie spannen wir das am besten und welche Schnittdaten/Strategie empfehlen Sie?“",
+    "answer": "Guten Tag! Eine Wandstärke von nur **1,0 mm** bei Titan Grade 5 (Ti-6Al-4V / 3.7165) und einer Bauteillänge von **75 mm** ist eine anspruchsvolle Zerspanungsaufgabe. Durch das geringe Elastizitätsmodul von Titan (~110 GPa) und die 3-Punkt-Krafteinleitung eines klassischen Dreibackenfutters ist der Dreiecksverzug (Polygoneffekt) vorprogrammiert; zudem fehlt die Dämpfung gegen Ratterneigung.\n\nFür Ihre Funktionsmaße nach **DIN EN ISO 286** gelten folgende Grenzmaße:\n* **Außendurchmesser Ø 48 h6:** 47,984 mm bis 48,000 mm (Toleranzfeld: 16 µm)\n* **Innendurchmesser Ø 46 H7:** 46,000 mm bis 46,025 mm (Toleranzfeld: 25 µm)\n\nUm die extrem engen Formtoleranzen (Rundheit < 0,005 mm, Zylinderform < 0,006 mm) und Ra 0,4 µm prozesssicher zu erreichen, ist eine vollumschlingende, vulkanisierte HAINBUCH-Spannung (Außenspannung bzw. segmentierter Spanndorn für die Innenbearbeitung) die ideale Lösung.\n\nHaben Sie bereits ein Spannfutter bzw. HAINBUCH-Spannmittel in Ihrer Fertigung (z. B. SPANNTOP, TOPlus, MANDO, InoFlex, B-Top, MANOK) – oder soll ich Ihnen passende Optionen vorschlagen?\n\n## Quellen\n- [HAINBUCH Kraftspannfutter Übersicht](https://www.hainbuch.com/produkte/kraftspannfutter/) [1]\n- [HAINBUCH Segmentspanndorne MANDO](https://www.hainbuch.com/produkte/spanndorne/) [1]",
+    "verifiedAt": "2026-09-03T23:12:44.259Z",
+    "qualityScore": 95
+  },
+  {
+    "question": "[Zeichnung angehängt]",
+    "answer": "Vielen Dank für die Bereitstellung der Fertigungszeichnung **HT-TW001 Rev. A** für die dünnwandige Titan-Lagerhülse (Werkstoff: Titan Grade 5 / 3.7165, Losgröße: 250 Stück).\n\nBei einer Wandstärke von nur **s = 1,0 mm** (Außenpassung **Ø 48 h6** [47,984 bis 48,000 mm] und Innenpassung **Ø 46 H7** [46,000 bis 46,025 mm]) in Kombination mit den engen Form- und Lagetoleranzen (Rundheit < 0,005 mm, Zylinderform < 0,006 mm, Koaxialität 0,004 mm) ist eine verzugsarme 360°-Vollumschlingung bzw. eine präzise Segment-Spanndornlösung zwingend erforderlich, um den typischen Dreiecksverzug konventioneller Backenfutter sicher zu vermeiden.\n\n**Haben Sie bereits ein Spannfutter bzw. HAINBUCH-Spannmittel in Ihrer Fertigung (z. B. SPANNTOP, TOPlus, MANDO, InoFlex, B-Top, MANOK) – oder soll ich Ihnen passende Optionen vorschlagen?**\n\n## Quellen\n- [HAINBUCH Spannfutter Übersicht](https://www.hainbuch.com/produkte/spannfutter/)\n- [HAINBUCH Segment-Spanndorne MANDO](https://www.hainbuch.com/produkte/spanndorne/)\n- [HAINBUCH Adaptionsspannmittel MANDO Adapt](https://shop.hainbuch.com/)",
+    "verifiedAt": "2026-09-03T23:12:44.259Z",
+    "qualityScore": 95
+  },
+  {
+    "question": "Flansch C45, Ø80, Bohrung 22H7",
+    "answer": "Für die Fertigung eines Flansches aus C45 (1.0503) mit Außen-Ø 80 mm und einer präzisen Passungsbohrung **Ø 22 H7** (Grenzmaße: 22,000 mm bis 22,021 mm, Toleranzfeld: 21 µm) ist eine schwingungsdämpfende und wiederholgenaue Spannung entscheidend, um Form- und Lagetoleranzen prozesssicher einzuhalten.\n\nHaben Sie bereits ein Spannfutter bzw. HAINBUCH-Spannmittel in Ihrer Fertigung (z. B. SPANNTOP, TOPlus, MANDO, InoFlex, B-Top, MANOK) – oder soll ich Ihnen passende Optionen vorschlagen?\n\n## Quellen\n- [HAINBUCH Produkte und Spannlösungen](https://www.hainbuch.com)\n- [HAINBUCH Online-Shop Produktprogramm](https://shop.hainbuch.com)",
+    "verifiedAt": "2026-09-03T23:12:44.259Z",
+    "qualityScore": 95
   }
 ]
