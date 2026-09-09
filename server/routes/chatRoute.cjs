@@ -123,15 +123,18 @@ async function handleChat(req, res) {
             .filter(Boolean)
             .join("\n")
             .slice(0, 20000);
-          const images = m.parts
-            .filter((p) => p.inlineData && String(p.inlineData.mimeType || "").startsWith("image/"))
+          const attachments = m.parts
+            .filter((p) => p.inlineData && (
+              String(p.inlineData.mimeType || "").startsWith("image/") ||
+              p.inlineData.mimeType === "application/pdf"
+            ))
             .slice(0, 4)
             .map((p) => ({
               type: "image_url",
-              image_url: { url: `data:${p.inlineData.mimeType};base64,${String(p.inlineData.data || "").slice(0, 5 * 1024 * 1024)}` },
+              image_url: { url: `data:${p.inlineData.mimeType};base64,${String(p.inlineData.data || "")}` },
             }));
-          if (images.length) {
-            return { role, content: [{ type: "text", text: text || "Bitte analysiere das angehängte Bild." }, ...images] };
+          if (attachments.length) {
+            return { role, content: [{ type: "text", text: text || "Bitte analysiere das angehängte Dokument bzw. die technische Zeichnung." }, ...attachments] };
           }
           return { role, content: text };
         }
@@ -294,11 +297,17 @@ async function handleChat(req, res) {
           const tr = await llmFetch({
             model: MODEL_ID,
             messages: [
-              { role: "system", content: "Du bist ein präziser Zeichnungs-Transkribierer. Lies das/die angehängte(n) Bild(er) ZEICHENGETREU ab und liste ALLE sichtbaren technischen Angaben auf: Nennmaße mit Toleranzklassen und Abmaßen (z. B. Ø30 g6 -0,007/-0,020), Gewindebezeichnungen vollständig (z. B. M18x1,5 6g + Länge + Freistich), Form-/Lagetoleranzen MIT ihren Bezügen exakt wie dargestellt (z. B. Rundheit 0,003 |A — Bezüge niemals weglassen), Passfedernuten mit Norm, Oberflächen (Ra), Werkstoff, Härte, Losgröße, Zeichnungsnummer, Rev.-Stand. Erfinde NICHTS — Unleserliches als [unleserlich] markieren. Nüchterne Liste, keine Auslegung, keine Empfehlungen." },
+              { role: "system", content: "Du bist ein präziser Zeichnungs-Transkribierer. Lies das/die angehängte(n) Bild(er) oder PDF-Dokument(e) ZEICHENGETREU ab und liste ALLE sichtbaren technischen Angaben auf: Nennmaße mit Toleranzklassen und Abmaßen (z. B. Ø30 g6 -0,007/-0,020), Gewindebezeichnungen vollständig (z. B. M18x1,5 6g + Länge + Freistich), Form-/Lagetoleranzen MIT ihren Bezügen exakt wie dargestellt (z. B. Rundheit 0,003 |A — Bezüge niemals weglassen), Passfedernuten mit Norm, Oberflächen (Ra), Werkstoff, Härte, Losgröße, Zeichnungsnummer, Rev.-Stand. Erfinde NICHTS — Unleserliches als [unleserlich] markieren. Nüchterne Liste, keine Auslegung, keine Empfehlungen." },
               ...messages,
             ],
           }, llmSignal(), "transcribe");
           drawingTranscript = String(tr.res.choices?.[0]?.message?.content || "").slice(0, 4000);
+          if (drawingTranscript) {
+            const transcriptFits = precomputeFits(drawingTranscript);
+            if (transcriptFits) {
+              fitsContext += "\n" + transcriptFits;
+            }
+          }
         } catch { /* best-effort */ }
       }
 

@@ -167,8 +167,8 @@ export function convertFileToBase64(file: File): Promise<{ base64: string; mimeT
     }
     const reader = new FileReader();
     // DXF/PDF: raw base64, no canvas processing (parsed server-side)
-    if (/\.(dxf|pdf)$/i.test(file.name)) {
-      const mimeType = /\.pdf$/i.test(file.name) ? 'application/pdf' : 'application/dxf';
+    if (file.type === 'application/pdf' || /\.(dxf|pdf)$/i.test(file.name)) {
+      const mimeType = (file.type === 'application/pdf' || /\.pdf$/i.test(file.name)) ? 'application/pdf' : 'application/dxf';
       reader.onloadend = () =>
         resolve({ base64: (reader.result as string).split(',')[1], mimeType });
       reader.onerror = reject;

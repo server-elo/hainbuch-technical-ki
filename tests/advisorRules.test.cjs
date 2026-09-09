@@ -45,4 +45,28 @@ describe("HAINBUCH Technical Advisor Rules & Prompt Engineering", () => {
     assert.strictEqual(isSmalltalk("SPANNTOP Futter"), false, "Technical terms must not match smalltalk");
     assert.strictEqual(isSmalltalk("Ø 50 mm Passung"), false, "Dimensions must not match smalltalk");
   });
+
+  test("PDF and image attachments are preserved in API message mapping", () => {
+    const parts = [
+      { inlineData: { data: "JVBERi0xLjQK...", mimeType: "application/pdf" } },
+      { inlineData: { data: "iVBORw0KGgo...", mimeType: "image/png" } },
+      { text: "Hier ist die Zeichnung" }
+    ];
+
+    const attachments = parts
+      .filter((p) => p.inlineData && (
+        String(p.inlineData.mimeType || "").startsWith("image/") ||
+        p.inlineData.mimeType === "application/pdf"
+      ))
+      .map((p) => ({
+        type: "image_url",
+        image_url: { url: `data:${p.inlineData.mimeType};base64,${String(p.inlineData.data || "")}` },
+      }));
+
+    assert.strictEqual(attachments.length, 2);
+    assert.strictEqual(attachments[0].type, "image_url");
+    assert.ok(attachments[0].image_url.url.startsWith("data:application/pdf;base64,"));
+    assert.strictEqual(attachments[1].type, "image_url");
+    assert.ok(attachments[1].image_url.url.startsWith("data:image/png;base64,"));
+  });
 });

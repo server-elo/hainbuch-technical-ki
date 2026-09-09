@@ -89,9 +89,43 @@ export function ChatMessageItem({
                       </div>
                     </div>
                   ) : (
-                    <div className="mt-2 p-2 bg-neutral-50 rounded flex items-center gap-2 border border-neutral-200 text-xs text-neutral-500">
-                      {part.inlineData.mimeType === 'application/pdf' ? <FileText size={14} /> : <ImageIcon size={14} />}
-                      {part.inlineData.mimeType === 'application/pdf' ? t.pdfAttached : t.drawingAttached}
+                    <div className="mt-2.5 p-3 bg-white rounded-xl flex items-center justify-between gap-3 border border-neutral-200/90 shadow-sm max-w-sm">
+                      <div className="flex items-center gap-2.5 min-w-0">
+                        <div className="w-8 h-8 rounded-lg bg-red-50 text-red-600 flex items-center justify-center shrink-0">
+                          <FileText size={18} />
+                        </div>
+                        <div className="min-w-0">
+                          <p className="text-xs font-semibold text-neutral-800 truncate">
+                            {part.inlineData.mimeType === 'application/pdf' ? (t.pdfAttached || 'PDF-Zeichnung') : (t.drawingAttached || 'Zeichnung')}
+                          </p>
+                          <p className="text-[10px] text-neutral-400 font-mono uppercase">
+                            {part.inlineData.mimeType === 'application/pdf' ? 'PDF Dokument' : 'CAD Datei'}
+                          </p>
+                        </div>
+                      </div>
+                      {part.inlineData.mimeType === 'application/pdf' && (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            try {
+                              const byteCharacters = atob(part.inlineData!.data);
+                              const byteNumbers = new Array(byteCharacters.length);
+                              for (let i = 0; i < byteCharacters.length; i++) {
+                                byteNumbers[i] = byteCharacters.charCodeAt(i);
+                              }
+                              const byteArray = new Uint8Array(byteNumbers);
+                              const blob = new Blob([byteArray], { type: 'application/pdf' });
+                              const url = URL.createObjectURL(blob);
+                              window.open(url, '_blank');
+                            } catch (e) {
+                              console.error('Failed to open PDF:', e);
+                            }
+                          }}
+                          className="px-2.5 py-1 text-[11px] font-medium text-red-600 hover:text-red-700 bg-red-50 hover:bg-red-100 rounded-lg transition-colors shrink-0 cursor-pointer"
+                        >
+                          Öffnen ↗
+                        </button>
+                      )}
                     </div>
                   )
                 )}
