@@ -156,3 +156,56 @@ export function parseSetupSheetFromMarkdown(text: string): SetupSheetData | null
     bom,
   };
 }
+
+export const MAX_UPLOAD_BYTES = 15 * 1024 * 1024;
+
+export function convertFileToBase64(file: File): Promise<{ base64: string; mimeType: string }> {
+  return new Promise((resolve, reject) => {
+    if (file.size > MAX_UPLOAD_BYTES) {
+      reject(new Error('file too large (max 15 MB)'));
+      return;
+    }
+    const reader = new FileReader();
+    // DXF/PDF: raw base64, no canvas processing (parsed server-side)
+    if (/\.(dxf|pdf)$/i.test(file.name)) {
+      const mimeType = /\.pdf$/i.test(file.name) ? 'application/pdf' : 'application/dxf';
+      reader.onloadend = () =>
+        resolve({ base64: (reader.result as string).split(',')[1], mimeType });
+      reader.onerror = reject;
+      reader.readAsDataURL(file);
+      return;
+    }
+    reader.onloadend = () => {
+      const img = new Image();
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        const MAX = 2048;
+        let { width, height } = img;
+        if (width > height && width > MAX) {
+          height *= MAX / width;
+          width = MAX;
+        } else if (height > MAX) {
+          width *= MAX / height;
+          width = MAX;
+        }
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext('2d');
+        if (!ctx) {
+          resolve({ base64: (reader.result as string).split(',')[1], mimeType: file.type });
+          return;
+        }
+        ctx.drawImage(img, 0, 0, width, height);
+        const dataUrl = canvas.toDataURL('image/jpeg', 0.85);
+        resolve({ base64: dataUrl.split(',')[1], mimeType: 'image/jpeg' });
+      };
+      img.onerror = () => {
+        // Browser can't decode (HEIC/AVIF...) -> send raw data
+        resolve({ base64: (reader.result as string).split(',')[1], mimeType: file.type || 'image/png' });
+      };
+      img.src = reader.result as string;
+    };
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
+}
